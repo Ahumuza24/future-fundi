@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
-import { Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ const LoginPage = () => {
       }
 
       login(access, refresh, user);
-      
+
       // Redirect based on role
       const role = user.role || "learner";
       if (role === "learner") {
@@ -38,15 +38,17 @@ const LoginPage = () => {
         navigate("/parent");
       } else if (role === "teacher") {
         navigate("/teacher");
-      } else if (role === "leader" || role === "admin") {
+      } else if (role === "leader") {
         navigate("/leader");
+      } else if (role === "admin") {
+        navigate("/admin");
       } else {
         navigate("/");
       }
     } catch (err: any) {
       setError(
-        err.response?.data?.detail || 
-        err.response?.data?.message || 
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
         "Invalid username or password"
       );
     } finally {
@@ -65,11 +67,14 @@ const LoginPage = () => {
           <Card className="shadow-xl border-2">
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4">
-                <div 
-                  className="p-4 rounded-full"
-                  style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}
+                <div
+                  className="p-2 rounded-full"
                 >
-                  <Sparkles className="h-12 w-12" style={{ color: 'var(--fundi-orange)' }} />
+                  <img
+                    src="/fundi_bots_logo.png"
+                    alt="Fundi Bots Logo"
+                    className="h-20 w-auto object-contain"
+                  />
                 </div>
               </div>
               <CardTitle className="heading-font text-3xl font-bold" style={{ color: 'var(--fundi-black)' }}>
@@ -123,8 +128,8 @@ const LoginPage = () => {
                 <Button
                   type="submit"
                   className="w-full font-semibold text-lg py-6 shadow-md hover:shadow-lg transition-shadow"
-                  style={{ 
-                    backgroundColor: 'var(--fundi-orange)', 
+                  style={{
+                    backgroundColor: 'var(--fundi-orange)',
                     color: 'white'
                   }}
                   disabled={loading}
@@ -150,11 +155,6 @@ const LoginPage = () => {
                       Sign up
                     </Link>
                   </p>
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs">Demo credentials:</p>
-                    <p className="mono-font mt-1 text-xs">username: <strong>admin</strong></p>
-                    <p className="mono-font text-xs">password: <strong>password</strong></p>
-                  </div>
                 </div>
               </form>
             </CardContent>

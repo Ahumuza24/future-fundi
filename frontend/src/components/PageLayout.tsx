@@ -6,9 +6,9 @@ const PageLayout = () => {
   return (
     <div className="min-h-screen dashboard-background flex">
       <Sidebar />
-      <div className="flex-1 lg:ml-64 flex flex-col">
+      <div className="flex-1 lg:ml-56 flex flex-col min-w-0">
         <TopBar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-0">
           <Outlet />
         </main>
       </div>

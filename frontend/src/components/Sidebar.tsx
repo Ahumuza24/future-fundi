@@ -4,15 +4,13 @@ import {
   Users, 
   BookOpen, 
   BarChart3, 
-  Home,
-  Menu,
-  X,
-  Sparkles,
-  LogOut,
-  Settings,
-  FileText,
-  TrendingUp,
-  Award,
+  Home, 
+  Menu, 
+  X, 
+  LogOut, 
+  FileText, 
+  TrendingUp, 
+  Award, 
   Calendar
 } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -208,20 +206,23 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out",
+          "fixed left-0 top-0 h-full w-56 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Brand */}
-          <div className="p-6 border-b">
+          <div className="p-4 border-b">
             <div className="flex items-center gap-3">
               <div 
-                className="p-2 rounded-lg"
-                style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}
+                className="p-1 rounded-lg"
               >
-                <Sparkles className="h-6 w-6" style={{ color: 'var(--fundi-orange)' }} />
+                <img 
+                  src="/fundi_bots_logo.png" 
+                  alt="Fundi Bots Logo" 
+                  className="h-8 w-auto object-contain"
+                />
               </div>
               <div>
                 <h1 className="heading-font text-xl font-bold" style={{ color: 'var(--fundi-black)' }}>

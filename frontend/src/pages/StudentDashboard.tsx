@@ -5,8 +5,8 @@ import { TrendingUp, Award, Target, Heart, Sparkles, BookOpen, Calendar } from "
 
 const StudentDashboard = () => {
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+    <div className="min-h-screen p-3 md:p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
         <header className="stagger flex flex-col md:flex-row md:items-center md:justify-between gap-4" style={{ animationDelay: '0ms' }}>
           <div>

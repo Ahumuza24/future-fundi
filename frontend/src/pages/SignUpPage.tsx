@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
-import { Sparkles, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const SignUpPage = () => {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ const SignUpPage = () => {
     password_confirm: "",
     first_name: "",
     last_name: "",
-    school_code: "",
+    // school_code: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,7 +57,7 @@ const SignUpPage = () => {
         password_confirm: formData.password_confirm,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        school_code: formData.school_code || undefined,
+        // school_code: formData.school_code || undefined,
       });
 
       const { access, refresh, user } = response.data;
@@ -79,8 +79,10 @@ const SignUpPage = () => {
           navigate("/parent");
         } else if (role === "teacher") {
           navigate("/teacher");
-        } else if (role === "leader" || role === "admin") {
+        } else if (role === "leader") {
           navigate("/leader");
+        } else if (role === "admin") {
+          navigate("/admin");
         } else {
           navigate("/");
         }
@@ -110,10 +112,13 @@ const SignUpPage = () => {
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4">
                 <div
-                  className="p-4 rounded-full"
-                  style={{ backgroundColor: "rgba(240, 87, 34, 0.1)" }}
+                  className="p-2 rounded-full"
                 >
-                  <Sparkles className="h-12 w-12" style={{ color: "var(--fundi-orange)" }} />
+                  <img 
+                    src="/fundi_bots_logo.png" 
+                    alt="Fundi Bots Logo" 
+                    className="h-16 w-auto object-contain"
+                  />
                 </div>
               </div>
               <CardTitle className="heading-font text-3xl font-bold" style={{ color: "var(--fundi-black)" }}>
@@ -214,7 +219,7 @@ const SignUpPage = () => {
                     />
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label htmlFor="school_code" className="block text-sm font-semibold mb-2">
                       School Code <span className="text-gray-500 text-xs">(Optional)</span>
                     </label>
@@ -232,7 +237,7 @@ const SignUpPage = () => {
                       Ask your teacher or administrator for your school code
                     </p>
                   </div>
-
+ */}
                   <div>
                     <label htmlFor="password" className="block text-sm font-semibold mb-2">
                       Password

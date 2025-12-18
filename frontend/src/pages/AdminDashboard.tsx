@@ -36,8 +36,8 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+    <div className="min-h-screen p-3 md:p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
         <header className="stagger" style={{ animationDelay: '0ms' }}>
           <div className="flex items-center gap-3 mb-2">
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
         </header>
 
         {/* System Health */}
-        <div className="grid md:grid-cols-4 gap-4 stagger" style={{ animationDelay: '50ms' }}>
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 stagger" style={{ animationDelay: '50ms' }}>
           <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
             <CardHeader className="pb-3">
               <CardDescription className="flex items-center gap-2">
@@ -241,7 +241,7 @@ const AdminDashboard = () => {
         </Card>
 
         {/* System Actions */}
-        <div className="grid md:grid-cols-4 gap-4 stagger" style={{ animationDelay: '250ms' }}>
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 stagger" style={{ animationDelay: '250ms' }}>
           <Button variant="orange" className="h-20 flex flex-col gap-2">
             <Database className="h-6 w-6" />
             <span className="text-sm">Backup Database</span>
