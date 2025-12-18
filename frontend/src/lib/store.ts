@@ -4,8 +4,15 @@ interface User {
   id: string;
   username: string;
   email: string;
+  first_name: string;
+  last_name: string;
   role: string;
-  tenant_id?: string;
+  tenant: string | null;
+  tenant_name?: string;
+  tenant_code?: string;
+  dashboard_url?: string;
+  date_joined: string;
+  is_active: boolean;
 }
 
 interface AuthState {
@@ -19,7 +26,7 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
   accessToken: localStorage.getItem('access_token'),
   refreshToken: localStorage.getItem('refresh_token'),
   isAuthenticated: !!localStorage.getItem('access_token'),
@@ -27,6 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (accessToken, refreshToken, user) => {
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
+    localStorage.setItem('user', JSON.stringify(user));
     set({ 
       user, 
       accessToken, 
@@ -38,6 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
     set({ 
       user: null, 
       accessToken: null, 
@@ -46,7 +55,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
   
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    set({ user });
+  },
 }));
 
 interface Learner {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,19 +21,28 @@ const LoginPage = () => {
 
     try {
       const response = await authApi.login(credentials);
-      const { access, refresh } = response.data;
+      const { access, refresh, user } = response.data;
 
-      // For now, create a mock user - in production, decode JWT or fetch user data
-      const user = {
-        id: "1",
-        username: credentials.username,
-        email: `${credentials.username}@fundi.org`,
-        role: "learner",
-        tenant_id: "1",
-      };
+      // User data is now included in the token response
+      if (!user) {
+        throw new Error("User data not received");
+      }
 
       login(access, refresh, user);
-      navigate("/student");
+      
+      // Redirect based on role
+      const role = user.role || "learner";
+      if (role === "learner") {
+        navigate("/student");
+      } else if (role === "parent") {
+        navigate("/parent");
+      } else if (role === "teacher") {
+        navigate("/teacher");
+      } else if (role === "leader" || role === "admin") {
+        navigate("/leader");
+      } else {
+        navigate("/");
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.detail || 
@@ -131,9 +140,21 @@ const LoginPage = () => {
                 </Button>
 
                 <div className="text-center text-sm text-gray-600 pt-4">
-                  <p>Demo credentials:</p>
-                  <p className="mono-font mt-1">username: <strong>admin</strong></p>
-                  <p className="mono-font">password: <strong>password</strong></p>
+                  <p>
+                    Don't have an account?{" "}
+                    <Link
+                      to="/signup"
+                      className="font-semibold hover:underline"
+                      style={{ color: "var(--fundi-orange)" }}
+                    >
+                      Sign up
+                    </Link>
+                  </p>
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-xs">Demo credentials:</p>
+                    <p className="mono-font mt-1 text-xs">username: <strong>admin</strong></p>
+                    <p className="mono-font text-xs">password: <strong>password</strong></p>
+                  </div>
                 </div>
               </form>
             </CardContent>

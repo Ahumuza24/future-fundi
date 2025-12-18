@@ -3,13 +3,25 @@ from __future__ import annotations
 from typing import Dict, Any
 
 from django.db.models import Prefetch
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.models import Learner, Artifact, PathwayInputs
-from .serializers import LearnerSerializer, ArtifactSerializer, PathwayInputsSerializer
+from .serializers import (
+    LearnerSerializer,
+    ArtifactSerializer,
+    PathwayInputsSerializer,
+)
+from .permissions import (
+    IsLearner,
+    IsTeacher,
+    IsParent,
+    IsLeader,
+    IsTeacherOrLeader,
+    IsLearnerOrParent,
+)
 
 
 class IsAuthenticatedTenant(permissions.IsAuthenticated):
@@ -19,8 +31,16 @@ class IsAuthenticatedTenant(permissions.IsAuthenticated):
 
 
 class LearnerViewSet(viewsets.ModelViewSet):
+    """ViewSet for learners with role-based access control.
+    
+    - Learners: Can only view/edit their own profile
+    - Teachers: Can view all learners in their tenant
+    - Parents: Can view their child's profile
+    - Leaders: Can view/edit all learners in their tenant
+    """
     permission_classes = [IsAuthenticatedTenant]
     serializer_class = LearnerSerializer
+    throttle_classes = []  # Will be set in settings
 
     def get_queryset(self):
         # Use _base_manager to bypass TenantManager and avoid conflicts with pagination/prefetch
@@ -29,8 +49,25 @@ class LearnerViewSet(viewsets.ModelViewSet):
         
         tenant_id = get_current_tenant()
         qs = Learner._base_manager.get_queryset().select_related("user").order_by("last_name", "first_name")
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
+        
+        # Role-based filtering
+        user = self.request.user
+        if user.role == "learner":
+            # Learners can only see their own profile
+            qs = qs.filter(user=user)
+        elif user.role == "parent":
+            # Parents can see their child's profile
+            from apps.core.models import ParentContact
+            parent_contacts = ParentContact.objects.filter(email=user.email).values_list("learner_id", flat=True)
+            qs = qs.filter(id__in=parent_contacts)
+        elif user.role in ["teacher", "leader", "admin"]:
+            # Teachers and leaders can see all learners in their tenant
+            if tenant_id:
+                qs = qs.filter(tenant_id=tenant_id)
+        else:
+            # Default: only own profile
+            qs = qs.filter(user=user)
+        
         return qs
 
     def perform_create(self, serializer):
@@ -132,11 +169,22 @@ class ArtifactViewSet(viewsets.ModelViewSet):
 
 
 class DashboardKpisView(APIView):
-    permission_classes = [IsAuthenticatedTenant]
+    """Dashboard KPIs - accessible by teachers and leaders only."""
+    permission_classes = [IsTeacherOrLeader]
 
     def get(self, request):
         # Placeholder aggregates; later implement real queries
+        from apps.core.tenant import get_current_tenant
+        tenant_id = get_current_tenant()
+        
+        qs_learners = Learner._base_manager.get_queryset()
+        qs_artifacts = Artifact._base_manager.get_queryset()
+        
+        if tenant_id:
+            qs_learners = qs_learners.filter(tenant_id=tenant_id)
+            qs_artifacts = qs_artifacts.filter(tenant_id=tenant_id)
+        
         return Response({
-            "learners": Learner.objects.count(),
-            "artifacts": Artifact.objects.count(),
+            "learners": qs_learners.count(),
+            "artifacts": qs_artifacts.count(),
         })

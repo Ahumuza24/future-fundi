@@ -3,6 +3,7 @@ import PageLayout from "@/components/PageLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
+import SignUpPage from "@/pages/SignUpPage";
 import StudentDashboard from "@/pages/StudentDashboard";
 import ParentPortal from "@/pages/ParentPortal";
 import TeacherCapture from "@/pages/TeacherCapture";
@@ -12,6 +13,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/signup",
+    element: <SignUpPage />,
   },
   {
     path: "/",
@@ -24,7 +29,7 @@ const router = createBrowserRouter([
       {
         path: "student",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['learner', 'admin']}>
             <StudentDashboard />
           </ProtectedRoute>
         ),
@@ -32,7 +37,7 @@ const router = createBrowserRouter([
       {
         path: "parent",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['parent', 'admin']}>
             <ParentPortal />
           </ProtectedRoute>
         ),
@@ -40,7 +45,7 @@ const router = createBrowserRouter([
       {
         path: "teacher",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherCapture />
           </ProtectedRoute>
         ),
@@ -48,7 +53,7 @@ const router = createBrowserRouter([
       {
         path: "leader",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['leader', 'admin']}>
             <LeaderDashboard />
           </ProtectedRoute>
         ),

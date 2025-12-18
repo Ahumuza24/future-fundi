@@ -1,0 +1,11 @@
+---
+trigger: always_on
+---
+
+Use React Query for all server communication.
+Use caching and stale time where possible.
+Minimize global state.
+Use lazy loaded routes.
+Use shadcn components for consistency and performance.
+Ensure all tables and dashboards are paginated.
+Ensure all lists have filters and search.

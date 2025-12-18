@@ -61,38 +61,50 @@ export default api;
 
 // API endpoints
 export const learnerApi = {
-  getAll: () => api.get('/learners/'),
-  getById: (id: string) => api.get(`/learners/${id}/`),
-  getTree: (id: string) => api.get(`/learners/${id}/tree/`),
-  getPathway: (id: string) => api.get(`/learners/${id}/pathway/`),
-  getArtifacts: (id: string) => api.get(`/learners/${id}/artifacts/`),
-  getPortfolioPdf: (id: string) => api.get(`/learners/${id}/portfolio-pdf/`),
+  getAll: () => api.get('/api/learners/'),
+  getById: (id: string) => api.get(`/api/learners/${id}/`),
+  getTree: (id: string) => api.get(`/api/learners/${id}/tree/`),
+  getPathway: (id: string) => api.get(`/api/learners/${id}/pathway/`),
+  getArtifacts: (id: string) => api.get(`/api/learners/${id}/artifacts/`),
+  getPortfolioPdf: (id: string) => api.get(`/api/learners/${id}/portfolio-pdf/`),
 };
 
 export const artifactApi = {
-  getAll: () => api.get('/artifacts/'),
-  getById: (id: string) => api.get(`/artifacts/${id}/`),
-  create: (data: any) => api.post('/artifacts/', data),
+  getAll: () => api.get('/api/artifacts/'),
+  getById: (id: string) => api.get(`/api/artifacts/${id}/`),
+  create: (data: any) => api.post('/api/artifacts/', data),
   uploadMedia: (id: string, formData: FormData) => 
-    api.post(`/artifacts/${id}/upload-media/`, formData, {
+    api.post(`/api/artifacts/${id}/upload-media/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 };
 
 export const dashboardApi = {
-  getKpis: () => api.get('/dashboard/kpis/'),
-  getTrends: () => api.get('/dashboard/trends/'),
-  getImpactBrief: () => api.get('/dashboard/impact-brief/'),
+  getKpis: () => api.get('/api/dashboard/kpis/'),
+  getTrends: () => api.get('/api/dashboard/trends/'),
+  getImpactBrief: () => api.get('/api/dashboard/impact-brief/'),
 };
 
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/`, credentials),
-  logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    return Promise.resolve();
-  },
+  register: (data: {
+    username: string;
+    email: string;
+    password: string;
+    password_confirm: string;
+    first_name: string;
+    last_name: string;
+    role?: string;
+    school_code?: string;
+  }) =>
+    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/register/`, data),
+  logout: (refreshToken: string) =>
+    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/logout/`, { refresh: refreshToken }),
   refreshToken: (refresh: string) => 
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`, { refresh }),
+  getProfile: () => 
+    api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`),
+  getDashboard: () =>
+    api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/dashboard/`),
 };

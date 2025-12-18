@@ -29,8 +29,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     # Local apps
+    "apps.users",
     "apps.core",
     "apps.api",
 ]
@@ -106,7 +109,7 @@ else:
         },
     }
 
-AUTH_USER_MODEL = "core.User"
+AUTH_USER_MODEL = "users.User"
 
 # Caching (Redis)
 # Caching (Redis)
@@ -156,10 +159,16 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_THROTTLE_CLASSES": [
-        # Placeholders for custom throttles
-        # "api.throttles.BurstRateThrottle",
-        # "api.throttles.SustainedRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+        "apps.api.throttles.BurstRateThrottle",
+        "apps.api.throttles.SustainedRateThrottle",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/min",
+        "burst": "60/min",
+        "sustained": "1000/hour",
+        "anon_burst": "20/min",
+    },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "20")),
 }

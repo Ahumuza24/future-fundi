@@ -48,4 +48,3 @@ class PathwayInputsSerializer(serializers.ModelSerializer):
             "breadth",
             "created_at",
         ]
-

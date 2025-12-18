@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 from django.db import models
 
 from .managers import TenantManager
@@ -26,14 +26,6 @@ class School(BaseUUIDModel):
         return f"{self.name} ({self.code})"
 
 
-class User(AbstractUser):
-    """Custom user with tenant association and simple RBAC role."""
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    tenant = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
-    role = models.CharField(max_length=32, default="learner", db_index=True)
-
-
 class TenantModel(BaseUUIDModel):
     """Abstract model for tenant-scoped entities."""
 
@@ -48,7 +40,7 @@ class TenantModel(BaseUUIDModel):
 class Learner(TenantModel):
     """Learner profile with consent and equity flags."""
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="learner_profile")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="learner_profile")
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
     consent_media = models.BooleanField(default=False, db_index=True)

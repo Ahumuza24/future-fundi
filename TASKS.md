@@ -52,21 +52,23 @@ This file tracks all implementation tasks and their completion status. Update af
 - [x] SafetyIncident (Incident tracking)
 
 ### API Endpoints - PARTIALLY COMPLETED
-- [x] `/api/learners/` - List/Create learners
-- [x] `/api/learners/<uuid:pk>/` - Get/Update/Delete learner
+- [x] `/api/learners/` - List/Create learners (with role-based filtering)
+- [x] `/api/learners/<uuid:pk>/` - Get/Update/Delete learner (role-based access)
 - [x] `/api/learners/<uuid:pk>/tree/` - Growth tree (stub)
 - [x] `/api/learners/<uuid:pk>/artifacts/` - Get learner artifacts
 - [x] `/api/learners/<uuid:pk>/pathway/` - Get pathway score
 - [x] `/api/learners/<uuid:pk>/portfolio-pdf/` - PDF generation (not implemented)
-- [x] `/api/artifacts/` - List/Create artifacts
+- [x] `/api/artifacts/` - List/Create artifacts (role-based access)
 - [x] `/api/artifacts/<uuid:pk>/upload-media/` - Media upload (not implemented)
-- [x] `/api/dashboard/kpis/` - Dashboard KPIs (basic)
+- [x] `/api/dashboard/kpis/` - Dashboard KPIs (teachers/leaders only)
+- [x] `/api/user/profile/` - Get/Update current user profile
 - [ ] `/api/dashboard/trends/` - Dashboard trends
 - [ ] `/api/dashboard/impact-brief/` - Impact brief
-- [x] `/auth/token/` - JWT token obtain
+- [x] `/auth/token/` - JWT token obtain (with user data in response)
 - [x] `/auth/token/refresh/` - JWT token refresh
+- [x] `/auth/logout/` - Logout endpoint (token blacklisting)
+- [x] `/api/auth/register/` - User registration endpoint (auto-login with JWT)
 - [ ] `/auth/google/` - Google OAuth
-- [ ] `/auth/logout/` - Logout endpoint
 
 ### Pathway Score Engine - COMPLETED & FIXED
 - [x] `calculate_pathway_score()` function (fixed to match spec: 0.4*Interest + 0.3*Skill + 0.2*Enjoyment + 0.1*Demand)
@@ -76,8 +78,16 @@ This file tracks all implementation tasks and their completion status. Update af
 - [ ] Batch recalculation Celery task
 - [ ] Unit tests for pathway logic
 
+### Role-Based Access Control (RBAC) - ✅ COMPLETED
+- [x] Permission classes (IsLearner, IsTeacher, IsParent, IsLeader, IsTeacherOrLeader, IsLearnerOrParent)
+- [x] Role-based queryset filtering in views
+- [x] Custom JWT serializer with user data and role claims
+- [x] User profile endpoint with role and tenant info
+- [x] Logout endpoint with token blacklisting
+- [x] Rate limiting/throttling (BurstRateThrottle, SustainedRateThrottle)
+- [x] Token blacklist app configured
+
 ### Missing Backend Features
-- [ ] Rate limiting/throttling implementation
 - [ ] Google OAuth integration (django-allauth)
 - [ ] Media upload handling (S3 integration)
 - [ ] PDF generation (WeasyPrint)
@@ -123,6 +133,7 @@ This file tracks all implementation tasks and their completion status. Update af
 - [x] Growth Tree visualization component (SVG with real tree anatomy: roots, trunk, rings, branches, leaves, fruit)
 - [x] Sidebar navigation (responsive, with logout)
 - [x] Login page (with FundiBots branding)
+- [x] Sign up page (with form validation, auto-login after registration)
 - [x] Protected routes (authentication guard)
 - [ ] Portfolio grid (artifacts with photos) - needs dynamic data
 - [ ] Pathway Score card (dynamic data) - needs API integration
@@ -136,8 +147,10 @@ This file tracks all implementation tasks and their completion status. Update af
 - [ ] School Impact Brief generator - needs API integration
 
 ### Missing Frontend Features
-- [x] Authentication flow (login, logout)
+- [x] Authentication flow (login, signup, logout with role-based redirect)
 - [x] Protected routes
+- [x] User profile integration (uses user data from token response)
+- [x] Sign up page with form validation
 - [ ] Google OAuth integration
 - [ ] Error boundaries
 - [ ] Loading states and skeletons
@@ -265,6 +278,30 @@ This file tracks all implementation tasks and their completion status. Update af
 **Last Updated:** 2025-01-18
 **Next Review:** After testing current implementation
 
+## 📝 User Registration & Sign Up Page (2025-01-18)
+
+**Completed:** User registration functionality
+- Registration endpoint (`/api/auth/register/`) with validation
+- RegisterSerializer with password confirmation, school code support
+- Auto-creates Learner profile if tenant provided
+- Auto-login after registration (returns JWT tokens)
+- SignUpPage component with form validation
+- Links between login and sign up pages
+- Role-based redirect after registration
+
+## 🔐 Role-Based Authentication & Backend Setup (2025-01-18)
+
+**Completed:** Full RBAC implementation
+- Permission classes for all roles (learner, teacher, parent, leader/admin)
+- Role-based queryset filtering in LearnerViewSet
+- Custom JWT serializer that includes user data in token response
+- User profile endpoint (`/api/user/profile/`)
+- Logout endpoint with token blacklisting (`/auth/logout/`)
+- Rate limiting/throttling configured (60/min burst, 1000/hour sustained)
+- Token blacklist app installed and migrated
+- Frontend updated to use user data from token response
+- Role-based redirect after login (learner→/student, teacher→/teacher, etc.)
+
 ## 🌳 Growth Tree Visualization (2025-01-18)
 
 **Completed:** Real tree anatomy implementation
@@ -295,4 +332,108 @@ This file tracks all implementation tasks and their completion status. Update af
 4. **Updated API View**
    - Fixed pathway endpoint to pass correct parameters to service functions
    - Added WeeklyPulse mood check for gate determination
+
+## ✅ Backend Restructuring & Users App (2025-01-18)
+
+**COMPLETED:** Full backend reorganization with dedicated users app
+
+### Users App Created
+- [x] Created `apps/users/` Django app for user management
+- [x] Moved User model from core to users app
+- [x] Updated AUTH_USER_MODEL to `users.User`
+- [x] User model with enhanced RBAC (learner, teacher, parent, leader, admin)
+- [x] User model includes `get_dashboard_url()` method for role-based routing
+- [x] Custom UserAdmin with role and tenant fields
+
+### Authentication & Serializers
+- [x] CustomTokenObtainPairSerializer with user data in response
+- [x] RegisterSerializer with school_code support and auto-login
+- [x] UserSerializer with tenant info and dashboard_url
+- [x] JWT tokens include custom claims (role, tenant_id, username, email)
+
+### Authentication Views & URLs
+- [x] CustomTokenObtainPairView for login with user data
+- [x] UserProfileView for GET/PATCH user profile
+- [x] register_view for user registration with auto-login
+- [x] logout_view with token blacklisting
+- [x] dashboard_redirect_view for role-based dashboard routing
+- [x] All auth endpoints moved to `/auth/*` and `/user/*`
+
+### URL Configuration
+- [x] Updated main urls.py to include users app
+- [x] Removed duplicate auth endpoints from api app
+- [x] Clean separation: users app handles auth, api app handles business logic
+- [x] Auth endpoints: `/auth/token/`, `/auth/register/`, `/auth/logout/`, `/user/profile/`
+- [x] API endpoints: `/api/learners/`, `/api/artifacts/`, `/api/dashboard/kpis/`
+
+### Core Models Updated
+- [x] Removed User model from core.models
+- [x] Updated Learner to use settings.AUTH_USER_MODEL
+- [x] Maintained all other models (School, Artifact, PathwayInputs, etc.)
+- [x] TenantModel and TenantManager remain in core
+
+### API Cleanup
+- [x] Removed UserSerializer, RegisterSerializer from api/serializers.py
+- [x] Removed CustomTokenObtainPairSerializer from api/serializers.py
+- [x] Removed register_view, logout_view, UserProfileView from api/views.py
+- [x] Updated api/urls.py to remove duplicate auth routes
+- [x] API now focuses on business logic only
+
+### Documentation
+- [x] Created comprehensive backend/README.md
+- [x] Documented all authentication flows
+- [x] Documented role-based access control
+- [x] Documented API endpoints
+- [x] Documented multi-tenancy architecture
+- [x] Documented pathway score engine
+- [x] Added setup instructions and troubleshooting
+
+## ✅ Frontend Authentication Updates (2025-01-18)
+
+**COMPLETED:** Role-based authentication and routing
+
+### Authentication Utilities
+- [x] Created `lib/auth.ts` with authentication helpers
+- [x] UserRole type definition (learner, teacher, parent, leader, admin)
+- [x] getDashboardRoute() function for role-based routing
+- [x] canAccessRoute() for permission checking
+- [x] getRoleDisplayName() for UI display
+- [x] getCurrentUser() to get user from localStorage
+- [x] clearAuth() to clear authentication data
+
+### Store Updates
+- [x] Updated useAuthStore with full User interface
+- [x] User interface includes all fields (role, tenant, dashboard_url, etc.)
+- [x] Store persists user data to localStorage
+- [x] login() saves user data to localStorage
+- [x] logout() clears user data from localStorage
+- [x] setUser() updates user data in localStorage
+
+### Protected Routes
+- [x] Updated ProtectedRoute component with role-based access
+- [x] Added allowedRoles prop for route protection
+- [x] Automatic redirect to appropriate dashboard if role mismatch
+- [x] Uses getCurrentUser() and getDashboardRoute() helpers
+
+### App Routing
+- [x] Updated App.tsx with role-based route protection
+- [x] Student route: learner, admin only
+- [x] Parent route: parent, admin only
+- [x] Teacher route: teacher, admin only
+- [x] Leader route: leader, admin only
+
+### API Configuration
+- [x] Updated authApi endpoints to match new backend structure
+- [x] Login: `/auth/token/`
+- [x] Register: `/auth/register/`
+- [x] Logout: `/auth/logout/`
+- [x] Profile: `/user/profile/`
+- [x] Dashboard redirect: `/user/dashboard/`
+- [x] Updated all API endpoints to use `/api/` prefix
+
+### Login & Signup Pages
+- [x] LoginPage uses role-based redirect after login
+- [x] SignUpPage uses role-based redirect after registration
+- [x] Both pages handle user data from token response
+- [x] Auto-login after registration with JWT tokens
 

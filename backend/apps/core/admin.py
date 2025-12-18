@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import (
     School,
-    User,
     Learner,
     ParentContact,
     Artifact,
@@ -21,11 +20,6 @@ from .models import (
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
     list_display = ("name", "code")
-
-
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ("username", "email", "role", "tenant")
 
 
 @admin.register(Learner)

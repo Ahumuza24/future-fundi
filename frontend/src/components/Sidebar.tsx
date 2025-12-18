@@ -63,7 +63,14 @@ const Sidebar = () => {
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = async () => {
-    await authApi.logout();
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      try {
+        await authApi.logout(refreshToken);
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
     logout();
     navigate("/login");
   };
