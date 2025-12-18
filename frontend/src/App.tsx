@@ -8,6 +8,9 @@ import StudentDashboard from "@/pages/StudentDashboard";
 import ParentPortal from "@/pages/ParentPortal";
 import TeacherCapture from "@/pages/TeacherCapture";
 import LeaderDashboard from "@/pages/LeaderDashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
+import SettingsPage from "@/pages/SettingsPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 const router = createBrowserRouter([
   {
@@ -57,6 +60,26 @@ const router = createBrowserRouter([
             <LeaderDashboard />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "*",
+        element: <NotFoundPage />,
       },
     ],
   },

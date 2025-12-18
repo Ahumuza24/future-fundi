@@ -1,193 +1,157 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Download, Calendar, Image as ImageIcon, TrendingUp } from "lucide-react";
+import { Users, Download, Calendar, TrendingUp, MessageCircle, Heart, Award, ChevronRight } from "lucide-react";
 
 interface Child {
   id: string;
   name: string;
+  grade: string;
   pathwayScore: number;
   gate: string;
   recentArtifacts: number;
 }
 
 const ParentPortal = () => {
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
 
-  // Mock data - will be replaced with React Query
   const children: Child[] = [
-    { id: "1", name: "Amina Nakato", pathwayScore: 72, gate: "Grow", recentArtifacts: 5 },
-    { id: "2", name: "David Okello", pathwayScore: 85, gate: "Thrive", recentArtifacts: 8 },
+    { id: "1", name: "Amina Nakato", grade: "Grade 6", pathwayScore: 72, gate: "GREEN", recentArtifacts: 5 },
+    { id: "2", name: "David Nakato", grade: "Grade 4", pathwayScore: 65, gate: "AMBER", recentArtifacts: 3 },
   ];
 
-  const mockArtifacts = [
-    {
-      id: "1",
-      title: "Solar Panel Prototype",
-      module: "Renewable Energy",
-      date: "2025-12-15",
-      reflection: "Built my first working solar panel! It can charge a phone.",
-    },
-    {
-      id: "2",
-      title: "Robot Arm Design",
-      module: "Robotics",
-      date: "2025-12-10",
-      reflection: "Designed a robot arm that can pick up objects.",
-    },
-    {
-      id: "3",
-      title: "Water Filter Project",
-      module: "Environmental Science",
-      date: "2025-12-05",
-      reflection: "Created a filter that makes dirty water clean!",
-    },
-  ];
+  const selectedChildData = children.find(c => c.id === selectedChild);
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
         <header className="stagger" style={{ animationDelay: '0ms' }}>
-          <h1 className="heading-font text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
+          <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
             Parent Portal
           </h1>
-          <p className="text-gray-600">Track your child's learning journey</p>
+          <p className="text-gray-600">Track your children's growth and celebrate their achievements</p>
         </header>
 
         {/* Child Selector */}
-        <Card className="stagger border-l-4" style={{ 
-          animationDelay: '50ms',
-          borderLeftColor: 'var(--fundi-purple)'
-        }}>
+        <Card className="stagger border-l-4" style={{ animationDelay: '50ms', borderLeftColor: 'var(--fundi-purple)' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
-              Select Your Child
+              <Users className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
+              Your Children
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
               {children.map((child) => (
-                <button
+                <Card 
                   key={child.id}
-                  onClick={() => setSelectedChild(child)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedChild?.id === child.id
-                      ? 'border-[var(--fundi-orange)] bg-orange-50'
-                      : 'border-gray-200 hover:border-[var(--fundi-cyan)]'
+                  className={`hover:shadow-lg transition-all cursor-pointer ${
+                    selectedChild === child.id ? 'ring-2 ring-purple-500' : ''
                   }`}
+                  onClick={() => setSelectedChild(child.id)}
                 >
-                  <div className="font-semibold text-lg">{child.name}</div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                    <span className="mono-font">Score: {child.pathwayScore}</span>
-                    <span className="px-2 py-1 rounded text-xs font-semibold"
-                          style={{ 
-                            backgroundColor: 'var(--fundi-lime)', 
-                            color: 'var(--fundi-black)' 
-                          }}>
-                      {child.gate}
-                    </span>
-                  </div>
-                </button>
+                  <CardHeader>
+                    <CardTitle>{child.name}</CardTitle>
+                    <CardDescription>{child.grade} • {child.recentArtifacts} recent artifacts</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-600">Pathway Score</div>
+                        <div className="text-2xl font-bold mono-font" style={{ color: 'var(--fundi-orange)' }}>{child.pathwayScore}</div>
+                      </div>
+                      <div className="px-3 py-1 rounded" style={{ 
+                        backgroundColor: child.gate === 'GREEN' ? 'var(--fundi-lime)' : 'var(--fundi-yellow)' 
+                      }}>
+                        <span className="text-sm font-bold">{child.gate}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {selectedChild && (
+        {selectedChildData && (
           <>
-            {/* Pathway Summary */}
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="stagger border-l-4" style={{ 
-                animationDelay: '100ms',
-                borderLeftColor: 'var(--fundi-orange)'
-              }}>
-                <CardHeader>
-                  <CardTitle className="text-xl">Pathway Score</CardTitle>
-                  <CardDescription>Current readiness level</CardDescription>
+            {/* Progress Overview */}
+            <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '100ms' }}>
+              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
+                <CardHeader className="pb-3">
+                  <CardDescription>Pathway Score</CardDescription>
+                  <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-orange)' }}>
+                    {selectedChildData.pathwayScore}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="mono-font text-4xl font-bold" style={{ color: 'var(--fundi-orange)' }}>
-                    {selectedChild.pathwayScore}
-                  </div>
-                  <div className="mt-2 inline-block px-3 py-1 rounded-full text-sm font-semibold" 
-                       style={{ 
-                         backgroundColor: 'var(--fundi-lime)', 
-                         color: 'var(--fundi-black)' 
-                       }}>
-                    {selectedChild.gate} Gate
+                  <div className="w-full h-2 bg-gray-200 rounded-full">
+                    <div className="h-full rounded-full" style={{ 
+                      width: `${selectedChildData.pathwayScore}%`,
+                      backgroundColor: 'var(--fundi-orange)'
+                    }}></div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="stagger border-l-4" style={{ 
-                animationDelay: '150ms',
-                borderLeftColor: 'var(--fundi-cyan)'
-              }}>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5" style={{ color: 'var(--fundi-cyan)' }} />
-                    Artifacts
+              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
+                <CardHeader className="pb-3">
+                  <CardDescription>Artifacts This Term</CardDescription>
+                  <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
+                    {selectedChildData.recentArtifacts}
                   </CardTitle>
-                  <CardDescription>This term</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="mono-font text-4xl font-bold" style={{ color: 'var(--fundi-cyan)' }}>
-                    {selectedChild.recentArtifacts}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">Projects completed</p>
+                  <p className="text-sm text-gray-600">+2 from last week</p>
                 </CardContent>
               </Card>
 
-              <Card className="stagger border-l-4" style={{ 
-                animationDelay: '200ms',
-                borderLeftColor: 'var(--fundi-pink)'
-              }}>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" style={{ color: 'var(--fundi-pink)' }} />
-                    Progress
-                  </CardTitle>
-                  <CardDescription>This month</CardDescription>
+              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
+                <CardHeader className="pb-3">
+                  <CardDescription>Current Gate</CardDescription>
+                  <CardTitle className="text-2xl font-bold">{selectedChildData.gate}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="mono-font text-4xl font-bold" style={{ color: 'var(--fundi-pink)' }}>
-                    +12
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">Points gained</p>
+                  <p className="text-sm text-gray-600">On track for next level</p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Weekly Tiles Feed */}
-            <Card className="stagger" style={{ animationDelay: '250ms' }}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Artifacts</CardTitle>
-                  <CardDescription>Your child's latest work</CardDescription>
+            {/* Weekly Artifacts Feed */}
+            <Card className="stagger border-l-4" style={{ animationDelay: '150ms', borderLeftColor: 'var(--fundi-orange)' }}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-6 w-6" style={{ color: 'var(--fundi-orange)' }} />
+                    Recent Artifacts
+                  </CardTitle>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Portfolio
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Portfolio
-                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockArtifacts.map((artifact, index) => (
-                    <div 
-                      key={artifact.id}
-                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                      style={{ animationDelay: `${300 + index * 50}ms` }}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-cyan-100 rounded-lg flex-shrink-0" />
-                        <div className="flex-1">
-                          <h3 className="heading-font font-bold text-lg">{artifact.title}</h3>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {artifact.module} • {artifact.date}
-                          </p>
-                          <p className="text-gray-700 italic">"{artifact.reflection}"</p>
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200">
+                      <div className="w-24 h-24 rounded-lg flex-shrink-0" style={{ 
+                        background: i % 2 === 0 
+                          ? 'linear-gradient(135deg, var(--fundi-cyan), var(--fundi-lime))'
+                          : 'linear-gradient(135deg, var(--fundi-orange), var(--fundi-yellow))'
+                      }}></div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold mb-1">Solar Panel Prototype {i}</h3>
+                            <p className="text-sm text-gray-600 mb-2">Renewable Energy Module • {i} days ago</p>
+                          </div>
+                          <Award className="h-5 w-5" style={{ color: 'var(--fundi-yellow)' }} />
+                        </div>
+                        <p className="text-sm italic text-gray-700 mb-3">"I learned how solar cells convert sunlight into electricity and built my own working panel!"</p>
+                        <div className="flex gap-2">
+                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)', color: 'var(--fundi-orange)' }}>Problem Solving</span>
+                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(21, 189, 219, 0.1)', color: 'var(--fundi-cyan)' }}>Technical Skills</span>
                         </div>
                       </div>
                     </div>
@@ -196,67 +160,96 @@ const ParentPortal = () => {
               </CardContent>
             </Card>
 
-            {/* Showcase Calendar */}
-            <Card className="stagger" style={{ animationDelay: '300ms' }}>
+            {/* Communication Section */}
+            <div className="grid md:grid-cols-2 gap-6 stagger" style={{ animationDelay: '200ms' }}>
+              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-purple)' }}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
+                    Teacher Updates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-purple-50">
+                      <p className="text-sm font-semibold mb-1">Ms. Nakimuli - Robotics</p>
+                      <p className="text-sm text-gray-700">"{selectedChildData.name} showed excellent teamwork during the robot challenge!"</p>
+                      <p className="text-xs text-gray-500 mt-2">2 days ago</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-purple-50">
+                      <p className="text-sm font-semibold mb-1">Mr. Okello - Science</p>
+                      <p className="text-sm text-gray-700">"Great progress on the environmental project. Keep it up!"</p>
+                      <p className="text-xs text-gray-500 mt-2">1 week ago</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full mt-4">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Message Teachers
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-pink)' }}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-6 w-6" style={{ color: 'var(--fundi-pink)' }} />
+                    Weekly Pulse
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center mb-4">
+                    <div className="text-5xl mb-2">😊</div>
+                    <p className="text-sm text-gray-600">Mood: Positive</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(158, 203, 58, 0.1)' }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--fundi-lime)' }}>This Week's Win</p>
+                      <p className="text-sm text-gray-700">"Finished my robot prototype!"</p>
+                    </div>
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--fundi-orange)' }}>This Week's Challenge</p>
+                      <p className="text-sm text-gray-700">"Need more practice with coding"</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Next Steps */}
+            <Card className="stagger border-l-4" style={{ animationDelay: '250ms', borderLeftColor: 'var(--fundi-cyan)' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-6 w-6" style={{ color: 'var(--fundi-yellow-dark)' }} />
-                  Upcoming Showcases
+                  <TrendingUp className="h-6 w-6" style={{ color: 'var(--fundi-cyan)' }} />
+                  Recommended Next Steps
                 </CardTitle>
-                <CardDescription>Events where your child will present their work</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="text-center">
-                      <div className="mono-font text-2xl font-bold" style={{ color: 'var(--fundi-yellow-dark)' }}>
-                        22
-                      </div>
-                      <div className="text-xs text-gray-600">DEC</div>
+                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-cyan-200 bg-cyan-50">
+                    <div>
+                      <p className="font-semibold">Deepen Technical Skills</p>
+                      <p className="text-sm text-gray-600">Explore advanced robotics modules</p>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold">End of Term Showcase</h4>
-                      <p className="text-sm text-gray-600">10:00 AM - School Hall</p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      RSVP
-                    </Button>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
-                  
-                  <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="text-center">
-                      <div className="mono-font text-2xl font-bold text-gray-600">
-                        15
-                      </div>
-                      <div className="text-xs text-gray-600">JAN</div>
+                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-purple-200 bg-purple-50">
+                    <div>
+                      <p className="font-semibold">Showcase Portfolio</p>
+                      <p className="text-sm text-gray-600">Share work with mentors</p>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold">Robotics Competition</h4>
-                      <p className="text-sm text-gray-600">2:00 PM - Innovation Lab</p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      RSVP
-                    </Button>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Download Portfolio */}
-            <div className="stagger flex justify-center" style={{ animationDelay: '350ms' }}>
-              <Button variant="orange" size="lg" className="gap-2">
-                <Download className="h-5 w-5" />
-                Download Full Portfolio PDF
-              </Button>
-            </div>
           </>
         )}
 
         {!selectedChild && (
           <Card className="stagger text-center p-12" style={{ animationDelay: '100ms' }}>
-            <User className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+            <Users className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h3 className="heading-font text-xl font-semibold mb-2">Select a child to view their progress</h3>
-            <p className="text-gray-600">Choose from the options above to see detailed information</p>
+            <p className="text-gray-600">Choose from your children above to see their growth journey</p>
           </Card>
         )}
       </div>

@@ -8,50 +8,153 @@ import {
   Menu,
   X,
   Sparkles,
-  LogOut
+  LogOut,
+  Settings,
+  FileText,
+  TrendingUp,
+  Award,
+  Calendar
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
+import { getCurrentUser } from "@/lib/auth";
 
 interface NavItem {
   title: string;
   path: string;
   icon: typeof User;
   color: string;
+  roles: string[];
 }
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   {
-    title: "Home",
-    path: "/",
+    title: "Dashboard",
+    path: "/student",
     icon: Home,
     color: "var(--fundi-orange)",
+    roles: ["learner"],
   },
   {
-    title: "Student",
-    path: "/student",
-    icon: User,
+    title: "My Portfolio",
+    path: "/student/portfolio",
+    icon: FileText,
     color: "var(--fundi-orange)",
+    roles: ["learner"],
   },
   {
-    title: "Parent",
+    title: "Growth Tree",
+    path: "/student/tree",
+    icon: TrendingUp,
+    color: "var(--fundi-orange)",
+    roles: ["learner"],
+  },
+  {
+    title: "Achievements",
+    path: "/student/achievements",
+    icon: Award,
+    color: "var(--fundi-orange)",
+    roles: ["learner"],
+  },
+  {
+    title: "Dashboard",
     path: "/parent",
+    icon: Home,
+    color: "var(--fundi-purple)",
+    roles: ["parent"],
+  },
+  {
+    title: "My Children",
+    path: "/parent/children",
     icon: Users,
     color: "var(--fundi-purple)",
+    roles: ["parent"],
   },
   {
-    title: "Teacher",
+    title: "Weekly Updates",
+    path: "/parent/updates",
+    icon: Calendar,
+    color: "var(--fundi-purple)",
+    roles: ["parent"],
+  },
+  {
+    title: "Dashboard",
     path: "/teacher",
+    icon: Home,
+    color: "var(--fundi-cyan)",
+    roles: ["teacher"],
+  },
+  {
+    title: "My Classes",
+    path: "/teacher/classes",
+    icon: Users,
+    color: "var(--fundi-cyan)",
+    roles: ["teacher"],
+  },
+  {
+    title: "Capture Artifact",
+    path: "/teacher/capture",
     icon: BookOpen,
     color: "var(--fundi-cyan)",
+    roles: ["teacher"],
   },
   {
-    title: "Leader",
+    title: "Assessments",
+    path: "/teacher/assessments",
+    icon: FileText,
+    color: "var(--fundi-cyan)",
+    roles: ["teacher"],
+  },
+  {
+    title: "Dashboard",
     path: "/leader",
+    icon: Home,
+    color: "var(--fundi-lime)",
+    roles: ["leader", "admin"],
+  },
+  {
+    title: "Analytics",
+    path: "/leader/analytics",
     icon: BarChart3,
     color: "var(--fundi-lime)",
+    roles: ["leader", "admin"],
+  },
+  {
+    title: "School Overview",
+    path: "/leader/overview",
+    icon: Users,
+    color: "var(--fundi-lime)",
+    roles: ["leader", "admin"],
+  },
+  {
+    title: "Reports",
+    path: "/leader/reports",
+    icon: FileText,
+    color: "var(--fundi-lime)",
+    roles: ["leader", "admin"],
+  },
+  {
+    title: "Admin Dashboard",
+    path: "/admin",
+    icon: Settings,
+    color: "var(--fundi-red)",
+    roles: ["admin"],
+  },
+  {
+    title: "User Management",
+    path: "/admin/users",
+    icon: Users,
+    color: "var(--fundi-red)",
+    roles: ["admin"],
+  },
+  {
+    title: "School Management",
+    path: "/admin/schools",
+    icon: BarChart3,
+    color: "var(--fundi-red)",
+    roles: ["admin"],
   },
 ];
 
@@ -61,6 +164,12 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
+  const user = getCurrentUser();
+
+  const navItems = useMemo(() => {
+    if (!user) return [];
+    return allNavItems.filter(item => item.roles.includes(user.role));
+  }, [user]);
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem('refresh_token');
@@ -186,21 +295,33 @@ const Sidebar = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t space-y-3">
+          <div className="p-4 border-t space-y-2">
             {isAuthenticated && (
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 text-left"
-              >
-                <div className="p-2 rounded-lg bg-red-100">
-                  <LogOut className="h-5 w-5 text-red-600" />
-                </div>
-                <span className="flex-1 text-red-600 font-semibold">Logout</span>
-              </button>
+              <>
+                <Link
+                  to="/settings"
+                  onClick={() => setIsOpen(false)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-100 text-left"
+                >
+                  <div className="p-2 rounded-lg bg-gray-100">
+                    <Settings className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <span className="flex-1 text-gray-700 font-semibold">Settings</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 text-left"
+                >
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <LogOut className="h-5 w-5 text-red-600" />
+                  </div>
+                  <span className="flex-1 text-red-600 font-semibold">Logout</span>
+                </button>
+              </>
             )}
-            <div className="text-xs text-gray-500 text-center">
+            <div className="text-xs text-gray-500 text-center pt-2">
               <p className="mono-font font-semibold mb-1">60k+ Learners</p>
-              <p>East Africa • 2024</p>
+              <p>East Africa • 2025</p>
             </div>
           </div>
         </div>
