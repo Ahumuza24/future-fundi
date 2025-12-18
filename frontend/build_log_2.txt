@@ -1,0 +1,17 @@
+[36mvite v7.2.4 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 7 modules transformed.
+[31m✗[39m Build failed in 339ms
+[31merror during build:
+[31m[@tailwindcss/vite:generate:build] Cannot apply unknown utility class `border-border`[31m
+file: [36mD:/mnt/futurefundi/frontend/src/index.css[31m
+    at onInvalidCandidate (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:21:1511)
+    at Ce (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:16:36652)
+    at file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:21:355
+    at br (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:3:1718)
+    at I (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:3:1377)
+    at Ae (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:21:172)
+    at Wi (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:38:294)
+    at async Za (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:38:631)
+    at async rf (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/tailwindcss@4.1.18/node_modules/tailwindcss/dist/chunk-CT46QCH7.mjs:38:1406)
+    at async lu (file:///D:/mnt/futurefundi/frontend/node_modules/.pnpm/@tailwindcss+node@4.1.18/node_modules/@tailwindcss/node/dist/index.mjs:10:3458)[39m

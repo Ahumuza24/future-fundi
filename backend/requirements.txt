@@ -1,0 +1,19 @@
+Django
+djangorestframework
+django-allauth
+dj-rest-auth
+djangorestframework-simplejwt
+django-cors-headers
+django-filter
+django-redis
+celery
+redis
+psycopg2-binary
+boto3
+pillow
+# weasyprint==60.2
+python-dotenv
+gunicorn
+whitenoise
+django-storages
+drf-spectacular
