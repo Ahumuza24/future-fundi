@@ -1,21 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { 
-  User, 
-  Users, 
-  BookOpen, 
-  BarChart3, 
-  Home, 
-  Menu, 
-  X, 
-  LogOut, 
-  FileText, 
-  TrendingUp, 
-  Award, 
-  Calendar
+import {
+  User,
+  Users,
+  BookOpen,
+  BarChart3,
+  Home,
+  Menu,
+  X,
+  LogOut,
+  FileText,
+  TrendingUp,
+  Award,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useUIStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -133,7 +135,7 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
   },
-  
+
   {
     title: "User Management",
     path: "/admin/users",
@@ -157,6 +159,8 @@ const Sidebar = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
   const user = getCurrentUser();
+  const isSidebarCollapsed = useUIStore((state) => state.isSidebarCollapsed);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -206,59 +210,72 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full w-56 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out",
+          "fixed left-0 top-0 h-full bg-white shadow-xl z-40 transform transition-all duration-300 ease-in-out border-r",
           "lg:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          isSidebarCollapsed ? "w-20" : "w-72"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Brand */}
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-3">
-              <div 
+          <div className="p-4 border-b flex items-center justify-between relative group">
+            <div className={cn("flex items-center gap-3 transition-opacity duration-300", isSidebarCollapsed ? "justify-center w-full" : "")}>
+              <div
                 className="p-1 rounded-lg"
               >
-                <img 
-                  src="/fundi_bots_logo.png" 
-                  alt="Fundi Bots Logo" 
-                  className="h-8 w-auto object-contain"
+                <img
+                  src="/fundi_bots_logo.png"
+                  alt="Fundi Bots Logo"
+                  className={cn("object-contain transition-all duration-300", isSidebarCollapsed ? "h-10 w-10" : "h-8 w-auto")}
                 />
               </div>
-              <div>
-                <h1 className="heading-font text-xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+              <div className={cn("transition-opacity duration-300", isSidebarCollapsed ? "hidden opacity-0 w-0 overflow-hidden" : "opacity-100")}>
+                <h1 className="heading-font text-xl font-bold whitespace-nowrap" style={{ color: 'var(--fundi-black)' }}>
                   Future Fundi
                 </h1>
-                <p className="text-xs text-gray-500">Growth Dashboard</p>
               </div>
             </div>
+
+            {/* Collapse Button */}
+            <button
+              onClick={toggleSidebar}
+              className={cn(
+                "hidden lg:flex items-center justify-center h-6 w-6 rounded-full border bg-white shadow-md text-gray-500 hover:text-[var(--fundi-orange)] hover:border-[var(--fundi-orange)] absolute -right-3 top-9 z-50 transition-all duration-300",
+                isSidebarCollapsed ? "-right-3" : "opacity-0 group-hover:opacity-100 -right-3"
+              )}
+            >
+              {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-2 space-y-2 overflow-y-auto overflow-x-hidden">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
-              
+
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
+                    "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative",
                     "hover:shadow-md",
                     active
                       ? "shadow-md font-semibold"
-                      : "hover:bg-gray-50"
+                      : "hover:bg-gray-50",
+                    isSidebarCollapsed ? "justify-center" : ""
                   )}
                   style={{
                     backgroundColor: active ? `${item.color}15` : "transparent",
-                    borderLeft: active ? `4px solid ${item.color}` : "4px solid transparent",
+                    borderLeft: active && !isSidebarCollapsed ? `4px solid ${item.color}` : "4px solid transparent",
                   }}
+                  title={isSidebarCollapsed ? item.title : undefined}
                 >
                   <div
                     className={cn(
-                      "p-2 rounded-lg transition-colors",
+                      "p-2 rounded-lg transition-colors flex-shrink-0",
                       active ? "" : "opacity-70"
                     )}
                     style={{
@@ -271,18 +288,29 @@ const Sidebar = () => {
                     />
                   </div>
                   <span
-                    className="flex-1"
+                    className={cn(
+                      "flex-1 transition-all duration-300 whitespace-nowrap overflow-hidden",
+                      isSidebarCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100"
+                    )}
                     style={{
                       color: active ? item.color : "var(--fundi-black)",
                     }}
                   >
                     {item.title}
                   </span>
-                  {active && (
+
+                  {active && !isSidebarCollapsed && (
                     <div
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
+                  )}
+
+                  {/* Tooltip for collapsed state */}
+                  {isSidebarCollapsed && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                      {item.title}
+                    </div>
                   )}
                 </Link>
               );
@@ -293,8 +321,8 @@ const Sidebar = () => {
           <div className="p-4 border-t space-y-2">
             {isAuthenticated && (
               <>
-               
-                
+
+
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 text-left"
@@ -306,7 +334,7 @@ const Sidebar = () => {
                 </button>
               </>
             )}
-            
+
           </div>
         </div>
       </aside>
