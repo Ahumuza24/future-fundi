@@ -36,17 +36,10 @@ const NotFoundPage = () => {
           <p className="text-lg text-gray-600 mb-2">
             Oops! This page is still under construction.
           </p>
-          <p className="text-gray-500">
-            We're working hard to build amazing features for you!
-          </p>
+          
         </div>
 
-        {/* Fun Message */}
-        <div className="mb-8 p-6 rounded-lg border-2 border-dashed" style={{ borderColor: 'var(--fundi-orange)', backgroundColor: 'rgba(240, 87, 34, 0.05)' }}>
-          <p className="text-sm md:text-base text-gray-700 italic">
-            "Every great innovation starts with curiosity. This page is just waiting for its moment to shine!" ✨
-          </p>
-        </div>
+        
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

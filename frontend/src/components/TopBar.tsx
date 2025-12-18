@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, User } from "lucide-react";
+import { Bell, ChevronDown, Settings, User } from "lucide-react";
 import { getCurrentUser, getRoleDisplayName } from "@/lib/auth";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -84,8 +84,8 @@ const TopBar = () => {
                   className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"
                   onClick={() => setShowDropdown(false)}
                 >
-                  <User className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm text-gray-700">Profile Settings</span>
+                  <Settings className="h-4 w-4 text-gray-600" />
+                  <span className="text-m text-gray-800"> Settings</span>
                 </Link>
               </div>
             </>

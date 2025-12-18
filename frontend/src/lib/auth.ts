@@ -28,7 +28,7 @@ export const getDashboardRoute = (role: UserRole): string => {
     teacher: '/teacher',
     parent: '/parent',
     leader: '/leader',
-    admin: '/leader', // Admins use leader dashboard
+    admin: '/admin',
   };
   
   return dashboardMap[role] || '/student';
@@ -43,7 +43,7 @@ export const canAccessRoute = (userRole: UserRole, routePath: string): boolean =
     teacher: ['/teacher', '/'],
     parent: ['/parent', '/'],
     leader: ['/leader', '/'],
-    admin: ['/leader', '/teacher', '/parent', '/student', '/'], // Admin can access all
+    admin: ['/admin', '/leader', '/teacher', '/parent', '/student', '/'], // Admin can access all
   };
   
   const allowedRoutes = roleRoutes[userRole] || [];

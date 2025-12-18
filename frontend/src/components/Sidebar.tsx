@@ -109,7 +109,7 @@ const allNavItems: NavItem[] = [
   },
   {
     title: "Dashboard",
-    path: "/leader",
+    path: "/admin",
     icon: Home,
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
@@ -135,13 +135,7 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
   },
-  {
-    title: "Admin Dashboard",
-    path: "/admin",
-    icon: Settings,
-    color: "var(--fundi-red)",
-    roles: ["admin"],
-  },
+  
   {
     title: "User Management",
     path: "/admin/users",
@@ -298,16 +292,8 @@ const Sidebar = () => {
           <div className="p-4 border-t space-y-2">
             {isAuthenticated && (
               <>
-                <Link
-                  to="/settings"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-100 text-left"
-                >
-                  <div className="p-2 rounded-lg bg-gray-100">
-                    <Settings className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <span className="flex-1 text-gray-700 font-semibold">Settings</span>
-                </Link>
+               
+                
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 text-left"
@@ -319,10 +305,7 @@ const Sidebar = () => {
                 </button>
               </>
             )}
-            <div className="text-xs text-gray-500 text-center pt-2">
-              <p className="mono-font font-semibold mb-1">60k+ Learners</p>
-              <p>East Africa • 2025</p>
-            </div>
+            
           </div>
         </div>
       </aside>
