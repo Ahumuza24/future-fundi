@@ -10,6 +10,8 @@ venv/
 # Django
 *.log
 local_settings.py
+# Django DB
+backend/db.sqlite3
 
 # Node
 node_modules/

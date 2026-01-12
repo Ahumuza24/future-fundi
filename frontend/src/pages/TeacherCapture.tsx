@@ -56,7 +56,7 @@ const TeacherCapture = () => {
         {/* Header */}
         <header className="stagger" style={{ animationDelay: '0ms' }}>
           <h1 className="heading-font text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
-            Teacher Capture
+            Teacher Dashboard
           </h1>
           <p className="text-gray-600">Record attendance, submit artifacts, and track progress</p>
         </header>
