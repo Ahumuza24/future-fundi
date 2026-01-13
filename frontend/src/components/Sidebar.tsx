@@ -95,7 +95,7 @@ const allNavItems: NavItem[] = [
   },
   {
     title: "Capture Artifact",
-    path: "/teacher/capture",
+    path: "/teacher/capture-artifact",
     icon: BookOpen,
     color: "var(--fundi-cyan)",
     roles: ["teacher"],

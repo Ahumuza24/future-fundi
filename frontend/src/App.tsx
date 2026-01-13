@@ -11,7 +11,7 @@ import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
 import TeacherDashboard from "@/pages/TeacherDashboard";
 import TeacherAttendance from "@/pages/TeacherAttendance";
 import TeacherArtifactCapture from "@/pages/TeacherArtifactCapture";
-import TeacherCapture from "@/pages/TeacherCapture";
+import ComingSoon from "@/pages/ComingSoon";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import SettingsPage from "@/pages/SettingsPage";
@@ -87,6 +87,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherArtifactCapture />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/classes",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <ComingSoon />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/assessments",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <ComingSoon />
           </ProtectedRoute>
         ),
       },
