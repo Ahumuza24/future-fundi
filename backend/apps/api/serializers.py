@@ -72,6 +72,15 @@ class ChildCreateSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=attrs['username']).exists():
             raise serializers.ValidationError({"username": "This username is already taken."})
         
+        # Age Validation
+        dob = attrs.get('date_of_birth')
+        if dob:
+            from datetime import date
+            today = date.today()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            if age < 6 or age > 18:
+                raise serializers.ValidationError({"date_of_birth": "Child must be between 6 and 18 years old."})
+            
         return attrs
     
     def create(self, validated_data):
@@ -138,6 +147,18 @@ class ChildUpdateSerializer(serializers.ModelSerializer):
             if new_password != new_password_confirm:
                 raise serializers.ValidationError({"new_password": "Passwords do not match."})
         
+        # Age Validation
+        dob = attrs.get('date_of_birth')
+        # Also check existing instance DOB if not provided in attrs but updated via other fields (though less critical here, if they are changing DOB they send it)
+        # But for partial update, attrs might not have date_of_birth.
+        # If date_of_birth is passed, validate it.
+        if dob:
+            from datetime import date
+            today = date.today()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            if age < 6 or age > 18:
+                raise serializers.ValidationError({"date_of_birth": "Child must be between 6 and 18 years old."})
+                
         return attrs
     
     def update(self, instance, validated_data):

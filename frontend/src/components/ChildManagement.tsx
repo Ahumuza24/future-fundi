@@ -74,10 +74,35 @@ export default function ChildManagement() {
         }
     };
 
+    const calculateAge = (dobString: string) => {
+        if (!dobString) return 0;
+        const dob = new Date(dobString);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
+    const validateAge = (dob: string) => {
+        const age = calculateAge(dob);
+        if (age < 6 || age > 18) {
+            setError("Child must be between 6 and 18 years old.");
+            return false;
+        }
+        return true;
+    };
+
     const handleAddChild = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(null);
+
+        if (!validateAge(formData.date_of_birth)) {
+            return;
+        }
 
         try {
             await childApi.create({
@@ -91,7 +116,8 @@ export default function ChildManagement() {
             resetForm();
             fetchChildren();
         } catch (err: any) {
-            const errorMsg = err.response?.data?.username?.[0] ||
+            const errorMsg = err.response?.data?.date_of_birth?.[0] ||
+                err.response?.data?.username?.[0] ||
                 err.response?.data?.password?.[0] ||
                 err.response?.data?.detail ||
                 "Failed to add child";
@@ -105,6 +131,10 @@ export default function ChildManagement() {
 
         setError(null);
         setSuccess(null);
+
+        if (!validateAge(formData.date_of_birth)) {
+            return;
+        }
 
         try {
             const updateData: any = {
@@ -129,7 +159,8 @@ export default function ChildManagement() {
             resetForm();
             fetchChildren();
         } catch (err: any) {
-            const errorMsg = err.response?.data?.new_password?.[0] ||
+            const errorMsg = err.response?.data?.date_of_birth?.[0] ||
+                err.response?.data?.new_password?.[0] ||
                 err.response?.data?.detail ||
                 "Failed to update child";
             setError(errorMsg);
