@@ -8,6 +8,7 @@ from apps.core.models import Learner, Artifact, PathwayInputs, WeeklyPulse
 from .serializers import (
     LearnerSerializer,
     ChildCreateSerializer,
+    ChildUpdateSerializer,
     ChildDetailSerializer,
     ArtifactSerializer,
     PathwayInputsSerializer,
@@ -37,6 +38,8 @@ class ChildViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return ChildCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return ChildUpdateSerializer
         elif self.action == 'retrieve':
             return ChildDetailSerializer
         return LearnerSerializer

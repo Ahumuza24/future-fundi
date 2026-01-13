@@ -73,6 +73,8 @@ class Learner(BaseUUIDModel):
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
     date_of_birth = models.DateField(null=True, blank=True, help_text="Child's date of birth")
+    current_school = models.CharField(max_length=255, blank=True, default="", help_text="Current school name")
+    current_class = models.CharField(max_length=100, blank=True, default="", help_text="Current class/grade")
     consent_media = models.BooleanField(default=False, db_index=True, help_text="Parent consent for media capture")
     equity_flag = models.BooleanField(default=False, db_index=True, help_text="Requires additional support")
     joined_at = models.DateField(null=True, blank=True, help_text="Date enrolled in program")

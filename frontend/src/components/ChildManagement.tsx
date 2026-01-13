@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { childApi } from "@/lib/api";
-import { Plus, Edit, Trash2, User, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, User, Calendar, CheckCircle, AlertCircle, School, GraduationCap, Key } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Child {
@@ -12,18 +12,24 @@ interface Child {
     full_name: string;
     date_of_birth?: string;
     age?: number;
+    current_school?: string;
+    current_class?: string;
     consent_media: boolean;
     equity_flag: boolean;
     joined_at?: string;
 }
 
-interface AddChildFormData {
+interface ChildFormData {
     first_name: string;
     last_name: string;
     date_of_birth: string;
-    username: string;
-    password: string;
-    password_confirm: string;
+    current_school: string;
+    current_class: string;
+    username?: string;
+    password?: string;
+    password_confirm?: string;
+    new_password?: string;
+    new_password_confirm?: string;
     consent_media: boolean;
     equity_flag: boolean;
 }
@@ -32,10 +38,13 @@ export default function ChildManagement() {
     const [children, setChildren] = useState<Child[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
-    const [formData, setFormData] = useState<AddChildFormData>({
+    const [editingChild, setEditingChild] = useState<Child | null>(null);
+    const [formData, setFormData] = useState<ChildFormData>({
         first_name: "",
         last_name: "",
         date_of_birth: "",
+        current_school: "",
+        current_class: "",
         username: "",
         password: "",
         password_confirm: "",
@@ -71,22 +80,59 @@ export default function ChildManagement() {
         setSuccess(null);
 
         try {
-            await childApi.create(formData);
+            await childApi.create({
+                ...formData,
+                username: formData.username!,
+                password: formData.password!,
+                password_confirm: formData.password_confirm!,
+            });
             setSuccess("Child added successfully!");
             setShowAddForm(false);
-            setFormData({
-                first_name: "",
-                last_name: "",
-                date_of_birth: "",
-                username: "",
-                password: "",
-                password_confirm: "",
-                consent_media: true,
-                equity_flag: false,
-            });
+            resetForm();
             fetchChildren();
         } catch (err: any) {
-            setError(err.response?.data?.detail || "Failed to add child");
+            const errorMsg = err.response?.data?.username?.[0] ||
+                err.response?.data?.password?.[0] ||
+                err.response?.data?.detail ||
+                "Failed to add child";
+            setError(errorMsg);
+        }
+    };
+
+    const handleEditChild = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingChild) return;
+
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const updateData: any = {
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                date_of_birth: formData.date_of_birth,
+                current_school: formData.current_school,
+                current_class: formData.current_class,
+                consent_media: formData.consent_media,
+                equity_flag: formData.equity_flag,
+            };
+
+            // Only include password if it's being changed
+            if (formData.new_password) {
+                updateData.new_password = formData.new_password;
+                updateData.new_password_confirm = formData.new_password_confirm;
+            }
+
+            await childApi.update(editingChild.id, updateData);
+            setSuccess("Child updated successfully!");
+            setEditingChild(null);
+            resetForm();
+            fetchChildren();
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.new_password?.[0] ||
+                err.response?.data?.detail ||
+                "Failed to update child";
+            setError(errorMsg);
         }
     };
 
@@ -102,6 +148,42 @@ export default function ChildManagement() {
         } catch (err: any) {
             setError("Failed to remove child");
         }
+    };
+
+    const startEdit = (child: Child) => {
+        setEditingChild(child);
+        setFormData({
+            first_name: child.first_name,
+            last_name: child.last_name,
+            date_of_birth: child.date_of_birth || "",
+            current_school: child.current_school || "",
+            current_class: child.current_class || "",
+            consent_media: child.consent_media,
+            equity_flag: child.equity_flag,
+            new_password: "",
+            new_password_confirm: "",
+        });
+        setShowAddForm(false);
+    };
+
+    const resetForm = () => {
+        setFormData({
+            first_name: "",
+            last_name: "",
+            date_of_birth: "",
+            current_school: "",
+            current_class: "",
+            username: "",
+            password: "",
+            password_confirm: "",
+            consent_media: true,
+            equity_flag: false,
+        });
+    };
+
+    const cancelEdit = () => {
+        setEditingChild(null);
+        resetForm();
     };
 
     if (loading) {
@@ -126,7 +208,11 @@ export default function ChildManagement() {
                     <p className="text-gray-600 mt-1">Manage your children's profiles</p>
                 </div>
                 <Button
-                    onClick={() => setShowAddForm(!showAddForm)}
+                    onClick={() => {
+                        setShowAddForm(!showAddForm);
+                        setEditingChild(null);
+                        resetForm();
+                    }}
                     style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
                     className="flex items-center gap-2"
                 >
@@ -162,9 +248,9 @@ export default function ChildManagement() {
                 )}
             </AnimatePresence>
 
-            {/* Add Child Form */}
+            {/* Add/Edit Child Form */}
             <AnimatePresence>
-                {showAddForm && (
+                {(showAddForm || editingChild) && (
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
@@ -172,10 +258,10 @@ export default function ChildManagement() {
                     >
                         <Card className="border-2" style={{ borderColor: "var(--fundi-orange)" }}>
                             <CardHeader>
-                                <CardTitle>Add New Child</CardTitle>
+                                <CardTitle>{editingChild ? "Edit Child" : "Add New Child"}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <form onSubmit={handleAddChild} className="space-y-4">
+                                <form onSubmit={editingChild ? handleEditChild : handleAddChild} className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-semibold mb-2">First Name</label>
@@ -209,56 +295,126 @@ export default function ChildManagement() {
                                         />
                                     </div>
 
-                                    {/* Login Credentials Section */}
-                                    <div className="pt-4 border-t-2 border-gray-200">
-                                        <h3 className="font-bold text-lg mb-3" style={{ color: "var(--fundi-black)" }}>
-                                            Student Login Credentials
-                                        </h3>
-                                        <p className="text-sm text-gray-600 mb-4">
-                                            Create a username and password for your child to log in to their student dashboard
-                                        </p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                                                <School className="h-4 w-4" />
+                                                Current School
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.current_school}
+                                                onChange={(e) => setFormData({ ...formData, current_school: e.target.value })}
+                                                className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                                placeholder="e.g., Kampala Primary School"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                                                <GraduationCap className="h-4 w-4" />
+                                                Current Class/Grade
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.current_class}
+                                                onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                                                className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                                placeholder="e.g., Primary 5"
+                                            />
+                                        </div>
+                                    </div>
 
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2">Username</label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.username}
-                                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                    placeholder="e.g., emma_j2024"
-                                                    required
-                                                />
-                                            </div>
+                                    {/* Login Credentials Section - Only for new children */}
+                                    {!editingChild && (
+                                        <div className="pt-4 border-t-2 border-gray-200">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2" style={{ color: "var(--fundi-black)" }}>
+                                                <Key className="h-5 w-5" />
+                                                Student Login Credentials
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mb-4">
+                                                Create a username and password for your child to log in to their student dashboard
+                                            </p>
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-semibold mb-2">Password</label>
+                                                    <label className="block text-sm font-semibold mb-2">Username</label>
                                                     <input
-                                                        type="password"
-                                                        value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                        type="text"
+                                                        value={formData.username}
+                                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                        placeholder="Min. 8 characters"
-                                                        minLength={8}
+                                                        placeholder="e.g., emma_j2024"
                                                         required
                                                     />
                                                 </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-semibold mb-2">Password</label>
+                                                        <input
+                                                            type="password"
+                                                            value={formData.password}
+                                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                            className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                                            placeholder="Min. 8 characters"
+                                                            minLength={8}
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold mb-2">Confirm Password</label>
+                                                        <input
+                                                            type="password"
+                                                            value={formData.password_confirm}
+                                                            onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                                                            className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                                            placeholder="Re-enter password"
+                                                            minLength={8}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Change Password Section - Only for editing */}
+                                    {editingChild && (
+                                        <div className="pt-4 border-t-2 border-gray-200">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2" style={{ color: "var(--fundi-black)" }}>
+                                                <Key className="h-5 w-5" />
+                                                Change Password (Optional)
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mb-4">
+                                                Leave blank to keep the current password
+                                            </p>
+
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-semibold mb-2">Confirm Password</label>
+                                                    <label className="block text-sm font-semibold mb-2">New Password</label>
                                                     <input
                                                         type="password"
-                                                        value={formData.password_confirm}
-                                                        onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                                                        value={formData.new_password}
+                                                        onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                        placeholder="Re-enter password"
+                                                        placeholder="Min. 8 characters"
                                                         minLength={8}
-                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-2">Confirm New Password</label>
+                                                    <input
+                                                        type="password"
+                                                        value={formData.new_password_confirm}
+                                                        onChange={(e) => setFormData({ ...formData, new_password_confirm: e.target.value })}
+                                                        className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                                        placeholder="Re-enter new password"
+                                                        minLength={8}
                                                     />
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     <div className="flex items-center gap-2">
                                         <input
@@ -292,11 +448,11 @@ export default function ChildManagement() {
                                             style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
                                             className="flex-1"
                                         >
-                                            Add Child
+                                            {editingChild ? "Update Child" : "Add Child"}
                                         </Button>
                                         <Button
                                             type="button"
-                                            onClick={() => setShowAddForm(false)}
+                                            onClick={editingChild ? cancelEdit : () => setShowAddForm(false)}
                                             className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
                                         >
                                             Cancel
@@ -356,6 +512,18 @@ export default function ChildManagement() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2 mb-4">
+                                        {child.current_school && (
+                                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                <School className="h-4 w-4 text-blue-600" />
+                                                {child.current_school}
+                                            </div>
+                                        )}
+                                        {child.current_class && (
+                                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                <GraduationCap className="h-4 w-4 text-purple-600" />
+                                                {child.current_class}
+                                            </div>
+                                        )}
                                         {child.consent_media && (
                                             <div className="flex items-center gap-2 text-sm text-green-600">
                                                 <CheckCircle className="h-4 w-4" />
@@ -371,6 +539,13 @@ export default function ChildManagement() {
                                     </div>
 
                                     <div className="flex gap-2">
+                                        <Button
+                                            onClick={() => startEdit(child)}
+                                            className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                                        >
+                                            <Edit className="h-4 w-4 mr-1" />
+                                            Edit
+                                        </Button>
                                         <Button
                                             onClick={() => handleDeleteChild(child.id, child.full_name)}
                                             className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"

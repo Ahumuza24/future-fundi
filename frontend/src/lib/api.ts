@@ -98,6 +98,11 @@ export const childApi = {
     first_name: string;
     last_name: string;
     date_of_birth?: string;
+    current_school?: string;
+    current_class?: string;
+    username: string;
+    password: string;
+    password_confirm: string;
     consent_media?: boolean;
     equity_flag?: boolean;
     joined_at?: string;
@@ -108,9 +113,13 @@ export const childApi = {
     first_name: string;
     last_name: string;
     date_of_birth: string;
+    current_school: string;
+    current_class: string;
     consent_media: boolean;
     equity_flag: boolean;
     joined_at: string;
+    new_password: string;
+    new_password_confirm: string;
   }>) => api.patch(`/children/${id}/`, data),
   
   // Delete a child

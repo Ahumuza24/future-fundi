@@ -27,6 +27,8 @@ class LearnerSerializer(serializers.ModelSerializer):
             "full_name",
             "date_of_birth",
             "age",
+            "current_school",
+            "current_class",
             "consent_media",
             "equity_flag",
             "joined_at",
@@ -48,6 +50,8 @@ class ChildCreateSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "date_of_birth",
+            "current_school",
+            "current_class",
             "consent_media",
             "equity_flag",
             "joined_at",
@@ -100,6 +104,62 @@ class ChildCreateSerializer(serializers.ModelSerializer):
         )
         
         return learner
+
+
+class ChildUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for parents to update their children's details."""
+    
+    new_password = serializers.CharField(write_only=True, required=False, min_length=8, allow_blank=True)
+    new_password_confirm = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    
+    class Meta:
+        model = Learner
+        fields = [
+            "first_name",
+            "last_name",
+            "date_of_birth",
+            "current_school",
+            "current_class",
+            "consent_media",
+            "equity_flag",
+            "joined_at",
+            "new_password",
+            "new_password_confirm",
+        ]
+    
+    def validate(self, attrs):
+        # If password change is requested, validate it
+        new_password = attrs.get('new_password', '')
+        new_password_confirm = attrs.get('new_password_confirm', '')
+        
+        if new_password or new_password_confirm:
+            if new_password != new_password_confirm:
+                raise serializers.ValidationError({"new_password": "Passwords do not match."})
+        
+        return attrs
+    
+    def update(self, instance, validated_data):
+        # Extract password fields
+        new_password = validated_data.pop('new_password', None)
+        validated_data.pop('new_password_confirm', None)
+        
+        # Update learner fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update user's first_name and last_name if changed
+        if instance.user:
+            instance.user.first_name = instance.first_name
+            instance.user.last_name = instance.last_name
+            
+            # Change password if provided
+            if new_password:
+                instance.user.set_password(new_password)
+            
+            instance.user.save()
+        
+        return instance
 
 
 class ArtifactSerializer(serializers.ModelSerializer):
