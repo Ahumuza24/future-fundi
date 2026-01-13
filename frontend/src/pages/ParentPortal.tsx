@@ -1,35 +1,168 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Download, Calendar, TrendingUp, MessageCircle, Heart, Award, ChevronRight } from "lucide-react";
+import { childApi } from "@/lib/api";
+import {
+  Users, Calendar, TrendingUp, Award, ChevronRight,
+  Settings, BookOpen, Heart, Target, Plus
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import ChildManagement from "@/components/ChildManagement";
 
 interface Child {
   id: string;
-  name: string;
-  grade: string;
-  pathwayScore: number;
-  gate: string;
-  recentArtifacts: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  age?: number;
+  date_of_birth?: string;
+}
+
+interface ChildDashboard {
+  pathway: {
+    score: number | null;
+    gate: string | null;
+  };
+  artifacts_count: number;
+  weekly_pulse: any;
 }
 
 const ParentPortal = () => {
-  const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [childDashboard, setChildDashboard] = useState<ChildDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showManagement, setShowManagement] = useState(false);
 
-  const children: Child[] = [
-    { id: "1", name: "Amina Nakato", grade: "Grade 6", pathwayScore: 72, gate: "GREEN", recentArtifacts: 5 },
-    { id: "2", name: "David Nakato", grade: "Grade 4", pathwayScore: 65, gate: "AMBER", recentArtifacts: 3 },
-  ];
+  useEffect(() => {
+    fetchChildren();
+  }, []);
 
-  const selectedChildData = children.find(c => c.id === selectedChild);
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchChildDashboard(selectedChildId);
+    }
+  }, [selectedChildId]);
+
+  const fetchChildren = async () => {
+    try {
+      setLoading(true);
+      const response = await childApi.getAll();
+      // Handle both paginated and non-paginated responses
+      const childrenData = response.data.results || response.data;
+      const childrenArray = Array.isArray(childrenData) ? childrenData : [];
+      setChildren(childrenArray);
+
+      // Auto-select first child if available
+      if (childrenArray.length > 0 && !selectedChildId) {
+        setSelectedChildId(childrenArray[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch children:", err);
+      setChildren([]); // Ensure it's always an array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchChildDashboard = async (childId: string) => {
+    try {
+      const response = await childApi.getDashboard(childId);
+      setChildDashboard(response.data);
+    } catch (err) {
+      console.error("Failed to fetch child dashboard:", err);
+    }
+  };
+
+  const selectedChild = children.find(c => c.id === selectedChildId);
+
+  const getGateColor = (gate: string | null) => {
+    if (!gate) return "var(--fundi-gray)";
+    if (gate.includes("GREEN")) return "var(--fundi-lime)";
+    if (gate.includes("AMBER")) return "var(--fundi-yellow)";
+    return "var(--fundi-orange)";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-orange)] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (showManagement) {
+    return (
+      <div className="min-h-screen p-3 md:p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="heading-font text-3xl md:text-4xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+              Manage Children
+            </h1>
+            <Button
+              onClick={() => {
+                setShowManagement(false);
+                fetchChildren();
+              }}
+              className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+          <ChildManagement />
+        </div>
+      </div>
+    );
+  }
+
+  if (children.length === 0) {
+    return (
+      <div className="min-h-screen p-3 md:p-4 lg:p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="text-center p-12">
+            <Users className="h-20 w-20 mx-auto mb-6 text-gray-400" />
+            <h2 className="heading-font text-3xl font-bold mb-4" style={{ color: 'var(--fundi-black)' }}>
+              Welcome to Future Fundi!
+            </h2>
+            <p className="text-gray-600 text-lg mb-6">
+              Start by adding your children to track their learning journey
+            </p>
+            <Button
+              onClick={() => setShowManagement(true)}
+              style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
+              className="text-lg px-8 py-6"
+            >
+              <Plus className="h-6 w-6 mr-2" />
+              Add Your First Child
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-3 md:p-4 lg:p-6">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        <header className="stagger" style={{ animationDelay: '0ms' }}>
-          <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
-            Parent Portal
-          </h1>
-          <p className="text-gray-600">Track your children's growth and celebrate their achievements</p>
+        {/* Header */}
+        <header className="stagger flex items-center justify-between" style={{ animationDelay: '0ms' }}>
+          <div>
+            <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
+              Parent Portal
+            </h1>
+            <p className="text-gray-600">Track your children's growth and celebrate their achievements</p>
+          </div>
+          <Button
+            onClick={() => setShowManagement(true)}
+            style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
+            className="flex items-center gap-2"
+          >
+            <Settings className="h-5 w-5" />
+            Manage Children
+          </Button>
         </header>
 
         {/* Child Selector */}
@@ -37,221 +170,153 @@ const ParentPortal = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
-              Your Children
+              Your Children ({children.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child) => (
-                <Card 
+                <motion.div
                   key={child.id}
-                  className={`hover:shadow-lg transition-all cursor-pointer ${
-                    selectedChild === child.id ? 'ring-2 ring-purple-500' : ''
-                  }`}
-                  onClick={() => setSelectedChild(child.id)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <CardHeader>
-                    <CardTitle>{child.name}</CardTitle>
-                    <CardDescription>{child.grade} • {child.recentArtifacts} recent artifacts</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm text-gray-600">Pathway Score</div>
-                        <div className="text-2xl font-bold mono-font" style={{ color: 'var(--fundi-orange)' }}>{child.pathwayScore}</div>
-                      </div>
-                      <div className="px-3 py-1 rounded" style={{ 
-                        backgroundColor: child.gate === 'GREEN' ? 'var(--fundi-lime)' : 'var(--fundi-yellow)' 
-                      }}>
-                        <span className="text-sm font-bold">{child.gate}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Card
+                    className={`hover:shadow-lg transition-all cursor-pointer ${selectedChildId === child.id ? 'ring-2 ring-purple-500 shadow-lg' : ''
+                      }`}
+                    onClick={() => setSelectedChildId(child.id)}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-lg">{child.full_name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        {child.age && (
+                          <>
+                            <Calendar className="h-4 w-4" />
+                            {child.age} years old
+                          </>
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    {selectedChildId === child.id && childDashboard && (
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-gray-600">Pathway Score</div>
+                            <div className="text-2xl font-bold mono-font" style={{ color: 'var(--fundi-orange)' }}>
+                              {childDashboard.pathway.score || "N/A"}
+                            </div>
+                          </div>
+                          {childDashboard.pathway.gate && (
+                            <div className="px-3 py-1 rounded" style={{
+                              backgroundColor: getGateColor(childDashboard.pathway.gate)
+                            }}>
+                              <span className="text-sm font-bold">{childDashboard.pathway.gate}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {selectedChildData && (
-          <>
-            {/* Progress Overview */}
-            <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '100ms' }}>
-              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
-                <CardHeader className="pb-3">
-                  <CardDescription>Pathway Score</CardDescription>
-                  <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-orange)' }}>
-                    {selectedChildData.pathwayScore}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="w-full h-2 bg-gray-200 rounded-full">
-                    <div className="h-full rounded-full" style={{ 
-                      width: `${selectedChildData.pathwayScore}%`,
-                      backgroundColor: 'var(--fundi-orange)'
-                    }}></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
-                <CardHeader className="pb-3">
-                  <CardDescription>Artifacts This Term</CardDescription>
-                  <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
-                    {selectedChildData.recentArtifacts}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">+2 from last week</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
-                <CardHeader className="pb-3">
-                  <CardDescription>Current Gate</CardDescription>
-                  <CardTitle className="text-2xl font-bold">{selectedChildData.gate}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">On track for next level</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Weekly Artifacts Feed */}
-            <Card className="stagger border-l-4" style={{ animationDelay: '150ms', borderLeftColor: 'var(--fundi-orange)' }}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-6 w-6" style={{ color: 'var(--fundi-orange)' }} />
-                    Recent Artifacts
-                  </CardTitle>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Portfolio
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200">
-                      <div className="w-24 h-24 rounded-lg flex-shrink-0" style={{ 
-                        background: i % 2 === 0 
-                          ? 'linear-gradient(135deg, var(--fundi-cyan), var(--fundi-lime))'
-                          : 'linear-gradient(135deg, var(--fundi-orange), var(--fundi-yellow))'
-                      }}></div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold mb-1">Solar Panel Prototype {i}</h3>
-                            <p className="text-sm text-gray-600 mb-2">Renewable Energy Module • {i} days ago</p>
-                          </div>
-                          <Award className="h-5 w-5" style={{ color: 'var(--fundi-yellow)' }} />
-                        </div>
-                        <p className="text-sm italic text-gray-700 mb-3">"I learned how solar cells convert sunlight into electricity and built my own working panel!"</p>
-                        <div className="flex gap-2">
-                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)', color: 'var(--fundi-orange)' }}>Problem Solving</span>
-                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(21, 189, 219, 0.1)', color: 'var(--fundi-cyan)' }}>Technical Skills</span>
-                        </div>
+        {/* Selected Child Dashboard */}
+        <AnimatePresence mode="wait">
+          {selectedChild && childDashboard && (
+            <motion.div
+              key={selectedChildId}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              {/* Progress Overview */}
+              <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '100ms' }}>
+                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Pathway Score</CardDescription>
+                    <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-orange)' }}>
+                      {childDashboard.pathway.score || "N/A"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {childDashboard.pathway.score && (
+                      <div className="w-full h-2 bg-gray-200 rounded-full">
+                        <div className="h-full rounded-full" style={{
+                          width: `${childDashboard.pathway.score}%`,
+                          backgroundColor: 'var(--fundi-orange)'
+                        }}></div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                  </CardContent>
+                </Card>
 
-            {/* Communication Section */}
-            <div className="grid md:grid-cols-2 gap-6 stagger" style={{ animationDelay: '200ms' }}>
-              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-purple)' }}>
+                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Total Artifacts</CardDescription>
+                    <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
+                      {childDashboard.artifacts_count}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <BookOpen className="h-4 w-4" />
+                      Learning portfolio
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Current Gate</CardDescription>
+                    <CardTitle className="text-2xl" style={{
+                      color: getGateColor(childDashboard.pathway.gate)
+                    }}>
+                      {childDashboard.pathway.gate || "Not Set"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Target className="h-4 w-4" />
+                      Progress milestone
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Actions */}
+              <Card className="stagger" style={{ animationDelay: '150ms' }}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
-                    Teacher Updates
-                  </CardTitle>
+                  <CardTitle>Quick Actions for {selectedChild.first_name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-purple-50">
-                      <p className="text-sm font-semibold mb-1">Ms. Nakimuli - Robotics</p>
-                      <p className="text-sm text-gray-700">"{selectedChildData.name} showed excellent teamwork during the robot challenge!"</p>
-                      <p className="text-xs text-gray-500 mt-2">2 days ago</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-purple-50">
-                      <p className="text-sm font-semibold mb-1">Mr. Okello - Science</p>
-                      <p className="text-sm text-gray-700">"Great progress on the environmental project. Keep it up!"</p>
-                      <p className="text-xs text-gray-500 mt-2">1 week ago</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Message Teachers
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-pink)' }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Heart className="h-6 w-6" style={{ color: 'var(--fundi-pink)' }} />
-                    Weekly Pulse
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center mb-4">
-                    <div className="text-5xl mb-2">😊</div>
-                    <p className="text-sm text-gray-600">Mood: Positive</p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(158, 203, 58, 0.1)' }}>
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--fundi-lime)' }}>This Week's Win</p>
-                      <p className="text-sm text-gray-700">"Finished my robot prototype!"</p>
-                    </div>
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}>
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--fundi-orange)' }}>This Week's Challenge</p>
-                      <p className="text-sm text-gray-700">"Need more practice with coding"</p>
-                    </div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <Button className="justify-between bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200">
+                      View Artifacts
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                    <Button className="justify-between bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">
+                      Growth Tree
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                    <Button className="justify-between bg-green-50 text-green-700 hover:bg-green-100 border border-green-200">
+                      Weekly Pulse
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                    <Button className="justify-between bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200">
+                      Download Portfolio
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Next Steps */}
-            <Card className="stagger border-l-4" style={{ animationDelay: '250ms', borderLeftColor: 'var(--fundi-cyan)' }}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-6 w-6" style={{ color: 'var(--fundi-cyan)' }} />
-                  Recommended Next Steps
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-cyan-200 bg-cyan-50">
-                    <div>
-                      <p className="font-semibold">Deepen Technical Skills</p>
-                      <p className="text-sm text-gray-600">Explore advanced robotics modules</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-purple-200 bg-purple-50">
-                    <div>
-                      <p className="font-semibold">Showcase Portfolio</p>
-                      <p className="text-sm text-gray-600">Share work with mentors</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {!selectedChild && (
-          <Card className="stagger text-center p-12" style={{ animationDelay: '100ms' }}>
-            <Users className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="heading-font text-xl font-semibold mb-2">Select a child to view their progress</h3>
-            <p className="text-gray-600">Choose from your children above to see their growth journey</p>
-          </Card>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

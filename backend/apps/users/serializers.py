@@ -27,7 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Serializer for user registration."""
+    """Serializer for parent user registration.
+    
+    By default, all new registrations create parent accounts.
+    Parents can then add their children through a separate endpoint.
+    """
     
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True, required=True)
@@ -35,7 +39,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'role', 'school_code']
+        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'school_code']
         extra_kwargs = {
             'first_name': {'required': True},
             'last_name': {'required': True},
@@ -62,24 +66,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         school_code = validated_data.pop('school_code', None)
         tenant = validated_data.pop('tenant', None)
         
+        # All new registrations are parent accounts
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
-            role=validated_data.get('role', 'learner'),
+            role='parent',  # Always create as parent
             tenant=tenant
         )
         
-        # Auto-create Learner profile if role is learner and tenant is provided
-        if user.role == 'learner' and tenant:
-            Learner.objects.create(
-                user=user,
-                tenant=tenant,
-                first_name=user.first_name,
-                last_name=user.last_name
-            )
+        # Note: Learner profiles are created separately by parents
+        # through the child management endpoints
         
         return user
 

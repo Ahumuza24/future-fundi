@@ -37,18 +37,75 @@ class TenantModel(BaseUUIDModel):
         abstract = True
 
 
-class Learner(TenantModel):
-    """Learner profile with consent and equity flags."""
+class Learner(BaseUUIDModel):
+    """Learner profile owned by a parent user.
+    
+    Learners can optionally have their own user accounts for logging in.
+    They are managed by their parent who has a User account with role='parent'.
+    One parent can have multiple children.
+    
+    Note: Tenant is optional to allow parents to register children before
+    being assigned to a school.
+    """
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="learner_profile")
+    tenant = models.ForeignKey(
+        School, 
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="School/organization (optional until parent is assigned)"
+    )
+    parent = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="children",
+        limit_choices_to={'role': 'parent'},
+        help_text="Parent/guardian who manages this learner"
+    )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="learner_profile",
+        null=True,
+        blank=True,
+        help_text="Optional user account for the learner to log in"
+    )
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
-    consent_media = models.BooleanField(default=False, db_index=True)
-    equity_flag = models.BooleanField(default=False, db_index=True)
-    joined_at = models.DateField(null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True, help_text="Child's date of birth")
+    consent_media = models.BooleanField(default=False, db_index=True, help_text="Parent consent for media capture")
+    equity_flag = models.BooleanField(default=False, db_index=True, help_text="Requires additional support")
+    joined_at = models.DateField(null=True, blank=True, help_text="Date enrolled in program")
+
+    # Use default manager instead of TenantManager
+    objects = models.Manager()
+
+    class Meta:
+        db_table = 'core_learner'
+        verbose_name = 'Learner'
+        verbose_name_plural = 'Learners'
+        ordering = ['first_name', 'last_name']
+        indexes = [
+            models.Index(fields=['parent', 'tenant']),
+        ]
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def age(self) -> int | None:
+        """Calculate age from date of birth."""
+        if not self.date_of_birth:
+            return None
+        from datetime import date
+        today = date.today()
+        return today.year - self.date_of_birth.year - (
+            (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+        )
 
 
 class ParentContact(TenantModel):

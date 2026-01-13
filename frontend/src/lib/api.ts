@@ -85,6 +85,50 @@ export const dashboardApi = {
   getImpactBrief: () => api.get('/api/dashboard/impact-brief/'),
 };
 
+// Child management API (for parents)
+export const childApi = {
+  // List all children for the authenticated parent
+  getAll: () => api.get('/children/'),
+  
+  // Get detailed information about a specific child
+  getById: (id: string) => api.get(`/children/${id}/`),
+  
+  // Add a new child
+  create: (data: {
+    first_name: string;
+    last_name: string;
+    date_of_birth?: string;
+    consent_media?: boolean;
+    equity_flag?: boolean;
+    joined_at?: string;
+  }) => api.post('/children/', data),
+  
+  // Update child information
+  update: (id: string, data: Partial<{
+    first_name: string;
+    last_name: string;
+    date_of_birth: string;
+    consent_media: boolean;
+    equity_flag: boolean;
+    joined_at: string;
+  }>) => api.patch(`/children/${id}/`, data),
+  
+  // Delete a child
+  delete: (id: string) => api.delete(`/children/${id}/`),
+  
+  // Get complete dashboard data for a child
+  getDashboard: (id: string) => api.get(`/children/${id}/dashboard/`),
+  
+  // Get all artifacts for a child
+  getArtifacts: (id: string) => api.get(`/children/${id}/artifacts/`),
+  
+  // Get pathway score and recommendations for a child
+  getPathway: (id: string) => api.get(`/children/${id}/pathway/`),
+  
+  // Get summary of all children
+  getSummary: () => api.get('/children/summary/'),
+};
+
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/`, credentials),
@@ -95,7 +139,6 @@ export const authApi = {
     password_confirm: string;
     first_name: string;
     last_name: string;
-    role?: string;
     school_code?: string;
   }) =>
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/register/`, data),

@@ -69,14 +69,14 @@ const allNavItems: NavItem[] = [
     title: "My Children",
     path: "/parent/children",
     icon: Users,
-    color: "var(--fundi-purple)",
+    color: "var(--fundi-orange)",
     roles: ["parent"],
   },
   {
     title: "Weekly Updates",
     path: "/parent/updates",
     icon: Calendar,
-    color: "var(--fundi-purple)",
+    color: "var(--fundi-cyan)",
     roles: ["parent"],
   },
   {

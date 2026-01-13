@@ -70,22 +70,9 @@ const SignUpPage = () => {
       login(access, refresh, user);
       setSuccess(true);
 
-      // Redirect after a brief success message
+      // All new registrations are parents, redirect to parent portal
       setTimeout(() => {
-        const role = user.role || "learner";
-        if (role === "learner") {
-          navigate("/student");
-        } else if (role === "parent") {
-          navigate("/parent");
-        } else if (role === "teacher") {
-          navigate("/teacher");
-        } else if (role === "leader") {
-          navigate("/leader");
-        } else if (role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
+        navigate("/parent");
       }, 1500);
     } catch (err: any) {
       const errorMessage =
@@ -114,18 +101,18 @@ const SignUpPage = () => {
                 <div
                   className="p-2 rounded-full"
                 >
-                  <img 
-                    src="/fundi_bots_logo.png" 
-                    alt="Fundi Bots Logo" 
+                  <img
+                    src="/fundi_bots_logo.png"
+                    alt="Fundi Bots Logo"
                     className="h-16 w-auto object-contain"
                   />
                 </div>
               </div>
               <CardTitle className="heading-font text-3xl font-bold" style={{ color: "var(--fundi-black)" }}>
-                Join Future Fundi
+                Create Parent Account
               </CardTitle>
               <CardDescription className="text-base mt-2">
-                Create your account to start your growth journey
+                Register to manage your children's learning journey
               </CardDescription>
             </CardHeader>
             <CardContent>

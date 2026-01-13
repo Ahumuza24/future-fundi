@@ -6,6 +6,8 @@ import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
 import StudentDashboard from "@/pages/StudentDashboard";
 import ParentPortal from "@/pages/ParentPortal";
+import ParentMyChildren from "@/pages/ParentMyChildren";
+import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
 import TeacherCapture from "@/pages/TeacherCapture";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -42,6 +44,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['parent', 'admin']}>
             <ParentPortal />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "parent/children",
+        element: (
+          <ProtectedRoute allowedRoles={['parent', 'admin']}>
+            <ParentMyChildren />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "parent/updates",
+        element: (
+          <ProtectedRoute allowedRoles={['parent', 'admin']}>
+            <ParentWeeklyUpdates />
           </ProtectedRoute>
         ),
       },
