@@ -138,6 +138,36 @@ export const childApi = {
   getSummary: () => api.get('/children/summary/'),
 };
 
+// Teacher API
+export const teacherApi = {
+  // Dashboard
+  getDashboard: () => api.get('/teacher/sessions/dashboard/'),
+  
+  // Sessions
+  getSessions: () => api.get('/teacher/sessions/'),
+  getTodaySessions: () => api.get('/teacher/sessions/today/'),
+  getUpcomingSessions: () => api.get('/teacher/sessions/upcoming/'),
+  getSession: (id: string) => api.get(`/teacher/sessions/${id}/`),
+  startSession: (id: string) => api.post(`/teacher/sessions/${id}/start/`),
+  completeSession: (id: string) => api.post(`/teacher/sessions/${id}/complete/`),
+  
+  // Attendance
+  markAttendance: (sessionId: string, attendance: Array<{
+    learner_id: string;
+    status: 'present' | 'absent' | 'late' | 'excused';
+    notes?: string;
+  }>) => api.post(`/teacher/sessions/${sessionId}/mark-attendance/`, { attendance }),
+  
+  // Quick Artifacts
+  getPendingArtifacts: () => api.get('/teacher/quick-artifacts/pending/'),
+  captureArtifact: (data: {
+    learner: string;
+    title: string;
+    reflection?: string;
+    media_refs?: any[];
+  }) => api.post('/teacher/quick-artifacts/', data),
+};
+
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/`, credentials),

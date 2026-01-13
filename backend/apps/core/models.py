@@ -125,6 +125,14 @@ class Artifact(TenantModel):
     """Weekly learner artifact (photos, metrics, reflection)."""
 
     learner = models.ForeignKey(Learner, on_delete=models.CASCADE, related_name="artifacts")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifacts_created",
+        help_text="Teacher who captured this artifact"
+    )
     title = models.CharField(max_length=255)
     reflection = models.TextField(blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -219,3 +227,104 @@ class SafetyIncident(TenantModel):
     description = models.TextField()
     severity = models.CharField(max_length=16, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+
+class Session(TenantModel):
+    """Learning session delivered by a teacher.
+    
+    Represents a single teaching session with learners.
+    Teachers mark attendance and capture artifacts per session.
+    """
+    
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sessions_taught',
+        limit_choices_to={'role': 'teacher'},
+        help_text="Teacher delivering this session"
+    )
+    module = models.ForeignKey(
+        'Module',
+        on_delete=models.CASCADE,
+        related_name='sessions',
+        help_text="Module/curriculum being taught"
+    )
+    learners = models.ManyToManyField(
+        'Learner',
+        through='Attendance',
+        related_name='sessions_attended',
+        help_text="Learners in this session"
+    )
+    date = models.DateField(db_index=True, help_text="Session date")
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='scheduled',
+        db_index=True
+    )
+    attendance_marked = models.BooleanField(default=False, db_index=True)
+    notes = models.TextField(blank=True, help_text="Session notes or observations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'core_session'
+        verbose_name = 'Session'
+        verbose_name_plural = 'Sessions'
+        ordering = ['-date', '-start_time']
+        indexes = [
+            models.Index(fields=['teacher', 'date']),
+            models.Index(fields=['status', 'date']),
+        ]
+    
+    def __str__(self) -> str:
+        return f"{self.module.name} - {self.date} ({self.teacher.get_full_name()})"
+
+
+class Attendance(BaseUUIDModel):
+    """Attendance record for a learner in a session."""
+    
+    STATUS_CHOICES = [
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused'),
+    ]
+    
+    session = models.ForeignKey(
+        'Session',
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    learner = models.ForeignKey(
+        'Learner',
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='present',
+        db_index=True
+    )
+    marked_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'core_attendance'
+        verbose_name = 'Attendance'
+        verbose_name_plural = 'Attendance Records'
+        unique_together = [['session', 'learner']]
+        ordering = ['-marked_at']
+    
+    def __str__(self) -> str:
+        return f"{self.learner.full_name} - {self.session} ({self.status})"

@@ -8,6 +8,8 @@ from apps.core.models import (
     PathwayInputs,
     WeeklyPulse,
     Assessment,
+    Session,
+    Attendance,
 )
 
 
@@ -261,3 +263,105 @@ class ChildDetailSerializer(serializers.ModelSerializer):
             "recent_assessments",
         ]
         read_only_fields = ["id"]
+
+
+# Teacher-specific serializers
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    """Serializer for attendance records."""
+    learner_name = serializers.CharField(source='learner.full_name', read_only=True)
+    learner_id = serializers.UUIDField(source='learner.id', read_only=True)
+    
+    class Meta:
+        model = Attendance
+        fields = [
+            'id',
+            'learner',
+            'learner_id',
+            'learner_name',
+            'status',
+            'notes',
+            'marked_at',
+        ]
+        read_only_fields = ['id', 'marked_at']
+
+
+class SessionSerializer(serializers.ModelSerializer):
+    """Basic session serializer for list views."""
+    module_name = serializers.CharField(source='module.name', read_only=True)
+    teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
+    learner_count = serializers.SerializerMethodField()
+    attendance_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Session
+        fields = [
+            'id',
+            'teacher',
+            'teacher_name',
+            'module',
+            'module_name',
+            'date',
+            'start_time',
+            'end_time',
+            'status',
+            'attendance_marked',
+            'learner_count',
+            'attendance_count',
+            'notes',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_learner_count(self, obj):
+        return obj.learners.count()
+    
+    def get_attendance_count(self, obj):
+        return obj.attendance_records.filter(status='present').count()
+
+
+class SessionDetailSerializer(serializers.ModelSerializer):
+    """Detailed session serializer with attendance records."""
+    module_name = serializers.CharField(source='module.name', read_only=True)
+    teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
+    attendance_records = AttendanceSerializer(many=True, read_only=True)
+    learners = LearnerSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Session
+        fields = [
+            'id',
+            'teacher',
+            'teacher_name',
+            'module',
+            'module_name',
+            'date',
+            'start_time',
+            'end_time',
+            'status',
+            'attendance_marked',
+            'learners',
+            'attendance_records',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class QuickArtifactSerializer(serializers.ModelSerializer):
+    """Quick artifact capture serializer for teachers."""
+    learner_name = serializers.CharField(source='learner.full_name', read_only=True)
+    
+    class Meta:
+        model = Artifact
+        fields = [
+            'id',
+            'learner',
+            'learner_name',
+            'title',
+            'reflection',
+            'media_refs',
+            'submitted_at',
+        ]
+        read_only_fields = ['id', 'submitted_at']

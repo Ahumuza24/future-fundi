@@ -8,6 +8,9 @@ import StudentDashboard from "@/pages/StudentDashboard";
 import ParentPortal from "@/pages/ParentPortal";
 import ParentMyChildren from "@/pages/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
+import TeacherDashboard from "@/pages/TeacherDashboard";
+import TeacherAttendance from "@/pages/TeacherAttendance";
+import TeacherArtifactCapture from "@/pages/TeacherArtifactCapture";
 import TeacherCapture from "@/pages/TeacherCapture";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -67,7 +70,23 @@ const router = createBrowserRouter([
         path: "teacher",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <TeacherCapture />
+            <TeacherDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/attendance/:sessionId",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherAttendance />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/capture-artifact",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherArtifactCapture />
           </ProtectedRoute>
         ),
       },
