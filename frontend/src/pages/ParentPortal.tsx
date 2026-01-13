@@ -3,11 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { childApi } from "@/lib/api";
 import {
-  Users, Calendar, TrendingUp, Award, ChevronRight,
-  Settings, BookOpen, Heart, Target, Plus
+  Users, Calendar,
+  Settings, BookOpen, Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChildManagement from "@/components/ChildManagement";
+import CurriculumLadder from "@/components/student/CurriculumLadder";
+import AchievementsList from "@/components/student/AchievementsList";
+import SuggestedActivities from "@/components/student/SuggestedActivities";
 
 interface Child {
   id: string;
@@ -234,86 +237,89 @@ const ParentPortal = () => {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {/* Progress Overview */}
-              <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '100ms' }}>
-                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Pathway Score</CardDescription>
-                    <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-orange)' }}>
-                      {childDashboard.pathway.score || "N/A"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {childDashboard.pathway.score && (
-                      <div className="w-full h-2 bg-gray-200 rounded-full">
-                        <div className="h-full rounded-full" style={{
-                          width: `${childDashboard.pathway.score}%`,
-                          backgroundColor: 'var(--fundi-orange)'
-                        }}></div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Student Dashboard View for Parent */}
+              <div className="grid lg:grid-cols-12 gap-6 stagger" style={{ animationDelay: '100ms' }}>
+                {/* Left Column - Friendly Pathway Direction */}
+                <div className="lg:col-span-4 space-y-6">
+                  <CurriculumLadder />
+                </div>
 
-                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Total Artifacts</CardDescription>
-                    <CardTitle className="text-3xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
-                      {childDashboard.artifacts_count}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <BookOpen className="h-4 w-4" />
-                      Learning portfolio
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Right Column - Activities, Achievements, Portfolio */}
+                <div className="lg:col-span-8 space-y-6">
 
-                <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Current Gate</CardDescription>
-                    <CardTitle className="text-2xl" style={{
-                      color: getGateColor(childDashboard.pathway.gate)
-                    }}>
-                      {childDashboard.pathway.gate || "Not Set"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Target className="h-4 w-4" />
-                      Progress milestone
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Quick Actions */}
-              <Card className="stagger" style={{ animationDelay: '150ms' }}>
-                <CardHeader>
-                  <CardTitle>Quick Actions for {selectedChild.first_name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <Button className="justify-between bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200">
-                      View Artifacts
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
-                    <Button className="justify-between bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">
-                      Growth Tree
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
-                    <Button className="justify-between bg-green-50 text-green-700 hover:bg-green-100 border border-green-200">
-                      Weekly Pulse
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
-                    <Button className="justify-between bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200">
-                      Download Portfolio
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
+                  {/* Stats Summary from Parent Portal (Optional, but keeping for quick data) */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
+                      <CardHeader className="p-4 pb-2">
+                        <CardDescription>Total Artifacts</CardDescription>
+                        <CardTitle className="text-2xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
+                          {childDashboard.artifacts_count}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
+                      <CardHeader className="p-4 pb-2">
+                        <CardDescription>Current Gate</CardDescription>
+                        <CardTitle className="text-xl" style={{ color: getGateColor(childDashboard.pathway.gate) }}>
+                          {childDashboard.pathway.gate || "Not Set"}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
+                      <CardHeader className="p-4 pb-2">
+                        <CardDescription>Weekly Pulse</CardDescription>
+                        <CardTitle className="text-xl" style={{ color: 'var(--fundi-orange)' }}>
+                          Active
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
+
+                  <SuggestedActivities />
+
+                  <AchievementsList />
+
+                  {/* Student Portfolio List */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="heading-font text-2xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+                        {selectedChild.first_name}'s Portfolio
+                      </h2>
+                      <Button variant="outline" className="gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        View Full Portfolio
+                      </Button>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <Card
+                          key={i}
+                          className="hover:scale-105 hover:shadow-lg transition-all cursor-pointer overflow-hidden group border-0 shadow-md"
+                        >
+                          <div
+                            className="h-32 bg-gradient-to-br rounded-t-lg relative overflow-hidden"
+                            style={{
+                              background: i === 1
+                                ? 'linear-gradient(135deg, var(--fundi-orange), var(--fundi-pink))'
+                                : i === 2
+                                  ? 'linear-gradient(135deg, var(--fundi-cyan), var(--fundi-lime))'
+                                  : 'linear-gradient(135deg, var(--fundi-purple), var(--fundi-cyan))'
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
+                          </div>
+                          <CardHeader className="p-4 pb-2">
+                            <CardTitle className="text-base">Robot Prototype {i}</CardTitle>
+                            <CardDescription className="text-xs">Robotics • Oct {10 + i}</CardDescription>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
