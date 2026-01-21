@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Calendar, Folder, User } from "lucide-react";
-import CurriculumLadder from "@/components/student/CurriculumLadder";
+import CourseLadder from "@/components/student/CourseLadder";
 import AchievementsList from "@/components/student/AchievementsList";
 import SuggestedActivities from "@/components/student/SuggestedActivities";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,13 +8,17 @@ import { getCurrentUser } from "@/lib/auth";
 
 const StudentDashboard = () => {
   const user = getCurrentUser();
+
   return (
     <div className="min-h-screen p-3 md:p-4 lg:p-6 bg-gray-50/50">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            
+            <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
+              Welcome back{user?.first_name ? `, ${user.first_name}` : ''}!
+            </h1>
+            <p className="text-gray-600">Ready to continue your learning journey?</p>
           </div>
           <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm border">
             <Calendar className="h-4 w-4 text-gray-500" />
@@ -23,9 +27,9 @@ const StudentDashboard = () => {
         </header>
 
         <div className="grid lg:grid-cols-12 gap-6">
-          {/* Left Column - Friendly Pathway Direction (Curriculum Ladder) */}
+          {/* Left Column - Course Progress */}
           <div className="lg:col-span-4 space-y-6">
-            <CurriculumLadder />
+            <CourseLadder />
           </div>
 
           {/* Right Column - Activities, Achievements, Portfolio */}
@@ -41,7 +45,7 @@ const StudentDashboard = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="heading-font text-2xl font-bold" style={{ color: 'var(--fundi-black)' }}>
-                  Student Portfolio
+                  My Portfolio
                 </h2>
                 <Button variant="outline" className="gap-2">
                   <Folder className="h-4 w-4" />
@@ -84,4 +88,3 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
-

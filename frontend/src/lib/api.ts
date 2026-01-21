@@ -190,3 +190,88 @@ export const authApi = {
   getDashboard: () =>
     api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/dashboard/`),
 };
+
+// Course API
+export const courseApi = {
+  // List all courses (optionally filter by age)
+  getAll: (params?: { domain?: string; age?: number }) => 
+    api.get('/courses/', { params }),
+  
+  // Get course by ID with levels
+  getById: (id: string) => api.get(`/courses/${id}/`),
+  
+  // Get courses available for a specific learner
+  getForLearner: (learnerId: string) => api.get(`/courses/for-learner/${learnerId}/`),
+  
+  // Get all levels for a course
+  getLevels: (courseId: string) => api.get(`/courses/${courseId}/levels/`),
+  
+  // Admin: Create course with levels
+  create: (data: {
+    name: string;
+    description?: string;
+    domain: string;
+    min_age: number;
+    max_age: number;
+    levels?: Array<{
+      name: string;
+      description?: string;
+      learning_outcomes?: string[];
+      required_modules_count?: number;
+      required_artifacts_count?: number;
+      required_assessment_score?: number;
+    }>;
+  }) => api.post('/courses/', data),
+  
+  // Admin: Update course
+  update: (id: string, data: any) => api.patch(`/courses/${id}/`, data),
+  
+  // Admin: Delete course
+  delete: (id: string) => api.delete(`/courses/${id}/`),
+};
+
+// Enrollment API
+export const enrollmentApi = {
+  // Get all enrollments (filtered by role)
+  getAll: () => api.get('/enrollments/'),
+  
+  // Get enrollment by ID with full details
+  getById: (id: string) => api.get(`/enrollments/${id}/`),
+  
+  // Get progress for an enrollment
+  getProgress: (id: string) => api.get(`/enrollments/${id}/progress/`),
+  
+  // Enroll a learner in a course
+  enroll: (learnerId: string, courseId: string) => 
+    api.post('/enrollments/', { learner: learnerId, course: courseId }),
+  
+  // Unenroll a learner
+  unenroll: (id: string) => api.delete(`/enrollments/${id}/`),
+};
+
+// Progress API (for teachers)
+export const progressApi = {
+  // Get progress record by ID
+  getById: (id: string) => api.get(`/progress/${id}/`),
+  
+  // Update progress (modules, artifacts, score)
+  updateProgress: (id: string, data: {
+    modules_completed?: number;
+    artifacts_submitted?: number;
+    assessment_score?: number;
+    teacher_confirmed?: boolean;
+  }) => api.post(`/progress/${id}/update_progress/`, data),
+  
+  // Teacher confirms level completion
+  confirmCompletion: (id: string) => api.post(`/progress/${id}/confirm_completion/`),
+};
+
+// Achievement API
+export const achievementApi = {
+  // Get all achievements (for current user/learner)
+  getAll: () => api.get('/achievements/'),
+  
+  // Get achievements for a specific learner
+  getForLearner: (learnerId: string) => api.get(`/achievements/for-learner/${learnerId}/`),
+};
+

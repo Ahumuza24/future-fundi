@@ -328,3 +328,365 @@ class Attendance(BaseUUIDModel):
     
     def __str__(self) -> str:
         return f"{self.learner.full_name} - {self.session} ({self.status})"
+
+
+# =============================================================================
+# COURSES & LEVELS SYSTEM
+# =============================================================================
+
+class Course(BaseUUIDModel):
+    """A structured course within a domain for a specific age band.
+    
+    Courses are created by Super Admins and contain progressive levels.
+    Learners are enrolled in courses based on their age.
+    
+    Examples:
+    - Robotics for Ages 6-8
+    - Coding Foundations for Ages 9-12
+    """
+    
+    DOMAIN_CHOICES = [
+        ('robotics', 'Robotics'),
+        ('coding', 'Coding'),
+        ('3d_printing', '3D Printing'),
+        ('electronics', 'Electronics'),
+        ('ai_ml', 'AI & Machine Learning'),
+        ('design', 'Design & Fabrication'),
+    ]
+    
+    name = models.CharField(max_length=255, db_index=True)
+    description = models.TextField(blank=True)
+    domain = models.CharField(max_length=50, choices=DOMAIN_CHOICES, db_index=True)
+    min_age = models.PositiveIntegerField(default=6, help_text="Minimum age for this course")
+    max_age = models.PositiveIntegerField(default=18, help_text="Maximum age for this course")
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Optional tenant scope (None = global course available to all schools)
+    tenant = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="If set, course is only for this school. If null, available globally."
+    )
+    
+    class Meta:
+        db_table = 'core_course'
+        verbose_name = 'Course'
+        verbose_name_plural = 'Courses'
+        ordering = ['domain', 'min_age', 'name']
+        indexes = [
+            models.Index(fields=['domain', 'is_active']),
+            models.Index(fields=['min_age', 'max_age']),
+        ]
+    
+    def __str__(self) -> str:
+        return f"{self.name} (Ages {self.min_age}-{self.max_age})"
+    
+    def is_age_eligible(self, age: int) -> bool:
+        """Check if a learner of given age is eligible for this course."""
+        return self.min_age <= age <= self.max_age
+
+
+class CourseLevel(BaseUUIDModel):
+    """A progressive level within a course.
+    
+    Each level has completion criteria that must be met before
+    the learner can progress to the next level.
+    """
+    
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='levels'
+    )
+    level_number = models.PositiveIntegerField(default=1, help_text="Order of this level (1, 2, 3...)")
+    name = models.CharField(max_length=255, help_text="e.g., 'Level 1: Foundations'")
+    description = models.TextField(blank=True)
+    learning_outcomes = models.JSONField(
+        default=list,
+        help_text="List of learning outcomes for this level"
+    )
+    
+    # Completion requirements
+    required_modules_count = models.PositiveIntegerField(
+        default=4,
+        help_text="Number of modules to complete"
+    )
+    required_artifacts_count = models.PositiveIntegerField(
+        default=6,
+        help_text="Minimum artifacts to submit"
+    )
+    required_assessment_score = models.PositiveIntegerField(
+        default=70,
+        help_text="Minimum assessment score (0-100)"
+    )
+    requires_teacher_confirmation = models.BooleanField(
+        default=False,
+        help_text="If true, teacher must confirm completion"
+    )
+    
+    # Linked modules (optional - for tracking which specific modules are required)
+    required_modules = models.ManyToManyField(
+        Module,
+        blank=True,
+        related_name='course_levels',
+        help_text="Specific modules required for this level"
+    )
+    
+    class Meta:
+        db_table = 'core_course_level'
+        verbose_name = 'Course Level'
+        verbose_name_plural = 'Course Levels'
+        ordering = ['course', 'level_number']
+        unique_together = [['course', 'level_number']]
+    
+    def __str__(self) -> str:
+        return f"{self.course.name} - Level {self.level_number}: {self.name}"
+
+
+class LearnerCourseEnrollment(BaseUUIDModel):
+    """Tracks which courses a learner is enrolled in.
+    
+    Learners are enrolled by admins/program leads based on age eligibility.
+    """
+    
+    learner = models.ForeignKey(
+        Learner,
+        on_delete=models.CASCADE,
+        related_name='course_enrollments'
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='enrollments'
+    )
+    current_level = models.ForeignKey(
+        CourseLevel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='current_learners',
+        help_text="Current level the learner is on"
+    )
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True, help_text="When all levels completed")
+    is_active = models.BooleanField(default=True, db_index=True)
+    
+    class Meta:
+        db_table = 'core_learner_course_enrollment'
+        verbose_name = 'Course Enrollment'
+        verbose_name_plural = 'Course Enrollments'
+        unique_together = [['learner', 'course']]
+        ordering = ['-enrolled_at']
+    
+    def __str__(self) -> str:
+        level_info = f"Level {self.current_level.level_number}" if self.current_level else "Not started"
+        return f"{self.learner.full_name} in {self.course.name} ({level_info})"
+    
+    def get_completed_levels(self):
+        """Get all completed levels for this enrollment."""
+        return self.level_progress.filter(completed=True).order_by('level__level_number')
+    
+    def check_and_promote(self):
+        """Check if learner can be promoted to next level and do so if eligible.
+        
+        Returns True if promotion occurred, False otherwise.
+        """
+        if not self.current_level:
+            return False
+        
+        # Get progress for current level
+        try:
+            progress = self.level_progress.get(level=self.current_level)
+        except LearnerLevelProgress.DoesNotExist:
+            return False
+        
+        # Check if all criteria are met
+        if not progress.is_complete():
+            return False
+        
+        # Mark current level as completed
+        if not progress.completed:
+            progress.completed = True
+            from django.utils import timezone
+            progress.completed_at = timezone.now()
+            progress.save()
+        
+        # Find next level
+        next_level = CourseLevel.objects.filter(
+            course=self.course,
+            level_number=self.current_level.level_number + 1
+        ).first()
+        
+        if next_level:
+            # Promote to next level
+            self.current_level = next_level
+            self.save()
+            
+            # Create progress record for new level
+            LearnerLevelProgress.objects.get_or_create(
+                enrollment=self,
+                level=next_level
+            )
+            return True
+        else:
+            # Course completed!
+            from django.utils import timezone
+            self.completed_at = timezone.now()
+            self.save()
+            return True
+        
+        return False
+
+
+class LearnerLevelProgress(BaseUUIDModel):
+    """Tracks a learner's progress within a specific level.
+    
+    Progress data is updated by teachers as they:
+    - Mark module completion
+    - Capture artifacts
+    - Record assessments
+    """
+    
+    enrollment = models.ForeignKey(
+        LearnerCourseEnrollment,
+        on_delete=models.CASCADE,
+        related_name='level_progress'
+    )
+    level = models.ForeignKey(
+        CourseLevel,
+        on_delete=models.CASCADE,
+        related_name='learner_progress'
+    )
+    
+    # Progress tracking
+    modules_completed = models.PositiveIntegerField(default=0)
+    artifacts_submitted = models.PositiveIntegerField(default=0)
+    assessment_score = models.PositiveIntegerField(default=0, help_text="Best assessment score")
+    teacher_confirmed = models.BooleanField(default=False)
+    
+    # Completion status
+    completed = models.BooleanField(default=False, db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'core_learner_level_progress'
+        verbose_name = 'Level Progress'
+        verbose_name_plural = 'Level Progress Records'
+        unique_together = [['enrollment', 'level']]
+        ordering = ['level__level_number']
+    
+    def __str__(self) -> str:
+        status = "✓" if self.completed else f"{self.completion_percentage}%"
+        return f"{self.enrollment.learner.full_name} - {self.level} ({status})"
+    
+    @property
+    def completion_percentage(self) -> int:
+        """Calculate overall completion percentage."""
+        if not self.level:
+            return 0
+        
+        criteria_met = 0
+        total_criteria = 3  # modules, artifacts, assessment
+        
+        if self.modules_completed >= self.level.required_modules_count:
+            criteria_met += 1
+        if self.artifacts_submitted >= self.level.required_artifacts_count:
+            criteria_met += 1
+        if self.assessment_score >= self.level.required_assessment_score:
+            criteria_met += 1
+        
+        if self.level.requires_teacher_confirmation:
+            total_criteria += 1
+            if self.teacher_confirmed:
+                criteria_met += 1
+        
+        return int((criteria_met / total_criteria) * 100)
+    
+    def is_complete(self) -> bool:
+        """Check if all completion criteria are met."""
+        if not self.level:
+            return False
+        
+        modules_ok = self.modules_completed >= self.level.required_modules_count
+        artifacts_ok = self.artifacts_submitted >= self.level.required_artifacts_count
+        assessment_ok = self.assessment_score >= self.level.required_assessment_score
+        
+        if self.level.requires_teacher_confirmation:
+            return modules_ok and artifacts_ok and assessment_ok and self.teacher_confirmed
+        
+        return modules_ok and artifacts_ok and assessment_ok
+    
+    def update_progress(self, modules: int = None, artifacts: int = None, score: int = None):
+        """Update progress and check for auto-promotion."""
+        if modules is not None:
+            self.modules_completed = modules
+        if artifacts is not None:
+            self.artifacts_submitted = artifacts
+        if score is not None and score > self.assessment_score:
+            self.assessment_score = score
+        
+        self.save()
+        
+        # Check for auto-promotion
+        self.enrollment.check_and_promote()
+
+
+class Achievement(BaseUUIDModel):
+    """Badges/achievements earned by learners.
+    
+    Awarded automatically when completing levels or manually by teachers.
+    """
+    
+    ACHIEVEMENT_TYPES = [
+        ('level_complete', 'Level Completed'),
+        ('course_complete', 'Course Completed'),
+        ('skill_mastery', 'Skill Mastery'),
+        ('participation', 'Participation'),
+        ('special', 'Special Achievement'),
+    ]
+    
+    learner = models.ForeignKey(
+        Learner,
+        on_delete=models.CASCADE,
+        related_name='achievements'
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    achievement_type = models.CharField(
+        max_length=50,
+        choices=ACHIEVEMENT_TYPES,
+        default='level_complete'
+    )
+    icon = models.CharField(max_length=100, blank=True, help_text="Icon name or emoji")
+    
+    # Link to what earned it (optional)
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    level = models.ForeignKey(
+        CourseLevel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    
+    earned_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'core_achievement'
+        verbose_name = 'Achievement'
+        verbose_name_plural = 'Achievements'
+        ordering = ['-earned_at']
+    
+    def __str__(self) -> str:
+        return f"{self.learner.full_name} - {self.name}"
+

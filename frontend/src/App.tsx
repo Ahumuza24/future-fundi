@@ -11,9 +11,13 @@ import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
 import TeacherDashboard from "@/pages/TeacherDashboard";
 import TeacherAttendance from "@/pages/TeacherAttendance";
 import TeacherArtifactCapture from "@/pages/TeacherArtifactCapture";
-import ComingSoon from "@/pages/ComingSoon";
+import TeacherClasses from "@/pages/TeacherClasses";
+import TeacherAssessments from "@/pages/TeacherAssessments";
+import TeacherLearnerPortfolio from "@/pages/TeacherLearnerPortfolio";
+import TeacherCommunication from "@/pages/TeacherCommunication";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminCourseManagement from "@/pages/AdminCourseManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
@@ -66,11 +70,20 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      // Teacher Routes
       {
         path: "teacher",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/attendance",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherAttendance />
           </ProtectedRoute>
         ),
       },
@@ -94,7 +107,7 @@ const router = createBrowserRouter([
         path: "teacher/classes",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <ComingSoon />
+            <TeacherClasses />
           </ProtectedRoute>
         ),
       },
@@ -102,10 +115,27 @@ const router = createBrowserRouter([
         path: "teacher/assessments",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <ComingSoon />
+            <TeacherAssessments />
           </ProtectedRoute>
         ),
       },
+      {
+        path: "teacher/learner/:learnerId",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherLearnerPortfolio />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/communication",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherCommunication />
+          </ProtectedRoute>
+        ),
+      },
+      // Leader Routes
       {
         path: "leader",
         element: (
@@ -114,6 +144,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      // Settings
       {
         path: "settings",
         element: (
@@ -122,11 +153,20 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      // Admin Routes
       {
         path: "admin",
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/courses",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminCourseManagement />
           </ProtectedRoute>
         ),
       },

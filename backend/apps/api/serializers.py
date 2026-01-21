@@ -10,6 +10,11 @@ from apps.core.models import (
     Assessment,
     Session,
     Attendance,
+    Course,
+    CourseLevel,
+    LearnerCourseEnrollment,
+    LearnerLevelProgress,
+    Achievement,
 )
 
 
@@ -386,3 +391,260 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
             'submitted_at',
         ]
         read_only_fields = ['id', 'submitted_at']
+
+
+# =============================================================================
+# COURSE SERIALIZERS
+# =============================================================================
+
+class CourseLevelSerializer(serializers.ModelSerializer):
+    """Serializer for course levels."""
+    completion_requirements = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CourseLevel
+        fields = [
+            'id',
+            'level_number',
+            'name',
+            'description',
+            'learning_outcomes',
+            'required_modules_count',
+            'required_artifacts_count',
+            'required_assessment_score',
+            'requires_teacher_confirmation',
+            'completion_requirements',
+        ]
+    
+    def get_completion_requirements(self, obj):
+        return {
+            'modules': obj.required_modules_count,
+            'artifacts': obj.required_artifacts_count,
+            'assessment_score': obj.required_assessment_score,
+            'teacher_confirmation': obj.requires_teacher_confirmation,
+        }
+
+
+class CourseSerializer(serializers.ModelSerializer):
+    """Serializer for courses."""
+    levels = CourseLevelSerializer(many=True, read_only=True)
+    level_count = serializers.IntegerField(source='levels.count', read_only=True)
+    age_range = serializers.SerializerMethodField()
+    domain_display = serializers.CharField(source='get_domain_display', read_only=True)
+    
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'name',
+            'description',
+            'domain',
+            'domain_display',
+            'min_age',
+            'max_age',
+            'age_range',
+            'is_active',
+            'level_count',
+            'levels',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_age_range(self, obj):
+        return f"{obj.min_age}-{obj.max_age} years"
+
+
+class CourseListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for course listings."""
+    level_count = serializers.IntegerField(source='levels.count', read_only=True)
+    domain_display = serializers.CharField(source='get_domain_display', read_only=True)
+    
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'name',
+            'domain',
+            'domain_display',
+            'min_age',
+            'max_age',
+            'level_count',
+            'is_active',
+        ]
+
+
+class LearnerLevelProgressSerializer(serializers.ModelSerializer):
+    """Serializer for level progress."""
+    level_name = serializers.CharField(source='level.name', read_only=True)
+    level_number = serializers.IntegerField(source='level.level_number', read_only=True)
+    completion_percentage = serializers.ReadOnlyField()
+    requirements = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LearnerLevelProgress
+        fields = [
+            'id',
+            'level',
+            'level_name',
+            'level_number',
+            'modules_completed',
+            'artifacts_submitted',
+            'assessment_score',
+            'teacher_confirmed',
+            'completed',
+            'completed_at',
+            'completion_percentage',
+            'requirements',
+            'started_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'started_at', 'updated_at', 'completed_at']
+    
+    def get_requirements(self, obj):
+        if not obj.level:
+            return None
+        return {
+            'modules': {
+                'required': obj.level.required_modules_count,
+                'completed': obj.modules_completed,
+                'met': obj.modules_completed >= obj.level.required_modules_count,
+            },
+            'artifacts': {
+                'required': obj.level.required_artifacts_count,
+                'submitted': obj.artifacts_submitted,
+                'met': obj.artifacts_submitted >= obj.level.required_artifacts_count,
+            },
+            'assessment': {
+                'required': obj.level.required_assessment_score,
+                'score': obj.assessment_score,
+                'met': obj.assessment_score >= obj.level.required_assessment_score,
+            },
+        }
+
+
+class LearnerCourseEnrollmentSerializer(serializers.ModelSerializer):
+    """Serializer for course enrollments."""
+    course_name = serializers.CharField(source='course.name', read_only=True)
+    course_domain = serializers.CharField(source='course.domain', read_only=True)
+    current_level_number = serializers.IntegerField(source='current_level.level_number', read_only=True)
+    current_level_name = serializers.CharField(source='current_level.name', read_only=True)
+    total_levels = serializers.IntegerField(source='course.levels.count', read_only=True)
+    current_progress = serializers.SerializerMethodField()
+    completed_levels_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LearnerCourseEnrollment
+        fields = [
+            'id',
+            'course',
+            'course_name',
+            'course_domain',
+            'current_level',
+            'current_level_number',
+            'current_level_name',
+            'total_levels',
+            'current_progress',
+            'completed_levels_count',
+            'enrolled_at',
+            'completed_at',
+            'is_active',
+        ]
+        read_only_fields = ['id', 'enrolled_at', 'completed_at']
+    
+    def get_current_progress(self, obj):
+        if not obj.current_level:
+            return None
+        try:
+            progress = obj.level_progress.get(level=obj.current_level)
+            return LearnerLevelProgressSerializer(progress).data
+        except LearnerLevelProgress.DoesNotExist:
+            return None
+    
+    def get_completed_levels_count(self, obj):
+        return obj.level_progress.filter(completed=True).count()
+
+
+class LearnerCourseEnrollmentDetailSerializer(LearnerCourseEnrollmentSerializer):
+    """Detailed enrollment serializer with all level progress."""
+    course = CourseSerializer(read_only=True)
+    all_progress = serializers.SerializerMethodField()
+    
+    class Meta(LearnerCourseEnrollmentSerializer.Meta):
+        fields = LearnerCourseEnrollmentSerializer.Meta.fields + ['all_progress']
+    
+    def get_all_progress(self, obj):
+        progress_records = obj.level_progress.all().order_by('level__level_number')
+        return LearnerLevelProgressSerializer(progress_records, many=True).data
+
+
+class AchievementSerializer(serializers.ModelSerializer):
+    """Serializer for achievements."""
+    course_name = serializers.CharField(source='course.name', read_only=True)
+    level_name = serializers.CharField(source='level.name', read_only=True)
+    
+    class Meta:
+        model = Achievement
+        fields = [
+            'id',
+            'name',
+            'description',
+            'achievement_type',
+            'icon',
+            'course',
+            'course_name',
+            'level',
+            'level_name',
+            'earned_at',
+        ]
+        read_only_fields = ['id', 'earned_at']
+
+
+class CourseAdminSerializer(serializers.ModelSerializer):
+    """Admin serializer for creating/updating courses and levels."""
+    levels = CourseLevelSerializer(many=True, required=False)
+    
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'name',
+            'description',
+            'domain',
+            'min_age',
+            'max_age',
+            'is_active',
+            'tenant',
+            'levels',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        levels_data = validated_data.pop('levels', [])
+        course = Course.objects.create(**validated_data)
+        
+        for i, level_data in enumerate(levels_data, start=1):
+            level_data['level_number'] = i
+            CourseLevel.objects.create(course=course, **level_data)
+        
+        return course
+    
+    def update(self, instance, validated_data):
+        levels_data = validated_data.pop('levels', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # If levels provided, update them
+        if levels_data is not None:
+            # Simple approach: delete and recreate
+            instance.levels.all().delete()
+            for i, level_data in enumerate(levels_data, start=1):
+                level_data['level_number'] = i
+                CourseLevel.objects.create(course=instance, **level_data)
+        
+        return instance
+

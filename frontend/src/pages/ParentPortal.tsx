@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChildManagement from "@/components/ChildManagement";
-import CurriculumLadder from "@/components/student/CurriculumLadder";
+import CourseLadder from "@/components/student/CourseLadder";
 import AchievementsList from "@/components/student/AchievementsList";
 import SuggestedActivities from "@/components/student/SuggestedActivities";
 
@@ -239,9 +239,9 @@ const ParentPortal = () => {
             >
               {/* Student Dashboard View for Parent */}
               <div className="grid lg:grid-cols-12 gap-6 stagger" style={{ animationDelay: '100ms' }}>
-                {/* Left Column - Friendly Pathway Direction */}
+                {/* Left Column - Course Progress */}
                 <div className="lg:col-span-4 space-y-6">
-                  <CurriculumLadder />
+                  <CourseLadder learnerId={selectedChildId || undefined} />
                 </div>
 
                 {/* Right Column - Activities, Achievements, Portfolio */}

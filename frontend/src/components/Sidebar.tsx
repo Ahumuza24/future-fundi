@@ -12,7 +12,10 @@ import {
   Award,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Camera,
+  MessageSquare,
+  ClipboardCheck
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -88,15 +91,22 @@ const allNavItems: NavItem[] = [
   {
     title: "Capture Artifact",
     path: "/teacher/capture-artifact",
-    icon: BookOpen,
-    color: "var(--fundi-cyan)",
+    icon: Camera,
+    color: "var(--fundi-orange)",
     roles: ["teacher"],
   },
   {
     title: "Assessments",
     path: "/teacher/assessments",
-    icon: FileText,
-    color: "var(--fundi-cyan)",
+    icon: ClipboardCheck,
+    color: "var(--fundi-purple)",
+    roles: ["teacher"],
+  },
+  {
+    title: "Communication",
+    path: "/teacher/communication",
+    icon: MessageSquare,
+    color: "var(--fundi-lime)",
     roles: ["teacher"],
   },
   {
@@ -140,6 +150,13 @@ const allNavItems: NavItem[] = [
     path: "/admin/schools",
     icon: BarChart3,
     color: "var(--fundi-red)",
+    roles: ["admin"],
+  },
+  {
+    title: "Course Management",
+    path: "/admin/courses",
+    icon: BookOpen,
+    color: "var(--fundi-orange)",
     roles: ["admin"],
   },
 ];
