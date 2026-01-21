@@ -1,9 +1,0 @@
----
-trigger: always_on
----
-
-System must be deployable on Render or Railway with autoscaling.
-Frontend must be deployed on Vercel for fast global delivery.
-Use CDN caching for static assets.
-Ensure CI builds separately for backend and frontend.
-Ensure environment variables are centrally managed.
