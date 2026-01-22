@@ -17,6 +17,7 @@ export interface User {
   dashboard_url?: string;
   date_joined: string;
   is_active: boolean;
+  avatar_url?: string | null;
 }
 
 /**
