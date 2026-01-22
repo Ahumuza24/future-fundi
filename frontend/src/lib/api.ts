@@ -187,8 +187,21 @@ export const authApi = {
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`, { refresh }),
   getProfile: () => 
     api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`),
+  updateProfile: (data: { first_name?: string; last_name?: string; email?: string }) =>
+    api.patch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`, data),
   getDashboard: () =>
     api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/dashboard/`),
+  
+  // Avatar management
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteAvatar: () =>
+    api.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`),
 };
 
 // Course API
