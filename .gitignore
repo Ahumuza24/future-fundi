@@ -21,6 +21,9 @@ yarn-error.log
 #-IDE
 .idea/
 .vscode/
+.cursor
+.windsurf
+docs
 
 #dotenv
 .env
