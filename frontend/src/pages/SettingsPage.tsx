@@ -75,7 +75,7 @@ const SettingsPage = () => {
       // Update stored user data
       if (user) {
         const updatedUser = { ...user, avatar_url: response.data.avatar_url };
-        localStorage.setItem("user_data", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
     } catch (error: any) {
@@ -94,7 +94,7 @@ const SettingsPage = () => {
       // Update stored user data
       if (user) {
         const updatedUser = { ...user, avatar_url: null };
-        localStorage.setItem("user_data", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
     } catch (error) {

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import io
+import uuid
 
 from PIL import Image
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -28,7 +29,7 @@ class UserProfileView(APIView):
     """Get or update current user profile."""
 
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request):
         """Get current user profile with role and tenant info."""
@@ -107,12 +108,14 @@ class AvatarUploadView(APIView):
             # Save new avatar
             from django.core.files.uploadedfile import InMemoryUploadedFile
 
+            unique_name = f"{request.user.id}_{uuid.uuid4().hex}.jpg"
+
             request.user.avatar.save(
-                f"{request.user.id}.jpg",
+                unique_name,
                 InMemoryUploadedFile(
                     output,
                     "ImageField",
-                    f"{request.user.id}.jpg",
+                    unique_name,
                     "image/jpeg",
                     output.getbuffer().nbytes,
                     None,

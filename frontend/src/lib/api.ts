@@ -2,9 +2,6 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Request interceptor to add auth token
@@ -196,9 +193,7 @@ export const authApi = {
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`, formData);
   },
   deleteAvatar: () =>
     api.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`),

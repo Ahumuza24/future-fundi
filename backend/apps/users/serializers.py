@@ -127,7 +127,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
 
         # Add user data to response
-        user_serializer = UserSerializer(self.user)
+        request = self.context.get("request")
+        user_serializer = UserSerializer(self.user, context={"request": request})
         data["user"] = user_serializer.data
 
         # Add custom claims to token
