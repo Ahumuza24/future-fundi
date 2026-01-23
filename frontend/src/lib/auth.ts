@@ -2,7 +2,7 @@
  * Authentication utilities and role-based routing helpers
  */
 
-export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin';
+export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry';
 
 export interface User {
   id: string;
@@ -30,6 +30,7 @@ export const getDashboardRoute = (role: UserRole): string => {
     parent: '/parent',
     leader: '/leader',
     admin: '/admin',
+    data_entry: '/admin/curriculum-entry',
   };
   
   return dashboardMap[role] || '/student';
@@ -45,6 +46,7 @@ export const canAccessRoute = (userRole: UserRole, routePath: string): boolean =
     parent: ['/parent', '/'],
     leader: ['/leader', '/'],
     admin: ['/admin', '/leader', '/teacher', '/parent', '/student', '/'], // Admin can access all
+    data_entry: ['/admin/curriculum-entry', '/'],
   };
   
   const allowedRoutes = roleRoutes[userRole] || [];
@@ -61,6 +63,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     parent: 'Parent',
     leader: 'Leader',
     admin: 'Administrator',
+    data_entry: 'Data Entry',
   };
   
   return roleNames[role] || 'User';

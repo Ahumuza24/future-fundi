@@ -201,9 +201,9 @@ export const authApi = {
 
 // Course API
 export const courseApi = {
-  // List all courses (optionally filter by age)
-  getAll: (params?: { domain?: string; age?: number }) => 
-    api.get('/courses/', { params }),
+  // List all courses (optionally filter by domain)
+  getAll: () => 
+    api.get('/courses/'),
   
   // Get course by ID with levels
   getById: (id: string) => api.get(`/courses/${id}/`),
@@ -218,9 +218,6 @@ export const courseApi = {
   create: (data: {
     name: string;
     description?: string;
-    domain: string;
-    min_age: number;
-    max_age: number;
     levels?: Array<{
       name: string;
       description?: string;
@@ -236,6 +233,32 @@ export const courseApi = {
   
   // Admin: Delete course
   delete: (id: string) => api.delete(`/courses/${id}/`),
+};
+
+// Module (Micro-credential) API
+export const moduleApi = {
+  getAll: (courseId?: string) => api.get('/modules/', { params: { course: courseId } }),
+  getById: (id: string) => api.get(`/modules/${id}/`),
+  create: (data: any) => api.post('/modules/', data),
+  update: (id: string, data: any) => api.patch(`/modules/${id}/`, data),
+  delete: (id: string) => api.delete(`/modules/${id}/`),
+  uploadMedia: (moduleId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/modules/${moduleId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  deleteMedia: (moduleId: string, mediaId: string) => 
+    api.delete(`/modules/${moduleId}/delete-media/${mediaId}/`),
+};
+
+// Career API
+export const careerApi = {
+  getAll: (courseId?: string) => api.get('/careers/', { params: { course: courseId } }),
+  create: (data: any) => api.post('/careers/', data),
+  update: (id: string, data: any) => api.patch(`/careers/${id}/`, data),
+  delete: (id: string) => api.delete(`/careers/${id}/`),
 };
 
 // Enrollment API

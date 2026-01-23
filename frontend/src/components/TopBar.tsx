@@ -77,25 +77,6 @@ const TopBar = () => {
                 onClick={() => setShowDropdown(false)}
               />
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-                  <Avatar
-                    src={user.avatar_url}
-                    name={fullName}
-                    size="lg"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--fundi-black)' }}>
-                      {user.first_name} {user.last_name}
-                    </p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
-                    {user.tenant_name && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {user.tenant_name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
                 <Link
                   to="/settings"
                   className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"

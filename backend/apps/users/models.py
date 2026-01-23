@@ -29,6 +29,7 @@ class User(AbstractUser):
         ("parent", "Parent"),
         ("leader", "Leader"),
         ("admin", "Admin"),
+        ("data_entry", "Data Entry"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -89,5 +90,6 @@ class User(AbstractUser):
             "parent": "/parent",
             "leader": "/leader",
             "admin": "/admin",
+            "data_entry": "/admin/curriculum-entry",
         }
         return dashboard_map.get(self.role, "/student")
