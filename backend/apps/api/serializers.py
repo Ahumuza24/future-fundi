@@ -439,10 +439,6 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
 class ModuleSerializer(serializers.ModelSerializer):
     """Serializer for curriculum modules (micro-credentials)."""
 
-    suggested_activities = serializers.JSONField(required=False, initial=list)
-    materials = serializers.JSONField(required=False, initial=list)
-    competences = serializers.JSONField(required=False, initial=list)
-
     class Meta:
         model = Module
         fields = [

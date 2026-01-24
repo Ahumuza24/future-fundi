@@ -153,9 +153,6 @@ class ModuleViewSet(viewsets.ModelViewSet):
     queryset = Module.objects.all()
     serializer_class = ModuleSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user.tenant)
-
     def get_permissions(self):
         if self.action in [
             "create",
@@ -282,9 +279,6 @@ class CareerViewSet(viewsets.ModelViewSet):
 
     queryset = Career.objects.all()
     serializer_class = CareerSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user.tenant)
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:

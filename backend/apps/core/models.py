@@ -162,10 +162,9 @@ class Artifact(TenantModel):
     media_refs = models.JSONField(default=list)  # e.g., [{"s3_key": "..."}]
 
 
-class Module(TenantModel):
-    """Curriculum module catalog."""
+class Module(BaseUUIDModel):
+    """Curriculum module catalog - Global content shared across all schools."""
 
-    tenant = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True)
 
@@ -199,6 +198,8 @@ class Module(TenantModel):
         related_name="modules",
         help_text="Primary pathway this module belongs to",
     )
+
+    objects = models.Manager()  # Explicit default manager
 
 
 class Assessment(TenantModel):
@@ -439,13 +440,14 @@ class Course(BaseUUIDModel):
         return f"{self.name}"
 
 
-class Career(TenantModel):
-    """Potential careers linked to a pathway (Course)."""
+class Career(BaseUUIDModel):
+    """Potential careers linked to a pathway (Course) - Global content."""
 
-    tenant = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="careers")
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+
+    objects = models.Manager()  # Explicit default manager
 
     def __str__(self) -> str:
         return f"{self.title} ({self.course.name})"

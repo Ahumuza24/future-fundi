@@ -226,6 +226,155 @@ export default function CurriculumDataEntry() {
     );
 }
 
+function OverviewEditor({ course, onUpdate, onDelete }: { course: Course, onUpdate: () => void, onDelete: () => void }) {
+    const [editing, setEditing] = useState(false);
+
+    const totalModules = course.modules?.length || 0;
+    const totalCareers = course.careers?.length || 0;
+    const totalActivities = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.suggested_activities) ? m.suggested_activities.length : 0), 0) || 0;
+    const totalMaterials = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.materials) ? m.materials.length : 0), 0) || 0;
+    const totalCompetences = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.competences) ? m.competences.length : 0), 0) || 0;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+        >
+            {editing ? (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Edit Pathway Details</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <PathwayForm
+                            initialData={course}
+                            onClose={() => setEditing(false)}
+                            onSuccess={() => { setEditing(false); onUpdate(); }}
+                        />
+                    </CardContent>
+                </Card>
+            ) : (
+                <>
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                        <BookOpen className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold">{totalModules}</p>
+                                        <p className="text-xs text-gray-500">Micro-credentials</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-50 rounded-lg">
+                                        <Briefcase className="h-5 w-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold">{totalCareers}</p>
+                                        <p className="text-xs text-gray-500">Career Paths</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-purple-50 rounded-lg">
+                                        <Lightbulb className="h-5 w-5 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold">{totalActivities}</p>
+                                        <p className="text-xs text-gray-500">Activities</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-orange-50 rounded-lg">
+                                        <GraduationCap className="h-5 w-5 text-orange-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold">{totalCompetences}</p>
+                                        <p className="text-xs text-gray-500">Competences</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Pathway Details */}
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle>Pathway Information</CardTitle>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                                        <Edit className="h-4 w-4 mr-2" /> Edit
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={onDelete}>
+                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label className="text-gray-500">Name</Label>
+                                <p className="text-lg font-semibold">{course.name}</p>
+                            </div>
+                            <div>
+                                <Label className="text-gray-500">Description</Label>
+                                <p className="text-gray-700">{course.description || 'No description provided.'}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Links */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <Card className="hover:border-indigo-300 transition-colors cursor-pointer">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-semibold text-lg mb-1">Micro-credentials</h3>
+                                        <p className="text-sm text-gray-500">Manage learning modules and content</p>
+                                    </div>
+                                    <ChevronRight className="h-6 w-6 text-gray-400" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="hover:border-indigo-300 transition-colors cursor-pointer">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-semibold text-lg mb-1">Career Paths</h3>
+                                        <p className="text-sm text-gray-500">Define potential career outcomes</p>
+                                    </div>
+                                    <ChevronRight className="h-6 w-6 text-gray-400" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </>
+            )}
+        </motion.div>
+    );
+}
+
 function PathwayForm({ onClose, onSuccess, initialData }: { onClose: () => void, onSuccess: (id: string) => void, initialData?: Course }) {
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
@@ -284,6 +433,42 @@ function TabButton({ active, onClick, icon, label }: any) {
 
 function ModulesManager({ courseId, initialModules, onUpdate }: { courseId: string, initialModules: Module[], onUpdate: () => void }) {
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingModule, setEditingModule] = useState<Module | undefined>(undefined);
+    const [loading, setLoading] = useState(false);
+
+    const handleEdit = async (moduleId: string) => {
+        setLoading(true);
+        try {
+            // Fetch full module data from API
+            const res = await moduleApi.getById(moduleId);
+            console.log('Fetched module for editing:', res.data);
+            setEditingModule(res.data);
+            setEditingId(moduleId);
+        } catch (err) {
+            console.error('Error fetching module:', err);
+            // Fallback to using the module from initialModules
+            const module = initialModules.find(m => m.id === moduleId);
+            setEditingModule(module);
+            setEditingId(moduleId);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCloseEdit = () => {
+        setEditingId(null);
+        setEditingModule(undefined);
+    };
+
+    const handleDelete = async (moduleId: string, moduleName: string) => {
+        if (!confirm(`Delete micro-credential "${moduleName}"?`)) return;
+        try {
+            await moduleApi.delete(moduleId);
+            onUpdate();
+        } catch (err) {
+            console.error('Error deleting module:', err);
+        }
+    };
 
     return (
         <motion.div
@@ -300,7 +485,7 @@ function ModulesManager({ courseId, initialModules, onUpdate }: { courseId: stri
             </div>
 
             {editingId === 'new' && (
-                <ModuleEditor courseId={courseId} onClose={() => setEditingId(null)} onSuccess={onUpdate} />
+                <ModuleEditor courseId={courseId} onClose={handleCloseEdit} onSuccess={() => { handleCloseEdit(); onUpdate(); }} />
             )}
 
             <div className="grid gap-4">
@@ -313,43 +498,54 @@ function ModulesManager({ courseId, initialModules, onUpdate }: { courseId: stri
                     <Card key={module.id} className="group hover:border-indigo-200 transition-colors">
                         {editingId === module.id ? (
                             <CardContent className="p-6">
-                                <ModuleEditor
-                                    courseId={courseId}
-                                    module={module}
-                                    onClose={() => setEditingId(null)}
-                                    onSuccess={onUpdate}
-                                />
+                                {loading ? (
+                                    <div className="text-center py-8">Loading...</div>
+                                ) : (
+                                    <ModuleEditor
+                                        courseId={courseId}
+                                        module={editingModule}
+                                        onClose={handleCloseEdit}
+                                        onSuccess={() => { handleCloseEdit(); onUpdate(); }}
+                                    />
+                                )}
                             </CardContent>
                         ) : (
                             <CardContent className="p-4 flex items-start justify-between">
-                                <div className="space-y-1">
+                                <div className="space-y-1 flex-1">
                                     <div className="font-semibold text-lg flex items-center gap-2">
                                         {module.name}
                                     </div>
-                                    <p className="text-gray-500 text-sm line-clamp-2">{module.description}</p>
+                                    {module.description && (
+                                        <p className="text-gray-500 text-sm line-clamp-2">{module.description}</p>
+                                    )}
                                     <div className="flex flex-wrap gap-2 mt-2">
-                                        {module.suggested_activities && (
+                                        {Array.isArray(module.suggested_activities) && module.suggested_activities.length > 0 && (
                                             <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <Lightbulb className="h-3 w-3" /> Activities
+                                                <Lightbulb className="h-3 w-3" /> {module.suggested_activities.length} Activities
                                             </span>
                                         )}
-                                        {module.materials && (
+                                        {Array.isArray(module.materials) && module.materials.length > 0 && (
                                             <span className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <Hammer className="h-3 w-3" /> Materials
+                                                <Hammer className="h-3 w-3" /> {module.materials.length} Materials
                                             </span>
                                         )}
-                                        {module.competences && (
+                                        {Array.isArray(module.competences) && module.competences.length > 0 && (
                                             <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <GraduationCap className="h-3 w-3" /> Competences
+                                                <GraduationCap className="h-3 w-3" /> {module.competences.length} Competences
+                                            </span>
+                                        )}
+                                        {Array.isArray(module.media_files) && module.media_files.length > 0 && (
+                                            <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                📁 {module.media_files.length} Media Files
                                             </span>
                                         )}
                                     </div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button size="icon" variant="ghost" onClick={() => setEditingId(module.id)}>
+                                    <Button size="icon" variant="ghost" onClick={() => handleEdit(module.id)}>
                                         <Edit className="h-4 w-4 text-gray-500" />
                                     </Button>
-                                    <Button size="icon" variant="ghost" className="hover:text-red-600">
+                                    <Button size="icon" variant="ghost" className="hover:text-red-600" onClick={() => handleDelete(module.id, module.name)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -367,7 +563,9 @@ function ListInput({ label, items, onChange, placeholder }: { label: string, ite
 
     const handleAdd = () => {
         if (!newItem.trim()) return;
-        onChange([...items, newItem.trim()]);
+        const updatedItems = [...items, newItem.trim()];
+        console.log(`Adding item to ${label}:`, newItem.trim(), 'Updated array:', updatedItems);
+        onChange(updatedItems);
         setNewItem('');
     };
 
@@ -392,7 +590,7 @@ function ListInput({ label, items, onChange, placeholder }: { label: string, ite
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder || "Add item..."}
                 />
-                <Button type="button" onClick={handleAdd} variant="outline">Add</Button>
+                <Button type="button" onClick={handleAdd} variant="secondary">Add</Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
                 {items.map((item, i) => (
@@ -409,13 +607,23 @@ function ListInput({ label, items, onChange, placeholder }: { label: string, ite
 }
 
 function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: string, module?: Module, onClose: () => void, onSuccess: () => void }) {
+    // Helper to ensure we always get an array
+    const ensureArray = (value: any): string[] => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string' && value.trim()) {
+            // Handle legacy text data by splitting on newlines
+            return value.split('\n').map(s => s.trim()).filter(s => s);
+        }
+        return [];
+    };
+
     const [formData, setFormData] = useState({
         name: module?.name || '',
         description: module?.description || '',
         content: module?.content || '',
-        suggested_activities: (module?.suggested_activities || []) as string[],
-        materials: (module?.materials || []) as string[],
-        competences: (module?.competences || []) as string[],
+        suggested_activities: ensureArray(module?.suggested_activities),
+        materials: ensureArray(module?.materials),
+        competences: ensureArray(module?.competences),
     });
     const [saving, setSaving] = useState(false);
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(module?.media_files || []);
@@ -424,16 +632,30 @@ function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: stri
     const handleSave = async () => {
         setSaving(true);
         try {
-            console.log('Saving module payload:', formData);
+            // Ensure arrays are properly formatted
+            const dataToSave = {
+                ...formData,
+                suggested_activities: Array.isArray(formData.suggested_activities) ? formData.suggested_activities : [],
+                materials: Array.isArray(formData.materials) ? formData.materials : [],
+                competences: Array.isArray(formData.competences) ? formData.competences : [],
+            };
+
+            console.log('=== SAVE DEBUG ===');
+            console.log('Current formData:', JSON.stringify(formData, null, 2));
+            console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+            console.log('==================');
+
             if (module) {
-                await moduleApi.update(module.id, formData);
+                const response = await moduleApi.update(module.id, dataToSave);
+                console.log('Update response:', response.data);
             } else {
-                await moduleApi.create({ ...formData, course: courseId });
+                const response = await moduleApi.create({ ...dataToSave, course: courseId });
+                console.log('Create response:', response.data);
             }
             onSuccess();
             onClose();
         } catch (err) {
-            console.error(err);
+            console.error('Save error:', err);
         } finally {
             setSaving(false);
         }
@@ -450,13 +672,23 @@ function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: stri
         setUploading(true);
         try {
             for (const file of Array.from(files)) {
+                console.log('Uploading file:', file.name, 'to module:', module.id);
                 const res = await moduleApi.uploadMedia(module.id, file);
+                console.log('Upload response:', res.data);
                 setMediaFiles(res.data.media_files || []);
             }
-            onSuccess(); // Refresh parent
+            // Don't call onSuccess() here - let user continue editing
         } catch (err: any) {
-            console.error(err);
-            alert(err.response?.data?.error || 'Upload failed');
+            console.error('Upload error:', err);
+            console.error('Error response:', err.response?.data);
+            console.error('Error status:', err.response?.status);
+
+            if (err.response?.status === 401) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/login';
+            } else {
+                alert(err.response?.data?.error || `Upload failed: ${err.message}`);
+            }
         } finally {
             setUploading(false);
             e.target.value = ''; // Reset input
@@ -519,35 +751,43 @@ function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: stri
                     {/* Existing Media */}
                     {mediaFiles.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {mediaFiles.map((media) => (
-                                <div key={media.id} className="relative group rounded-lg overflow-hidden border bg-gray-50">
-                                    {media.type === 'image' ? (
-                                        <img
-                                            src={media.url}
-                                            alt={media.name}
-                                            className="w-full h-24 object-cover"
-                                        />
-                                    ) : (
-                                        <video
-                                            src={media.url}
-                                            className="w-full h-24 object-cover"
-                                        />
-                                    )}
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <Button
-                                            size="icon"
-                                            variant="outline"
-                                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white border-0"
-                                            onClick={() => handleDeleteMedia(media.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                            {mediaFiles.map((media) => {
+                                // Handle relative URLs by prepending API base URL
+                                const mediaUrl = media.url.startsWith('http')
+                                    ? media.url
+                                    : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${media.url}`;
+
+                                return (
+                                    <div key={media.id} className="relative group rounded-lg overflow-hidden border bg-gray-50">
+                                        {media.type === 'image' ? (
+                                            <img
+                                                src={mediaUrl}
+                                                alt={media.name}
+                                                className="w-full h-32 object-cover"
+                                            />
+                                        ) : (
+                                            <video
+                                                src={mediaUrl}
+                                                className="w-full h-32 object-cover"
+                                                controls
+                                            />
+                                        )}
+                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                size="icon"
+                                                variant="outline"
+                                                className="h-7 w-7 bg-red-500 hover:bg-red-600 text-white border-0"
+                                                onClick={() => handleDeleteMedia(media.id)}
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                        <div className="p-1.5 text-xs truncate text-gray-600 bg-white/90">
+                                            {media.type === 'video' ? '🎥' : '🖼️'} {media.name}
+                                        </div>
                                     </div>
-                                    <div className="p-1.5 text-xs truncate text-gray-600">
-                                        {media.type === 'video' ? '🎥' : '🖼️'} {media.name}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
@@ -684,51 +924,5 @@ function CareersManager({ courseId, initialCareers, onUpdate }: { courseId: stri
                 ))}
             </div>
         </motion.div>
-    )
-}
-
-function OverviewEditor({ course, onUpdate, onDelete }: { course: Course, onUpdate: () => void, onDelete: () => void }) {
-    const [isEditing, setIsEditing] = useState(false);
-
-    if (isEditing) {
-        return (
-            <Card>
-                <CardContent className="p-6">
-                    <PathwayForm
-                        initialData={course}
-                        onClose={() => setIsEditing(false)}
-                        onSuccess={() => { setIsEditing(false); onUpdate(); }}
-                    />
-                </CardContent>
-            </Card>
-        )
-    }
-
-    return (
-        <div className="max-w-xl space-y-6">
-            <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Edit className="h-4 w-4 mr-2" /> Edit Details
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
-                    onClick={onDelete}
-                >
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </Button>
-            </div>
-
-            <div className="grid gap-2">
-                <Label>Pathway Name</Label>
-                <div className="p-3 bg-gray-50 rounded border font-medium">{course.name}</div>
-            </div>
-
-            <div className="grid gap-2">
-                <Label>Description</Label>
-                <div className="p-3 bg-gray-50 rounded border min-h-[100px]">{course.description}</div>
-            </div>
-        </div>
     )
 }
