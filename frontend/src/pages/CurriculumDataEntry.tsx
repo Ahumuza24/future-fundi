@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { courseApi, moduleApi, careerApi } from "@/lib/api";
 import {
-    Plus, Edit, Trash2, Bot, Globe, ChevronRight,
-    Briefcase, BookOpen, Layers, Save, X, Layout, FileText,
-    Hammer, Lightbulb, GraduationCap
+    Plus, Edit, Trash2, ChevronDown, ChevronUp,
+    Briefcase, BookOpen, Save, X, Image, Video,
+    Sparkles, GraduationCap, Lightbulb, Wrench
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Types matching backend
+// Types
 interface Career {
     id: string;
     title: string;
@@ -47,335 +47,346 @@ interface Course {
     modules?: Module[];
 }
 
+// Fundi brand color palette for pathways
+const pathwayColors = [
+    { bg: 'from-[#FF6B35] to-[#E85A24]', light: 'bg-white', text: 'text-[#FF6B35]', border: 'border-[#FF6B35]/30' },  // Fundi Orange
+    { bg: 'from-[#00C4B4] to-[#00A89C]', light: 'bg-white', text: 'text-[#00C4B4]', border: 'border-[#00C4B4]/30' },   // Fundi Cyan
+    { bg: 'from-[#C7F464] to-[#A8D94A]', light: 'bg-white', text: 'text-[#7CB518]', border: 'border-[#C7F464]/50' },   // Fundi Lime
+    { bg: 'from-[#1A1A2E] to-[#2D2D44]', light: 'bg-white', text: 'text-[#1A1A2E]', border: 'border-gray-300' },       // Fundi Dark
+    { bg: 'from-[#FF6B35] to-[#00C4B4]', light: 'bg-white', text: 'text-[#FF6B35]', border: 'border-[#FF6B35]/30' },   // Orange-Cyan gradient
+    { bg: 'from-[#00C4B4] to-[#C7F464]', light: 'bg-white', text: 'text-[#00C4B4]', border: 'border-[#00C4B4]/30' },   // Cyan-Lime gradient
+];
+
 export default function CurriculumDataEntry() {
     const [courses, setCourses] = useState<Course[]>([]);
-    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'modules' | 'careers'>('modules');
-    const [isCreating, setIsCreating] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [expandedPathway, setExpandedPathway] = useState<string | null>(null);
+    const [editingModule, setEditingModule] = useState<string | null>(null);
+    const [editingCareer, setEditingCareer] = useState<string | null>(null);
+    const [isCreatingPathway, setIsCreatingPathway] = useState(false);
+    const [isCreatingModule, setIsCreatingModule] = useState<string | null>(null);
+    const [isCreatingCareer, setIsCreatingCareer] = useState<string | null>(null);
 
     useEffect(() => {
         fetchCourses();
     }, []);
 
     const fetchCourses = async () => {
+        setLoading(true);
         try {
             const res = await courseApi.getAll();
-            const data = res.data.results || res.data || [];
+            // Handle both paginated and non-paginated responses
+            const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
             setCourses(data);
         } catch (err) {
             console.error(err);
+            setCourses([]);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleCreateSuccess = (newId: string) => {
-        setIsCreating(false);
-        fetchCourses();
-        loadCourseDetails(newId);
-    };
+    const getColorScheme = (index: number) => pathwayColors[index % pathwayColors.length];
 
-    const handleUpdate = () => {
-        if (selectedCourse) loadCourseDetails(selectedCourse.id);
-        fetchCourses(); // to update sidebar name if changed
-    };
-
-    const handleDelete = async () => {
-        if (!selectedCourse || !confirm(`Delete pathway "${selectedCourse.name}"? This cannot be undone.`)) return;
-        try {
-            await courseApi.delete(selectedCourse.id);
-            setSelectedCourse(null);
-            fetchCourses();
-        } catch (err) { console.error(err); }
-    };
-
-    const loadCourseDetails = async (courseId: string) => {
-        try {
-            // Fetch full details including modules and careers (if backend supports nested)
-            // If not, fetch separately. My CourseSerializer DOES include them.
-            const res = await courseApi.getById(courseId);
-            setSelectedCourse(res.data);
-        } catch (err) {
-            console.error(err);
+    const togglePathway = async (courseId: string) => {
+        if (expandedPathway === courseId) {
+            setExpandedPathway(null);
+        } else {
+            try {
+                const res = await courseApi.getById(courseId);
+                setCourses(prev => prev.map(c => c.id === courseId ? res.data : c));
+                setExpandedPathway(courseId);
+            } catch (err) {
+                console.error(err);
+            }
         }
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[var(--fundi-bg-light)]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--fundi-orange)] border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading curriculum...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-gray-50/50">
-            {/* Sidebar: Pathways */}
-            <div className="w-80 border-r bg-white overflow-y-auto flex flex-col">
-                <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                    <h2 className="font-bold text-lg flex items-center gap-2">
-                        <Layout className="h-5 w-5 text-indigo-600" />
-                        Pathways
-                    </h2>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setIsCreating(true); setSelectedCourse(null); }}>
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </div>
-                <div className="p-2 space-y-1">
-                    {courses.map(course => (
-                        <button
-                            key={course.id}
-                            onClick={() => loadCourseDetails(course.id)}
-                            className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition-colors ${selectedCourse?.id === course.id
-                                ? 'bg-indigo-50 text-indigo-700 font-medium'
-                                : 'hover:bg-gray-100 text-gray-600'
-                                }`}
+        <div className="min-h-screen bg-[var(--fundi-bg-light)]">
+            {/* Header */}
+            <div className="bg-white border-b sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-[var(--fundi-black)]">
+                                Curriculum Editor
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-1">
+                                {courses.length} pathways • Build and manage learning content
+                            </p>
+                        </div>
+                        <Button
+                            onClick={() => setIsCreatingPathway(true)}
+                            className="gap-2"
                         >
-                            <div className={`p-2 rounded-md ${selectedCourse?.id === course.id ? 'bg-indigo-100' : 'bg-gray-100'
-                                }`}>
-                                <Bot className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1 truncate">
-                                <div className="truncate">{course.name}</div>
-                                <div className="text-xs text-gray-400 font-normal">
-                                    <div className="text-xs text-gray-400 font-normal">
-                                        Pathway
-                                    </div>
-                                </div>
-                            </div>
-                            <ChevronRight className={`h-4 w-4 opacity-50 ${selectedCourse?.id === course.id ? 'opacity-100' : ''
-                                }`} />
-                        </button>
-                    ))}
+                            <Plus className="h-4 w-4" /> New Pathway
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                {selectedCourse ? (
-                    <div className="max-w-5xl mx-auto space-y-6">
-                        {/* Header */}
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900">{selectedCourse.name}</h1>
-                                <p className="text-gray-500 mt-1">{selectedCourse.description || 'No description provided.'}</p>
-                            </div>
-                        </div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Create Pathway Modal */}
+                <AnimatePresence>
+                    {isCreatingPathway && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="mb-8"
+                        >
+                            <PathwayForm
+                                onClose={() => setIsCreatingPathway(false)}
+                                onSuccess={() => { setIsCreatingPathway(false); fetchCourses(); }}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                        {/* Tabs */}
-                        <div className="border-b flex gap-6">
-                            <TabButton
-                                active={activeTab === 'overview'}
-                                onClick={() => setActiveTab('overview')}
-                                icon={<Layout className="h-4 w-4" />}
-                                label="Overview"
-                            />
-                            <TabButton
-                                active={activeTab === 'modules'}
-                                onClick={() => setActiveTab('modules')}
-                                icon={<BookOpen className="h-4 w-4" />}
-                                label="Micro-credentials"
-                            />
-                            <TabButton
-                                active={activeTab === 'careers'}
-                                onClick={() => setActiveTab('careers')}
-                                icon={<Briefcase className="h-4 w-4" />}
-                                label="Potential Careers"
-                            />
-                        </div>
+                {/* Pathways Grid */}
+                <div className="space-y-6">
+                    {courses.map((course, index) => {
+                        const colors = getColorScheme(index);
+                        const isExpanded = expandedPathway === course.id;
+                        const moduleCount = course.modules?.length || 0;
+                        const careerCount = course.careers?.length || 0;
 
-                        {/* Content Area */}
-                        <div className="min-h-[500px]">
-                            <AnimatePresence mode="wait">
-                                {activeTab === 'modules' && (
-                                    <ModulesManager
-                                        key="modules"
-                                        courseId={selectedCourse.id}
-                                        initialModules={selectedCourse.modules || []}
-                                        onUpdate={() => loadCourseDetails(selectedCourse.id)}
-                                    />
-                                )}
-                                {activeTab === 'careers' && (
-                                    <CareersManager
-                                        key="careers"
-                                        courseId={selectedCourse.id}
-                                        initialCareers={selectedCourse.careers || []}
-                                        onUpdate={() => loadCourseDetails(selectedCourse.id)}
-                                    />
-                                )}
-                                {activeTab === 'overview' && (
-                                    <OverviewEditor course={selectedCourse} onUpdate={handleUpdate} onDelete={handleDelete} />
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                        {isCreating ? (
-                            <div className="w-full max-w-lg">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Create New Pathway</CardTitle>
-                                        <CardDescription>Start a new learning track</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <PathwayForm onClose={() => setIsCreating(false)} onSuccess={handleCreateSuccess} />
-                                    </CardContent>
-                                </Card>
+                        return (
+                            <motion.div
+                                key={course.id}
+                                layout
+                                className={`bg-white rounded-2xl shadow-sm border-2 transition-all duration-300 overflow-hidden ${isExpanded ? 'shadow-lg ' + colors.border : 'border-gray-100 hover:border-gray-200'
+                                    }`}
+                            >
+                                {/* Pathway Header */}
+                                <div
+                                    className={`p-5 cursor-pointer transition-all ${isExpanded ? colors.light : 'hover:bg-gray-50'}`}
+                                    onClick={() => togglePathway(course.id)}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-lg`}>
+                                                <BookOpen className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-bold text-gray-900">{course.name}</h2>
+                                                <p className="text-sm text-gray-500 line-clamp-1">{course.description || 'No description'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            {/* Quick Stats */}
+                                            <div className="hidden sm:flex items-center gap-4">
+                                                <div className="text-center">
+                                                    <p className={`text-lg font-bold ${colors.text}`}>{moduleCount}</p>
+                                                    <p className="text-xs text-gray-500">Microcredentials</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className={`text-lg font-bold ${colors.text}`}>{careerCount}</p>
+                                                    <p className="text-xs text-gray-500">Career Paths</p>
+                                                </div>
+                                            </div>
+                                            <motion.div
+                                                animate={{ rotate: isExpanded ? 180 : 0 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <ChevronDown className={`h-6 w-6 ${colors.text}`} />
+                                            </motion.div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Content */}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="border-t"
+                                        >
+                                            <div className="p-6 space-y-6">
+                                                {/* Micro-credentials Section */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                            <Sparkles className={`h-5 w-5 ${colors.text}`} />
+                                                            Micro-credentials
+                                                        </h3>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={(e) => { e.stopPropagation(); setIsCreatingModule(course.id); }}
+                                                            className="gap-1"
+                                                        >
+                                                            <Plus className="h-4 w-4" /> Add
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* New Module Form */}
+                                                    <AnimatePresence>
+                                                        {isCreatingModule === course.id && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                                className="mb-4"
+                                                            >
+                                                                <ModuleForm
+                                                                    courseId={course.id}
+                                                                    onClose={() => setIsCreatingModule(null)}
+                                                                    onSuccess={() => { setIsCreatingModule(null); togglePathway(course.id); }}
+                                                                    colors={colors}
+                                                                />
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Modules List */}
+                                                    <div className="space-y-3">
+                                                        {course.modules?.length === 0 && !isCreatingModule && (
+                                                            <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-xl">
+                                                                <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                                <p>No micro-credentials yet</p>
+                                                            </div>
+                                                        )}
+                                                        {course.modules?.map((module) => (
+                                                            <ModuleCard
+                                                                key={module.id}
+                                                                module={module}
+                                                                courseId={course.id}
+                                                                colors={colors}
+                                                                isEditing={editingModule === module.id}
+                                                                onEdit={() => setEditingModule(module.id)}
+                                                                onClose={() => setEditingModule(null)}
+                                                                onUpdate={() => togglePathway(course.id)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Careers Section */}
+                                                <div className="pt-4 border-t">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                            <Briefcase className={`h-5 w-5 ${colors.text}`} />
+                                                            Career Paths
+                                                        </h3>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={(e) => { e.stopPropagation(); setIsCreatingCareer(course.id); }}
+                                                            className="gap-1"
+                                                        >
+                                                            <Plus className="h-4 w-4" /> Add
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* New Career Form */}
+                                                    <AnimatePresence>
+                                                        {isCreatingCareer === course.id && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                                className="mb-4"
+                                                            >
+                                                                <CareerForm
+                                                                    courseId={course.id}
+                                                                    onClose={() => setIsCreatingCareer(null)}
+                                                                    onSuccess={() => { setIsCreatingCareer(null); togglePathway(course.id); }}
+                                                                    colors={colors}
+                                                                />
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Careers Grid */}
+                                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {course.careers?.length === 0 && !isCreatingCareer && (
+                                                            <div className="col-span-full text-center py-6 text-gray-400 border-2 border-dashed rounded-xl">
+                                                                <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                                <p>No career paths defined</p>
+                                                            </div>
+                                                        )}
+                                                        {course.careers?.map((career) => (
+                                                            <CareerCard
+                                                                key={career.id}
+                                                                career={career}
+                                                                colors={colors}
+                                                                isEditing={editingCareer === career.id}
+                                                                onEdit={() => setEditingCareer(career.id)}
+                                                                onClose={() => setEditingCareer(null)}
+                                                                onUpdate={() => togglePathway(course.id)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Pathway Actions */}
+                                                <div className="pt-4 border-t flex justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={async () => {
+                                                            if (confirm(`Delete "${course.name}"? This cannot be undone.`)) {
+                                                                await courseApi.delete(course.id);
+                                                                fetchCourses();
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-1" /> Delete Pathway
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })}
+
+                    {courses.length === 0 && !isCreatingPathway && (
+                        <div className="text-center py-16">
+                            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#00C4B4] flex items-center justify-center">
+                                <BookOpen className="h-10 w-10 text-white" />
                             </div>
-                        ) : (
-                            <>
-                                <Layout className="h-16 w-16 mb-4 opacity-20" />
-                                <p>Select a pathway to start editing</p>
-                            </>
-                        )}
-                    </div>
-                )}
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pathways Yet</h3>
+                            <p className="text-gray-500 mb-6">Create your first learning pathway to get started</p>
+                            <Button
+                                onClick={() => setIsCreatingPathway(true)}
+                                className="gap-2"
+                            >
+                                <Plus className="h-4 w-4" /> Create First Pathway
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
 
-function OverviewEditor({ course, onUpdate, onDelete }: { course: Course, onUpdate: () => void, onDelete: () => void }) {
-    const [editing, setEditing] = useState(false);
-
-    const totalModules = course.modules?.length || 0;
-    const totalCareers = course.careers?.length || 0;
-    const totalActivities = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.suggested_activities) ? m.suggested_activities.length : 0), 0) || 0;
-    const totalMaterials = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.materials) ? m.materials.length : 0), 0) || 0;
-    const totalCompetences = course.modules?.reduce((sum, m) => sum + (Array.isArray(m.competences) ? m.competences.length : 0), 0) || 0;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-        >
-            {editing ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Edit Pathway Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <PathwayForm
-                            initialData={course}
-                            onClose={() => setEditing(false)}
-                            onSuccess={() => { setEditing(false); onUpdate(); }}
-                        />
-                    </CardContent>
-                </Card>
-            ) : (
-                <>
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-50 rounded-lg">
-                                        <BookOpen className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold">{totalModules}</p>
-                                        <p className="text-xs text-gray-500">Micro-credentials</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-green-50 rounded-lg">
-                                        <Briefcase className="h-5 w-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold">{totalCareers}</p>
-                                        <p className="text-xs text-gray-500">Career Paths</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-purple-50 rounded-lg">
-                                        <Lightbulb className="h-5 w-5 text-purple-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold">{totalActivities}</p>
-                                        <p className="text-xs text-gray-500">Activities</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-orange-50 rounded-lg">
-                                        <GraduationCap className="h-5 w-5 text-orange-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold">{totalCompetences}</p>
-                                        <p className="text-xs text-gray-500">Competences</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Pathway Details */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>Pathway Information</CardTitle>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                                        <Edit className="h-4 w-4 mr-2" /> Edit
-                                    </Button>
-                                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={onDelete}>
-                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label className="text-gray-500">Name</Label>
-                                <p className="text-lg font-semibold">{course.name}</p>
-                            </div>
-                            <div>
-                                <Label className="text-gray-500">Description</Label>
-                                <p className="text-gray-700">{course.description || 'No description provided.'}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Quick Links */}
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <Card className="hover:border-indigo-300 transition-colors cursor-pointer">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-semibold text-lg mb-1">Micro-credentials</h3>
-                                        <p className="text-sm text-gray-500">Manage learning modules and content</p>
-                                    </div>
-                                    <ChevronRight className="h-6 w-6 text-gray-400" />
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="hover:border-indigo-300 transition-colors cursor-pointer">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-semibold text-lg mb-1">Career Paths</h3>
-                                        <p className="text-sm text-gray-500">Define potential career outcomes</p>
-                                    </div>
-                                    <ChevronRight className="h-6 w-6 text-gray-400" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </>
-            )}
-        </motion.div>
-    );
-}
-
-function PathwayForm({ onClose, onSuccess, initialData }: { onClose: () => void, onSuccess: (id: string) => void, initialData?: Course }) {
+// ============ PATHWAY FORM ============
+function PathwayForm({ onClose, onSuccess, initialData }: {
+    onClose: () => void;
+    onSuccess: () => void;
+    initialData?: Course
+}) {
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
         description: initialData?.description || '',
@@ -383,279 +394,325 @@ function PathwayForm({ onClose, onSuccess, initialData }: { onClose: () => void,
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async () => {
+        if (!formData.name.trim()) return;
         setSaving(true);
         try {
-            let res;
             if (initialData) {
-                res = await courseApi.update(initialData.id, formData);
+                await courseApi.update(initialData.id, formData);
             } else {
-                res = await courseApi.create(formData);
+                await courseApi.create(formData);
             }
-            onSuccess(res.data.id);
-        } catch (err) { console.error(err); } finally { setSaving(false); }
-    };
-
-    return (
-        <div className="space-y-4">
-            <div className="grid gap-2">
-                <Label>Pathway Name</Label>
-                <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Advanced Robotics" />
-            </div>
-            <div className="grid gap-2">
-                <Label>Description</Label>
-                <textarea className="w-full min-h-[80px] p-3 rounded-md border text-sm" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Saving...' : 'Save Pathway'}</Button>
-            </div>
-        </div>
-    )
-}
-
-function TabButton({ active, onClick, icon, label }: any) {
-    return (
-        <button
-            onClick={onClick}
-            className={`pb-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors ${active
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-        >
-            {icon}
-            {label}
-        </button>
-    )
-}
-
-// --- Modules Manager ---
-
-function ModulesManager({ courseId, initialModules, onUpdate }: { courseId: string, initialModules: Module[], onUpdate: () => void }) {
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingModule, setEditingModule] = useState<Module | undefined>(undefined);
-    const [loading, setLoading] = useState(false);
-
-    const handleEdit = async (moduleId: string) => {
-        setLoading(true);
-        try {
-            // Fetch full module data from API
-            const res = await moduleApi.getById(moduleId);
-            console.log('Fetched module for editing:', res.data);
-            setEditingModule(res.data);
-            setEditingId(moduleId);
+            onSuccess();
         } catch (err) {
-            console.error('Error fetching module:', err);
-            // Fallback to using the module from initialModules
-            const module = initialModules.find(m => m.id === moduleId);
-            setEditingModule(module);
-            setEditingId(moduleId);
+            console.error(err);
         } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCloseEdit = () => {
-        setEditingId(null);
-        setEditingModule(undefined);
-    };
-
-    const handleDelete = async (moduleId: string, moduleName: string) => {
-        if (!confirm(`Delete micro-credential "${moduleName}"?`)) return;
-        try {
-            await moduleApi.delete(moduleId);
-            onUpdate();
-        } catch (err) {
-            console.error('Error deleting module:', err);
+            setSaving(false);
         }
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
-        >
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-lg">Micro-credentials</h3>
-                <Button onClick={() => setEditingId('new')} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Micro-credential
-                </Button>
-            </div>
-
-            {editingId === 'new' && (
-                <ModuleEditor courseId={courseId} onClose={handleCloseEdit} onSuccess={() => { handleCloseEdit(); onUpdate(); }} />
-            )}
-
-            <div className="grid gap-4">
-                {initialModules.length === 0 && editingId !== 'new' && (
-                    <div className="text-center p-8 border-2 border-dashed rounded-lg text-gray-400">
-                        No micro-credentials added yet.
-                    </div>
-                )}
-                {initialModules.map(module => (
-                    <Card key={module.id} className="group hover:border-indigo-200 transition-colors">
-                        {editingId === module.id ? (
-                            <CardContent className="p-6">
-                                {loading ? (
-                                    <div className="text-center py-8">Loading...</div>
-                                ) : (
-                                    <ModuleEditor
-                                        courseId={courseId}
-                                        module={editingModule}
-                                        onClose={handleCloseEdit}
-                                        onSuccess={() => { handleCloseEdit(); onUpdate(); }}
-                                    />
-                                )}
-                            </CardContent>
-                        ) : (
-                            <CardContent className="p-4 flex items-start justify-between">
-                                <div className="space-y-1 flex-1">
-                                    <div className="font-semibold text-lg flex items-center gap-2">
-                                        {module.name}
-                                    </div>
-                                    {module.description && (
-                                        <p className="text-gray-500 text-sm line-clamp-2">{module.description}</p>
-                                    )}
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {Array.isArray(module.suggested_activities) && module.suggested_activities.length > 0 && (
-                                            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <Lightbulb className="h-3 w-3" /> {module.suggested_activities.length} Activities
-                                            </span>
-                                        )}
-                                        {Array.isArray(module.materials) && module.materials.length > 0 && (
-                                            <span className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <Hammer className="h-3 w-3" /> {module.materials.length} Materials
-                                            </span>
-                                        )}
-                                        {Array.isArray(module.competences) && module.competences.length > 0 && (
-                                            <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <GraduationCap className="h-3 w-3" /> {module.competences.length} Competences
-                                            </span>
-                                        )}
-                                        {Array.isArray(module.media_files) && module.media_files.length > 0 && (
-                                            <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                📁 {module.media_files.length} Media Files
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button size="icon" variant="ghost" onClick={() => handleEdit(module.id)}>
-                                        <Edit className="h-4 w-4 text-gray-500" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="hover:text-red-600" onClick={() => handleDelete(module.id, module.name)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        )}
-                    </Card>
-                ))}
-            </div>
-        </motion.div>
+        <Card className="border-2 border-[#FF6B35]/30 shadow-lg">
+            <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-[#FF6B35]" />
+                    {initialData ? 'Edit Pathway' : 'Create New Pathway'}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+                <div>
+                    <Label className="text-sm font-medium">Pathway Name *</Label>
+                    <Input
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Robotics & Automation"
+                        className="mt-1"
+                    />
+                </div>
+                <div>
+                    <Label className="text-sm font-medium">Description</Label>
+                    <textarea
+                        value={formData.description}
+                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Brief description of this learning pathway..."
+                        className="mt-1 w-full p-3 rounded-lg border text-sm min-h-[80px] focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent"
+                    />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={saving || !formData.name.trim()}
+                    >
+                        {saving ? 'Saving...' : initialData ? 'Update' : 'Create Pathway'}
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 
-function ListInput({ label, items, onChange, placeholder }: { label: string, items: string[], onChange: (items: string[]) => void, placeholder?: string }) {
-    const [newItem, setNewItem] = useState('');
+// ============ MODULE CARD ============
+function ModuleCard({ module, courseId, colors, isEditing, onEdit, onClose, onUpdate }: {
+    module: Module;
+    courseId: string;
+    colors: typeof pathwayColors[0];
+    isEditing: boolean;
+    onEdit: () => void;
+    onClose: () => void;
+    onUpdate: () => void;
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const [fullModule, setFullModule] = useState<Module | null>(null);
 
-    const handleAdd = () => {
-        if (!newItem.trim()) return;
-        const updatedItems = [...items, newItem.trim()];
-        console.log(`Adding item to ${label}:`, newItem.trim(), 'Updated array:', updatedItems);
-        onChange(updatedItems);
-        setNewItem('');
+    const loadFullModule = async () => {
+        if (!fullModule) {
+            try {
+                const res = await moduleApi.getById(module.id);
+                setFullModule(res.data);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        setExpanded(!expanded);
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAdd();
+    const handleEditClick = async () => {
+        if (!fullModule) {
+            const res = await moduleApi.getById(module.id);
+            setFullModule(res.data);
+        }
+        onEdit();
+    };
+
+    const handleDelete = async () => {
+        if (confirm(`Delete "${module.name}"?`)) {
+            await moduleApi.delete(module.id);
+            onUpdate();
         }
     };
 
-    const remove = (index: number) => {
-        onChange(items.filter((_, i) => i !== index));
-    };
+    const data = fullModule || module;
+    const activities = Array.isArray(data.suggested_activities) ? data.suggested_activities : [];
+    const materials = Array.isArray(data.materials) ? data.materials : [];
+    const competences = Array.isArray(data.competences) ? data.competences : [];
+    const mediaFiles = Array.isArray(data.media_files) ? data.media_files : [];
+
+    if (isEditing && fullModule) {
+        return (
+            <ModuleForm
+                courseId={courseId}
+                module={fullModule}
+                onClose={onClose}
+                onSuccess={() => { onClose(); onUpdate(); }}
+                colors={colors}
+            />
+        );
+    }
 
     return (
-        <div className="space-y-2">
-            <Label>{label}</Label>
-            <div className="flex gap-2">
-                <Input
-                    value={newItem}
-                    onChange={e => setNewItem(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder || "Add item..."}
-                />
-                <Button type="button" onClick={handleAdd} variant="secondary">Add</Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-                {items.map((item, i) => (
-                    <div key={i} className="bg-white border rounded-md px-3 py-1 text-sm flex items-center gap-2 shadow-sm">
-                        <span>{item}</span>
-                        <button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500">
-                            <X className="h-3 w-3" />
-                        </button>
+        <div className={`rounded-xl border-2 ${expanded ? colors.border + ' ' + colors.light : 'border-gray-100'} transition-all`}>
+            {/* Header */}
+            <div className="p-4 flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0" onClick={loadFullModule}>
+                    <div className="flex items-center gap-3 cursor-pointer">
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                            <Sparkles className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900 truncate">{module.name}</h4>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                                {activities.length > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                        <Lightbulb className="h-3 w-3" /> {activities.length}
+                                    </span>
+                                )}
+                                {competences.length > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                        <GraduationCap className="h-3 w-3" /> {competences.length}
+                                    </span>
+                                )}
+                                {materials.length > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                        <Wrench className="h-3 w-3" /> {materials.length}
+                                    </span>
+                                )}
+                                {mediaFiles.length > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                        <Image className="h-3 w-3" /> {mediaFiles.length}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                ))}
+                </div>
+                <div className="flex items-center gap-1">
+                    <Button size="icon" variant="ghost" onClick={handleEditClick} className="h-8 w-8">
+                        <Edit className="h-4 w-4 text-gray-500" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={handleDelete} className="h-8 w-8 hover:text-red-600">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={loadFullModule} className="h-8 w-8">
+                        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
+
+            {/* Expanded Details */}
+            <AnimatePresence>
+                {expanded && fullModule && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t"
+                    >
+                        <div className="p-4 space-y-4">
+                            {/* Content */}
+                            {fullModule.content && (
+                                <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Content</Label>
+                                    <p className="mt-1 text-sm text-gray-700 bg-white p-3 rounded-lg border">{fullModule.content}</p>
+                                </div>
+                            )}
+
+                            {/* Activities, Competences & Materials - Prominent Display */}
+                            <div className="grid sm:grid-cols-3 gap-4">
+                                {/* Activities Card */}
+                                <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4 border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                                            <Lightbulb className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-blue-900">Activities</h4>
+                                            <p className="text-xs text-blue-600">{activities.length} defined</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        {activities.length === 0 && (
+                                            <p className="text-sm text-blue-400 italic">No activities added</p>
+                                        )}
+                                        {activities.map((a, i) => (
+                                            <div key={i} className="flex items-start gap-2 bg-white/80 rounded-lg px-3 py-2 border border-blue-100">
+                                                <span className="text-blue-500 mt-0.5">•</span>
+                                                <span className="text-sm text-gray-700">{a}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Competences Card */}
+                                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-4 border border-emerald-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+                                            <GraduationCap className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-emerald-900">Competences</h4>
+                                            <p className="text-xs text-emerald-600">{competences.length} skills</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        {competences.length === 0 && (
+                                            <p className="text-sm text-emerald-400 italic">No competences added</p>
+                                        )}
+                                        {competences.map((c, i) => (
+                                            <div key={i} className="flex items-start gap-2 bg-white/80 rounded-lg px-3 py-2 border border-emerald-100">
+                                                <span className="text-emerald-500 mt-0.5">✓</span>
+                                                <span className="text-sm text-gray-700">{c}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Materials Card */}
+                                <div className="bg-gradient-to-br from-orange-50 to-amber-100/50 rounded-xl p-4 border border-orange-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-[#FF6B35] flex items-center justify-center">
+                                            <Wrench className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-orange-900">Materials</h4>
+                                            <p className="text-xs text-orange-600">{materials.length} items</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        {materials.length === 0 && (
+                                            <p className="text-sm text-orange-400 italic">No materials listed</p>
+                                        )}
+                                        {materials.map((m, i) => (
+                                            <div key={i} className="flex items-start gap-2 bg-white/80 rounded-lg px-3 py-2 border border-orange-100">
+                                                <span className="text-[#FF6B35] mt-0.5">▸</span>
+                                                <span className="text-sm text-gray-700">{m}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Media Preview */}
+                            {mediaFiles.length > 0 && (
+                                <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Media Files</Label>
+                                    <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                        {mediaFiles.map((media) => {
+                                            const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
+                                            return (
+                                                <div key={media.id} className="aspect-square rounded-lg overflow-hidden border bg-gray-100">
+                                                    {media.type === 'image' ? (
+                                                        <img src={url} alt={media.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                                            <Video className="h-6 w-6 text-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
 
-function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: string, module?: Module, onClose: () => void, onSuccess: () => void }) {
-    // Helper to ensure we always get an array
-    const ensureArray = (value: any): string[] => {
-        if (Array.isArray(value)) return value;
-        if (typeof value === 'string' && value.trim()) {
-            // Handle legacy text data by splitting on newlines
-            return value.split('\n').map(s => s.trim()).filter(s => s);
-        }
-        return [];
-    };
-
+// ============ MODULE FORM ============
+function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
+    courseId: string;
+    module?: Module;
+    onClose: () => void;
+    onSuccess: () => void;
+    colors: typeof pathwayColors[0];
+}) {
     const [formData, setFormData] = useState({
         name: module?.name || '',
         description: module?.description || '',
         content: module?.content || '',
-        suggested_activities: ensureArray(module?.suggested_activities),
-        materials: ensureArray(module?.materials),
-        competences: ensureArray(module?.competences),
+        suggested_activities: Array.isArray(module?.suggested_activities) ? module.suggested_activities : [],
+        materials: Array.isArray(module?.materials) ? module.materials : [],
+        competences: Array.isArray(module?.competences) ? module.competences : [],
     });
-    const [saving, setSaving] = useState(false);
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(module?.media_files || []);
+    const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
     const handleSave = async () => {
+        if (!formData.name.trim()) return;
         setSaving(true);
         try {
-            // Ensure arrays are properly formatted
-            const dataToSave = {
-                ...formData,
-                suggested_activities: Array.isArray(formData.suggested_activities) ? formData.suggested_activities : [],
-                materials: Array.isArray(formData.materials) ? formData.materials : [],
-                competences: Array.isArray(formData.competences) ? formData.competences : [],
-            };
-
-            console.log('=== SAVE DEBUG ===');
-            console.log('Current formData:', JSON.stringify(formData, null, 2));
-            console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
-            console.log('==================');
-
             if (module) {
-                const response = await moduleApi.update(module.id, dataToSave);
-                console.log('Update response:', response.data);
+                await moduleApi.update(module.id, formData);
             } else {
-                const response = await moduleApi.create({ ...dataToSave, course: courseId });
-                console.log('Create response:', response.data);
+                await moduleApi.create({ ...formData, course: courseId });
             }
             onSuccess();
-            onClose();
         } catch (err) {
-            console.error('Save error:', err);
+            console.error(err);
         } finally {
             setSaving(false);
         }
@@ -667,262 +724,376 @@ function ModuleEditor({ courseId, module, onClose, onSuccess }: { courseId: stri
             return;
         }
         const files = e.target.files;
-        if (!files || files.length === 0) return;
+        if (!files) return;
 
         setUploading(true);
         try {
             for (const file of Array.from(files)) {
-                console.log('Uploading file:', file.name, 'to module:', module.id);
                 const res = await moduleApi.uploadMedia(module.id, file);
-                console.log('Upload response:', res.data);
                 setMediaFiles(res.data.media_files || []);
             }
-            // Don't call onSuccess() here - let user continue editing
         } catch (err: any) {
-            console.error('Upload error:', err);
-            console.error('Error response:', err.response?.data);
-            console.error('Error status:', err.response?.status);
-
-            if (err.response?.status === 401) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/login';
-            } else {
-                alert(err.response?.data?.error || `Upload failed: ${err.message}`);
-            }
+            console.error(err);
+            alert(err.response?.data?.error || 'Upload failed');
         } finally {
             setUploading(false);
-            e.target.value = ''; // Reset input
+            e.target.value = '';
         }
     };
 
     const handleDeleteMedia = async (mediaId: string) => {
-        if (!module?.id || !confirm('Delete this media file?')) return;
+        if (!module?.id) return;
         try {
             const res = await moduleApi.deleteMedia(module.id, mediaId);
             setMediaFiles(res.data.media_files || []);
-            onSuccess();
         } catch (err) {
             console.error(err);
         }
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="font-medium text-indigo-600">{module ? 'Edit Micro-credential' : 'New Micro-credential'}</h4>
-                <Button size="icon" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-                <div className="col-span-2">
-                    <Label htmlFor="name">Title</Label>
+        <Card className={`border-2 ${colors.border}`}>
+            <CardHeader className={colors.light}>
+                <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                        <Sparkles className={`h-5 w-5 ${colors.text}`} />
+                        {module ? 'Edit Micro-credential' : 'New Micro-credential'}
+                    </span>
+                    <Button size="icon" variant="ghost" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-5">
+                {/* Name */}
+                <div>
+                    <Label className="text-sm font-medium">Title *</Label>
                     <Input
-                        id="name"
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g. Intro to Sensors"
+                        placeholder="e.g., Introduction to Sensors"
+                        className="mt-1"
                     />
                 </div>
-                {/*  <div className="col-span-2">
-                    <Label htmlFor="desc">Description</Label>
-                    <Input
-                        id="desc"
-                        value={formData.description}
-                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Brief summary..."
-                    />
-                </div> */}
 
-                {/* Detailed Fields */}
-                <div className="col-span-2 space-y-2">
-                    <Label htmlFor="content">Content (Text)</Label>
+                {/* Content */}
+                <div>
+                    <Label className="text-sm font-medium">Content</Label>
                     <textarea
-                        className="w-full min-h-[120px] p-3 rounded-md border text-sm"
-                        placeholder="Text content here..."
                         value={formData.content}
                         onChange={e => setFormData({ ...formData, content: e.target.value })}
+                        placeholder="Main content for this module..."
+                        className="mt-1 w-full p-3 rounded-lg border text-sm min-h-[100px]"
                     />
                 </div>
 
-                {/* Media Upload Section */}
-                <div className="col-span-2 space-y-3">
-                    <Label>Media Files (Images & Videos)</Label>
+                {/* Tags Section */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                    <TagInput
+                        label="Activities"
+                        icon={<Lightbulb className="h-4 w-4 text-blue-500" />}
+                        items={formData.suggested_activities}
+                        onChange={items => setFormData({ ...formData, suggested_activities: items })}
+                        placeholder="Add activity..."
+                        color="blue"
+                    />
+                    <TagInput
+                        label="Competences"
+                        icon={<GraduationCap className="h-4 w-4 text-green-500" />}
+                        items={formData.competences}
+                        onChange={items => setFormData({ ...formData, competences: items })}
+                        placeholder="Add skill..."
+                        color="green"
+                    />
+                    <TagInput
+                        label="Materials"
+                        icon={<Wrench className="h-4 w-4 text-orange-500" />}
+                        items={formData.materials}
+                        onChange={items => setFormData({ ...formData, materials: items })}
+                        placeholder="Add material..."
+                        color="orange"
+                    />
+                </div>
 
-                    {/* Existing Media */}
-                    {mediaFiles.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {/* Media Upload */}
+                {module && (
+                    <div>
+                        <Label className="text-sm font-medium">Media Files</Label>
+                        <div className="mt-2 grid grid-cols-4 gap-2">
                             {mediaFiles.map((media) => {
-                                // Handle relative URLs by prepending API base URL
-                                const mediaUrl = media.url.startsWith('http')
-                                    ? media.url
-                                    : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${media.url}`;
-
+                                const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
                                 return (
-                                    <div key={media.id} className="relative group rounded-lg overflow-hidden border bg-gray-50">
+                                    <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border group">
                                         {media.type === 'image' ? (
-                                            <img
-                                                src={mediaUrl}
-                                                alt={media.name}
-                                                className="w-full h-32 object-cover"
-                                            />
+                                            <img src={url} alt={media.name} className="w-full h-full object-cover" />
                                         ) : (
-                                            <video
-                                                src={mediaUrl}
-                                                className="w-full h-32 object-cover"
-                                                controls
-                                            />
+                                            <video src={url} className="w-full h-full object-cover" />
                                         )}
-                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                                size="icon"
-                                                variant="outline"
-                                                className="h-7 w-7 bg-red-500 hover:bg-red-600 text-white border-0"
-                                                onClick={() => handleDeleteMedia(media.id)}
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                        <div className="p-1.5 text-xs truncate text-gray-600 bg-white/90">
-                                            {media.type === 'video' ? '🎥' : '🖼️'} {media.name}
-                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteMedia(media.id)}
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
                                     </div>
                                 );
                             })}
+                            <label className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-gray-400 transition">
+                                <input
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    multiple
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                    disabled={uploading}
+                                />
+                                {uploading ? (
+                                    <span className="text-xs text-gray-400">Uploading...</span>
+                                ) : (
+                                    <Plus className="h-6 w-6 text-gray-400" />
+                                )}
+                            </label>
                         </div>
-                    )}
-
-                    {/* Upload Area */}
-                    <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-indigo-400 transition-colors">
-                        <input
-                            type="file"
-                            accept="image/*,video/*"
-                            multiple
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            id="media-upload"
-                            disabled={!module?.id || uploading}
-                        />
-                        <label
-                            htmlFor="media-upload"
-                            className={`cursor-pointer ${!module?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {uploading ? (
-                                <span className="text-indigo-600">Uploading...</span>
-                            ) : (
-                                <>
-                                    <Plus className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                                    <span className="text-sm text-gray-500">
-                                        {module?.id ? 'Click to upload images or videos' : 'Save module first to upload media'}
-                                    </span>
-                                </>
-                            )}
-                        </label>
                     </div>
+                )}
+                {!module && (
+                    <p className="text-xs text-gray-500 italic">💡 Save first to upload media files</p>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving || !formData.name.trim()}
+                        className={`bg-gradient-to-r ${colors.bg}`}
+                    >
+                        {saving ? 'Saving...' : <><Save className="h-4 w-4 mr-1" /> Save</>}
+                    </Button>
                 </div>
+            </CardContent>
+        </Card>
+    );
+}
 
-                <div className="col-span-2 space-y-4 pt-2 border-t">
-                    <ListInput
-                        label="Suggested Activities"
-                        items={formData.suggested_activities}
-                        onChange={items => setFormData({ ...formData, suggested_activities: items })}
-                        placeholder="Add activity (e.g. Build a paper prototype)"
-                    />
+// ============ TAG INPUT ============
+function TagInput({ label, icon, items, onChange, placeholder, color }: {
+    label: string;
+    icon: React.ReactNode;
+    items: string[];
+    onChange: (items: string[]) => void;
+    placeholder: string;
+    color: 'blue' | 'green' | 'orange';
+}) {
+    const [value, setValue] = useState('');
+    
+    const colorConfig = {
+        blue: {
+            bg: 'from-blue-50 to-blue-100/50',
+            border: 'border-blue-200',
+            iconBg: 'bg-blue-500',
+            header: 'text-blue-900',
+            subtext: 'text-blue-600',
+            itemBg: 'bg-white/80 border-blue-100',
+            bullet: 'text-blue-500',
+        },
+        green: {
+            bg: 'from-emerald-50 to-emerald-100/50',
+            border: 'border-emerald-200',
+            iconBg: 'bg-emerald-500',
+            header: 'text-emerald-900',
+            subtext: 'text-emerald-600',
+            itemBg: 'bg-white/80 border-emerald-100',
+            bullet: 'text-emerald-500',
+        },
+        orange: {
+            bg: 'from-orange-50 to-amber-100/50',
+            border: 'border-orange-200',
+            iconBg: 'bg-[#FF6B35]',
+            header: 'text-orange-900',
+            subtext: 'text-orange-600',
+            itemBg: 'bg-white/80 border-orange-100',
+            bullet: 'text-[#FF6B35]',
+        },
+    };
+    
+    const config = colorConfig[color];
 
-                    <ListInput
-                        label="Competences / Skills"
-                        items={formData.competences}
-                        onChange={items => setFormData({ ...formData, competences: items })}
-                        placeholder="Add competence (e.g. Critical Thinking)"
-                    />
+    const handleAdd = () => {
+        if (value.trim()) {
+            onChange([...items, value.trim()]);
+            setValue('');
+        }
+    };
 
-                    <ListInput
-                        label="Materials Needed"
-                        items={formData.materials}
-                        onChange={items => setFormData({ ...formData, materials: items })}
-                        placeholder="Add material (e.g. Cardboard, Glue)"
-                    />
+    return (
+        <div className={`bg-gradient-to-br ${config.bg} rounded-xl p-4 border ${config.border}`}>
+            <div className="flex items-center gap-2 mb-3">
+                <div className={`w-8 h-8 rounded-lg ${config.iconBg} flex items-center justify-center text-white`}>
+                    {icon}
+                </div>
+                <div>
+                    <h4 className={`font-semibold ${config.header}`}>{label}</h4>
+                    <p className={`text-xs ${config.subtext}`}>{items.length} added</p>
                 </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving...' : 'Save Changes'}
+            
+            {/* Add Input */}
+            <div className="flex gap-1 mb-3">
+                <Input
+                    value={value}
+                    onChange={e => setValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
+                    placeholder={placeholder}
+                    className="text-sm bg-white/90"
+                />
+                <Button size="sm" variant="secondary" onClick={handleAdd} className="px-3">
+                    <Plus className="h-4 w-4" />
                 </Button>
+            </div>
+            
+            {/* Items List */}
+            <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+                {items.length === 0 && (
+                    <p className={`text-sm ${config.subtext} italic`}>None added yet</p>
+                )}
+                {items.map((item, i) => (
+                    <div key={i} className={`flex items-center justify-between ${config.itemBg} rounded-lg px-3 py-2 border`}>
+                        <div className="flex items-center gap-2">
+                            <span className={config.bullet}>
+                                {color === 'blue' ? '•' : color === 'green' ? '✓' : '▸'}
+                            </span>
+                            <span className="text-sm text-gray-700">{item}</span>
+                        </div>
+                        <button 
+                            onClick={() => onChange(items.filter((_, j) => j !== i))} 
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ))}
             </div>
         </div>
     );
 }
 
-// --- Careers Manager ---
+// ============ CAREER CARD ============
+function CareerCard({ career, colors, isEditing, onEdit, onClose, onUpdate }: {
+    career: Career;
+    colors: typeof pathwayColors[0];
+    isEditing: boolean;
+    onEdit: () => void;
+    onClose: () => void;
+    onUpdate: () => void;
+}) {
+    if (isEditing) {
+        return (
+            <CareerForm
+                courseId={career.course}
+                career={career}
+                onClose={onClose}
+                onSuccess={() => { onClose(); onUpdate(); }}
+                colors={colors}
+            />
+        );
+    }
 
-function CareersManager({ courseId, initialCareers, onUpdate }: { courseId: string, initialCareers: Career[], onUpdate: () => void }) {
-    const [newTitle, setNewTitle] = useState('');
-    const [newDesc, setNewDesc] = useState('');
+    return (
+        <div className={`p-4 rounded-xl border-2 ${colors.border} ${colors.light} group`}>
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center`}>
+                        <Briefcase className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-gray-900">{career.title}</h4>
+                        {career.description && (
+                            <p className="text-sm text-gray-500 line-clamp-2">{career.description}</p>
+                        )}
+                    </div>
+                </div>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <Button size="icon" variant="ghost" onClick={onEdit} className="h-7 w-7">
+                        <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 hover:text-red-600"
+                        onClick={async () => {
+                            if (confirm(`Delete "${career.title}"?`)) {
+                                await careerApi.delete(career.id);
+                                onUpdate();
+                            }
+                        }}
+                    >
+                        <Trash2 className="h-3 w-3" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
-    const handleCreate = async () => {
+// ============ CAREER FORM ============
+function CareerForm({ courseId, career, onClose, onSuccess, colors }: {
+    courseId: string;
+    career?: Career;
+    onClose: () => void;
+    onSuccess: () => void;
+    colors: typeof pathwayColors[0];
+}) {
+    const [formData, setFormData] = useState({
+        title: career?.title || '',
+        description: career?.description || '',
+    });
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        if (!formData.title.trim()) return;
+        setSaving(true);
         try {
-            await careerApi.create({ title: newTitle, description: newDesc, course: courseId });
-            setNewTitle('');
-            setNewDesc('');
-            onUpdate();
-        } catch (err) { console.error(err); }
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!confirm("Delete career?")) return;
-        try {
-            await careerApi.delete(id);
-            onUpdate();
-        } catch (err) { console.error(err); }
+            if (career) {
+                await careerApi.update(career.id, formData);
+            } else {
+                await careerApi.create({ ...formData, course: courseId });
+            }
+            onSuccess();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-4 max-w-2xl"
-        >
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-lg">Potential Careers</h3>
+        <div className={`p-4 rounded-xl border-2 ${colors.border} bg-white`}>
+            <div className="space-y-3">
+                <Input
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Career title..."
+                    className="font-medium"
+                />
+                <textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description..."
+                    className="w-full p-2 rounded-lg border text-sm min-h-[60px]"
+                />
+                <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving || !formData.title.trim()}
+                        className={`bg-gradient-to-r ${colors.bg}`}
+                    >
+                        {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                </div>
             </div>
-
-            {/* Simple Add Form */}
-            <Card className="bg-gray-50 border-dashed">
-                <CardContent className="p-4 space-y-3">
-                    <Input
-                        placeholder="Add new career title (e.g. Robotics Engineer)"
-                        value={newTitle}
-                        onChange={e => setNewTitle(e.target.value)}
-                    />
-                    {newTitle && (
-                        <div className="space-y-3">
-                            <textarea
-                                className="w-full min-h-[60px] p-2 rounded-md border text-sm"
-                                placeholder="Description (optional)"
-                                value={newDesc}
-                                onChange={e => setNewDesc(e.target.value)}
-                            />
-                            <Button size="sm" onClick={handleCreate}>Add Career</Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="space-y-2">
-                {initialCareers.map(career => (
-                    <div key={career.id} className="bg-white p-3 rounded-lg border flex items-center justify-between group">
-                        <div>
-                            <div className="font-medium">{career.title}</div>
-                            {career.description && <div className="text-sm text-gray-500">{career.description}</div>}
-                        </div>
-                        <Button size="icon" variant="ghost" className="opacity-0 group-hover:opacity-100 hover:text-red-600" onClick={() => handleDelete(career.id)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                ))}
-            </div>
-        </motion.div>
-    )
+        </div>
+    );
 }
