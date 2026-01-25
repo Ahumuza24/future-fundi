@@ -148,13 +148,13 @@ const HomePage = () => {
             className="text-center"
           >
             {/* Badge */}
-            <motion.div
+            {/* <motion.div
               variants={fadeInUp}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FF6B35]/10 text-[#FF6B35] text-sm font-medium mb-8"
             >
               <Rocket className="h-4 w-4" />
               Powered by Fundi Bots STEM Education
-            </motion.div>
+            </motion.div> */}
 
             {/* Main Title */}
             <motion.h1
