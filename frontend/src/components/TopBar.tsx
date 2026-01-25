@@ -1,15 +1,26 @@
-import { Bell, ChevronDown, Settings, User } from "lucide-react";
+import { Bell, ChevronDown, Settings } from "lucide-react";
 import { getCurrentUser, getRoleDisplayName } from "@/lib/auth";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Avatar } from "@/components/ui/avatar";
+
+interface UserData {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  email?: string;
+  role: string;
+  tenant_name?: string;
+  avatar_url?: string | null;
+}
 
 const TopBar = () => {
-  const user = getCurrentUser();
+  const user = getCurrentUser() as UserData | null;
   const [showDropdown, setShowDropdown] = useState(false);
 
   if (!user) return null;
 
-  const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || user.username?.[0]?.toUpperCase() || 'U';
+  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'User';
 
   return (
     <div className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between sticky top-0 z-30">
@@ -41,12 +52,11 @@ const TopBar = () => {
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             {/* Avatar */}
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white"
-              style={{ backgroundColor: 'var(--fundi-orange)' }}
-            >
-              {initials}
-            </div>
+            <Avatar
+              src={user.avatar_url}
+              name={fullName}
+              size="md"
+            />
 
             {/* User Info */}
             <div className="text-left hidden md:block">
@@ -67,18 +77,6 @@ const TopBar = () => {
                 onClick={() => setShowDropdown(false)}
               />
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-3 border-b border-gray-200">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--fundi-black)' }}>
-                    {user.first_name} {user.last_name}
-                  </p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
-                  {user.tenant_name && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {user.tenant_name}
-                    </p>
-                  )}
-                </div>
-
                 <Link
                   to="/settings"
                   className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"

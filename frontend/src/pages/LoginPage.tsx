@@ -42,6 +42,8 @@ const LoginPage = () => {
         navigate("/leader");
       } else if (role === "admin") {
         navigate("/admin");
+      } else if (role === "data_entry") {
+        navigate("/admin/curriculum-entry");
       } else {
         navigate("/");
       }

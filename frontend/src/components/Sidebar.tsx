@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Camera,
   MessageSquare,
-  ClipboardCheck
+  ClipboardCheck,
+  Database
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -138,6 +139,13 @@ const allNavItems: NavItem[] = [
     roles: ["leader", "admin"],
   },
 
+  {
+    title: "Curriculum Entry",
+    path: "/admin/curriculum-entry",
+    icon: Database,
+    color: "var(--fundi-purple)",
+    roles: ["admin", "data_entry"],
+  },
   {
     title: "User Management",
     path: "/admin/users",

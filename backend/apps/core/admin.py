@@ -1,19 +1,20 @@
 from django.contrib import admin
+
 from .models import (
-    School,
-    Learner,
-    ParentContact,
     Artifact,
-    Module,
     Assessment,
-    PathwayInputs,
-    GateSnapshot,
     Credential,
-    Outcome,
-    PodClass,
+    GateSnapshot,
+    Learner,
+    Module,
     Observation,
-    WeeklyPulse,
+    Outcome,
+    ParentContact,
+    PathwayInputs,
+    PodClass,
     SafetyIncident,
+    School,
+    WeeklyPulse,
 )
 
 
@@ -39,7 +40,7 @@ class ArtifactAdmin(admin.ModelAdmin):
 
 @admin.register(Module)
 class ModuleAdmin(admin.ModelAdmin):
-    list_display = ("name", "tenant")
+    list_display = ("name", "course")
 
 
 @admin.register(Assessment)
