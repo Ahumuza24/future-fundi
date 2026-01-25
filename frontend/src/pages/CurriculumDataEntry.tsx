@@ -156,226 +156,268 @@ export default function CurriculumDataEntry() {
                     )}
                 </AnimatePresence>
 
-                {/* Pathways Grid */}
-                <div className="space-y-6">
+                {/* Pathways Grid - 3 per row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {courses.map((course, index) => {
                         const colors = getColorScheme(index);
-                        const isExpanded = expandedPathway === course.id;
+                        const isSelected = expandedPathway === course.id;
                         const moduleCount = course.modules?.length || 0;
                         const careerCount = course.careers?.length || 0;
 
                         return (
                             <motion.div
                                 key={course.id}
-                                layout
-                                className={`bg-white rounded-2xl shadow-sm border-2 transition-all duration-300 overflow-hidden ${isExpanded ? 'shadow-lg ' + colors.border : 'border-gray-100 hover:border-gray-200'
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => togglePathway(course.id)}
+                                className={`cursor-pointer rounded-2xl border-2 p-5 transition-all duration-200 ${isSelected
+                                        ? `${colors.border} bg-white shadow-lg ring-2 ring-offset-2 ring-[#FF6B35]`
+                                        : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-md'
                                     }`}
                             >
-                                {/* Pathway Header */}
-                                <div
-                                    className={`p-5 cursor-pointer transition-all ${isExpanded ? colors.light : 'hover:bg-gray-50'}`}
-                                    onClick={() => togglePathway(course.id)}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-lg`}>
-                                                <BookOpen className="h-6 w-6 text-white" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-xl font-bold text-gray-900">{course.name}</h2>
-                                                <p className="text-sm text-gray-500 line-clamp-1">{course.description || 'No description'}</p>
-                                            </div>
+                                {/* Pathway Icon & Name */}
+                                <div className="flex items-start gap-4">
+                                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                        <BookOpen className="h-7 w-7 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-gray-900 text-lg leading-tight">{course.name}</h3>
+                                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                            {course.description || 'No description'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Stats Row */}
+                                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-8 h-8 rounded-lg ${isSelected ? 'bg-blue-100' : 'bg-gray-100'} flex items-center justify-center`}>
+                                            <Sparkles className={`h-4 w-4 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
                                         </div>
-                                        <div className="flex items-center gap-6">
-                                            {/* Quick Stats */}
-                                            <div className="hidden sm:flex items-center gap-4">
-                                                <div className="text-center">
-                                                    <p className={`text-lg font-bold ${colors.text}`}>{moduleCount}</p>
-                                                    <p className="text-xs text-gray-500">Microcredentials</p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className={`text-lg font-bold ${colors.text}`}>{careerCount}</p>
-                                                    <p className="text-xs text-gray-500">Career Paths</p>
-                                                </div>
-                                            </div>
-                                            <motion.div
-                                                animate={{ rotate: isExpanded ? 180 : 0 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                <ChevronDown className={`h-6 w-6 ${colors.text}`} />
-                                            </motion.div>
+                                        <div>
+                                            <p className="text-lg font-bold text-gray-900">{moduleCount}</p>
+                                            <p className="text-xs text-gray-500">Micro-credentials</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-8 h-8 rounded-lg ${isSelected ? 'bg-emerald-100' : 'bg-gray-100'} flex items-center justify-center`}>
+                                            <Briefcase className={`h-4 w-4 ${isSelected ? 'text-emerald-600' : 'text-gray-500'}`} />
+                                        </div>
+                                        <div>
+                                            <p className="text-lg font-bold text-gray-900">{careerCount}</p>
+                                            <p className="text-xs text-gray-500">Career Paths</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Expanded Content */}
-                                <AnimatePresence>
-                                    {isExpanded && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="border-t"
-                                        >
-                                            <div className="p-6 space-y-6">
-                                                {/* Micro-credentials Section */}
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                            <Sparkles className={`h-5 w-5 ${colors.text}`} />
-                                                            Micro-credentials
-                                                        </h3>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={(e) => { e.stopPropagation(); setIsCreatingModule(course.id); }}
-                                                            className="gap-1"
-                                                        >
-                                                            <Plus className="h-4 w-4" /> Add
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* New Module Form */}
-                                                    <AnimatePresence>
-                                                        {isCreatingModule === course.id && (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, height: 0 }}
-                                                                animate={{ opacity: 1, height: 'auto' }}
-                                                                exit={{ opacity: 0, height: 0 }}
-                                                                className="mb-4"
-                                                            >
-                                                                <ModuleForm
-                                                                    courseId={course.id}
-                                                                    onClose={() => setIsCreatingModule(null)}
-                                                                    onSuccess={() => { setIsCreatingModule(null); togglePathway(course.id); }}
-                                                                    colors={colors}
-                                                                />
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-
-                                                    {/* Modules List */}
-                                                    <div className="space-y-3">
-                                                        {course.modules?.length === 0 && !isCreatingModule && (
-                                                            <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-xl">
-                                                                <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                                                <p>No micro-credentials yet</p>
-                                                            </div>
-                                                        )}
-                                                        {course.modules?.map((module) => (
-                                                            <ModuleCard
-                                                                key={module.id}
-                                                                module={module}
-                                                                courseId={course.id}
-                                                                colors={colors}
-                                                                isEditing={editingModule === module.id}
-                                                                onEdit={() => setEditingModule(module.id)}
-                                                                onClose={() => setEditingModule(null)}
-                                                                onUpdate={() => togglePathway(course.id)}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Careers Section */}
-                                                <div className="pt-4 border-t">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                            <Briefcase className={`h-5 w-5 ${colors.text}`} />
-                                                            Career Paths
-                                                        </h3>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={(e) => { e.stopPropagation(); setIsCreatingCareer(course.id); }}
-                                                            className="gap-1"
-                                                        >
-                                                            <Plus className="h-4 w-4" /> Add
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* New Career Form */}
-                                                    <AnimatePresence>
-                                                        {isCreatingCareer === course.id && (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, height: 0 }}
-                                                                animate={{ opacity: 1, height: 'auto' }}
-                                                                exit={{ opacity: 0, height: 0 }}
-                                                                className="mb-4"
-                                                            >
-                                                                <CareerForm
-                                                                    courseId={course.id}
-                                                                    onClose={() => setIsCreatingCareer(null)}
-                                                                    onSuccess={() => { setIsCreatingCareer(null); togglePathway(course.id); }}
-                                                                    colors={colors}
-                                                                />
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-
-                                                    {/* Careers Grid */}
-                                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                        {course.careers?.length === 0 && !isCreatingCareer && (
-                                                            <div className="col-span-full text-center py-6 text-gray-400 border-2 border-dashed rounded-xl">
-                                                                <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                                                <p>No career paths defined</p>
-                                                            </div>
-                                                        )}
-                                                        {course.careers?.map((career) => (
-                                                            <CareerCard
-                                                                key={career.id}
-                                                                career={career}
-                                                                colors={colors}
-                                                                isEditing={editingCareer === career.id}
-                                                                onEdit={() => setEditingCareer(career.id)}
-                                                                onClose={() => setEditingCareer(null)}
-                                                                onUpdate={() => togglePathway(course.id)}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Pathway Actions */}
-                                                <div className="pt-4 border-t flex justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        onClick={async () => {
-                                                            if (confirm(`Delete "${course.name}"? This cannot be undone.`)) {
-                                                                await courseApi.delete(course.id);
-                                                                fetchCourses();
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-1" /> Delete Pathway
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                {/* Selection Indicator */}
+                                {isSelected && (
+                                    <div className="mt-4 pt-3 border-t border-[#FF6B35]/20">
+                                        <span className="text-xs font-medium text-[#FF6B35] flex items-center gap-1">
+                                            <ChevronDown className="h-3 w-3" /> Viewing details below
+                                        </span>
+                                    </div>
+                                )}
                             </motion.div>
                         );
                     })}
-
-                    {courses.length === 0 && !isCreatingPathway && (
-                        <div className="text-center py-16">
-                            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#00C4B4] flex items-center justify-center">
-                                <BookOpen className="h-10 w-10 text-white" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pathways Yet</h3>
-                            <p className="text-gray-500 mb-6">Create your first learning pathway to get started</p>
-                            <Button
-                                onClick={() => setIsCreatingPathway(true)}
-                                className="gap-2"
-                            >
-                                <Plus className="h-4 w-4" /> Create First Pathway
-                            </Button>
-                        </div>
-                    )}
                 </div>
+
+                {/* Empty State */}
+                {courses.length === 0 && !isCreatingPathway && (
+                    <div className="text-center py-16">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#00C4B4] flex items-center justify-center">
+                            <BookOpen className="h-10 w-10 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pathways Yet</h3>
+                        <p className="text-gray-500 mb-6">Create your first learning pathway to get started</p>
+                        <Button
+                            onClick={() => setIsCreatingPathway(true)}
+                            className="gap-2"
+                        >
+                            <Plus className="h-4 w-4" /> Create First Pathway
+                        </Button>
+                    </div>
+                )}
+
+                {/* Expanded Detail View - Full Width Below Grid */}
+                <AnimatePresence>
+                    {expandedPathway && (() => {
+                        const selectedCourse = courses.find(c => c.id === expandedPathway);
+                        if (!selectedCourse) return null;
+                        const colors = getColorScheme(courses.indexOf(selectedCourse));
+
+                        return (
+                            <motion.div
+                                key="detail-panel"
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.3 }}
+                                className={`mt-6 bg-white rounded-2xl border-2 ${colors.border} shadow-lg overflow-hidden`}
+                            >
+                                {/* Detail Header */}
+                                <div className={`p-5 bg-gradient-to-r ${colors.bg} flex items-center justify-between`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                                            <BookOpen className="h-6 w-6 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white">{selectedCourse.name}</h2>
+                                            <p className="text-white/80 text-sm">{selectedCourse.description || 'No description'}</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setExpandedPathway(null)}
+                                        className="text-white hover:bg-white/20"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </Button>
+                                </div>
+
+                                {/* Detail Content */}
+                                <div className="p-6 space-y-6">
+                                    {/* Micro-credentials Section */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                <Sparkles className={`h-5 w-5 ${colors.text}`} />
+                                                Micro-credentials
+                                            </h3>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); setIsCreatingModule(selectedCourse.id); }}
+                                                className="gap-1"
+                                            >
+                                                <Plus className="h-4 w-4" /> Add
+                                            </Button>
+                                        </div>
+
+                                        {/* New Module Form */}
+                                        <AnimatePresence>
+                                            {isCreatingModule === selectedCourse.id && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="mb-4"
+                                                >
+                                                    <ModuleForm
+                                                        courseId={selectedCourse.id}
+                                                        onClose={() => setIsCreatingModule(null)}
+                                                        onSuccess={() => { setIsCreatingModule(null); togglePathway(selectedCourse.id); }}
+                                                        colors={colors}
+                                                    />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Modules List */}
+                                        <div className="space-y-3">
+                                            {selectedCourse.modules?.length === 0 && !isCreatingModule && (
+                                                <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-xl">
+                                                    <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                    <p>No micro-credentials yet</p>
+                                                </div>
+                                            )}
+                                            {selectedCourse.modules?.map((module) => (
+                                                <ModuleCard
+                                                    key={module.id}
+                                                    module={module}
+                                                    courseId={selectedCourse.id}
+                                                    colors={colors}
+                                                    isEditing={editingModule === module.id}
+                                                    onEdit={() => setEditingModule(module.id)}
+                                                    onClose={() => setEditingModule(null)}
+                                                    onUpdate={() => togglePathway(selectedCourse.id)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Careers Section */}
+                                    <div className="pt-6 border-t">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                <Briefcase className={`h-5 w-5 ${colors.text}`} />
+                                                Career Paths
+                                            </h3>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); setIsCreatingCareer(selectedCourse.id); }}
+                                                className="gap-1"
+                                            >
+                                                <Plus className="h-4 w-4" /> Add
+                                            </Button>
+                                        </div>
+
+                                        {/* New Career Form */}
+                                        <AnimatePresence>
+                                            {isCreatingCareer === selectedCourse.id && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="mb-4"
+                                                >
+                                                    <CareerForm
+                                                        courseId={selectedCourse.id}
+                                                        onClose={() => setIsCreatingCareer(null)}
+                                                        onSuccess={() => { setIsCreatingCareer(null); togglePathway(selectedCourse.id); }}
+                                                        colors={colors}
+                                                    />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Careers Grid */}
+                                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {selectedCourse.careers?.length === 0 && !isCreatingCareer && (
+                                                <div className="col-span-full text-center py-6 text-gray-400 border-2 border-dashed rounded-xl">
+                                                    <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                    <p>No career paths defined</p>
+                                                </div>
+                                            )}
+                                            {selectedCourse.careers?.map((career) => (
+                                                <CareerCard
+                                                    key={career.id}
+                                                    career={career}
+                                                    colors={colors}
+                                                    isEditing={editingCareer === career.id}
+                                                    onEdit={() => setEditingCareer(career.id)}
+                                                    onClose={() => setEditingCareer(null)}
+                                                    onUpdate={() => togglePathway(selectedCourse.id)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Pathway Actions */}
+                                    <div className="pt-4 border-t flex justify-end gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            onClick={async () => {
+                                                if (confirm(`Delete "${selectedCourse.name}"? This cannot be undone.`)) {
+                                                    await courseApi.delete(selectedCourse.id);
+                                                    setExpandedPathway(null);
+                                                    fetchCourses();
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-1" /> Delete Pathway
+                                        </Button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })()}
+                </AnimatePresence>
             </div>
         </div>
     );
@@ -886,7 +928,7 @@ function TagInput({ label, icon, items, onChange, placeholder, color }: {
     color: 'blue' | 'green' | 'orange';
 }) {
     const [value, setValue] = useState('');
-    
+
     const colorConfig = {
         blue: {
             bg: 'from-blue-50 to-blue-100/50',
@@ -916,7 +958,7 @@ function TagInput({ label, icon, items, onChange, placeholder, color }: {
             bullet: 'text-[#FF6B35]',
         },
     };
-    
+
     const config = colorConfig[color];
 
     const handleAdd = () => {
@@ -937,7 +979,7 @@ function TagInput({ label, icon, items, onChange, placeholder, color }: {
                     <p className={`text-xs ${config.subtext}`}>{items.length} added</p>
                 </div>
             </div>
-            
+
             {/* Add Input */}
             <div className="flex gap-1 mb-3">
                 <Input
@@ -951,7 +993,7 @@ function TagInput({ label, icon, items, onChange, placeholder, color }: {
                     <Plus className="h-4 w-4" />
                 </Button>
             </div>
-            
+
             {/* Items List */}
             <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                 {items.length === 0 && (
@@ -965,8 +1007,8 @@ function TagInput({ label, icon, items, onChange, placeholder, color }: {
                             </span>
                             <span className="text-sm text-gray-700">{item}</span>
                         </div>
-                        <button 
-                            onClick={() => onChange(items.filter((_, j) => j !== i))} 
+                        <button
+                            onClick={() => onChange(items.filter((_, j) => j !== i))}
                             className="text-gray-400 hover:text-red-500 transition-colors"
                         >
                             <X className="h-4 w-4" />
