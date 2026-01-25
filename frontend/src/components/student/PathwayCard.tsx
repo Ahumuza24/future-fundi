@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export interface PathwayProps {
     id: string;
     title: string;
-    icon: React.ReactNode;
+    icon: React.ElementType; // Changed from React.ReactNode
     progress: number;
     status: "good" | "warning" | "critical";
     microCredentialsEarned: number;
@@ -28,12 +28,13 @@ const statusIcon = {
 };
 
 export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onClick?: () => void }) => {
+    const Icon = pathway.icon;
     return (
         <motion.div
             whileHover={{ y: -5, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
-                "bg-white rounded-xl shadow-sm border p-5 cursor-pointer transition-all hover:shadow-md",
+                "bg-white rounded-xl shadow-sm border p-5 cursor-pointer transition-all duration-200 hover:shadow-md",
                 "flex flex-col gap-4 relative overflow-hidden"
             )}
             onClick={onClick}
@@ -46,7 +47,7 @@ export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onCli
 
             <div className="flex justify-between items-start z-10">
                 <div className="p-2 rounded-lg bg-gray-50 text-gray-700">
-                    {pathway.icon}
+                    <Icon className="h-6 w-6" />
                 </div>
                 <div className={cn("px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border", statusColors[pathway.status])}>
                     {statusIcon[pathway.status]}

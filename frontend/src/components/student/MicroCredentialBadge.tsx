@@ -8,11 +8,13 @@ interface MicroCredentialProps {
     pathway: string;
     earnedDate?: string;
     isLocked?: boolean;
-    icon?: React.ReactNode;
+    icon?: React.ElementType; // Changed from React.ReactNode
     color: string;
 }
 
 export const MicroCredentialBadge = ({ credential }: { credential: MicroCredentialProps }) => {
+    const Icon = credential.icon || Award;
+
     return (
         <motion.div
             whileHover={{ scale: 1.05 }}
@@ -28,7 +30,7 @@ export const MicroCredentialBadge = ({ credential }: { credential: MicroCredenti
                 )}
                 style={{ backgroundColor: credential.isLocked ? undefined : credential.color }}
             >
-                {credential.isLocked ? <Lock className="h-5 w-5" /> : (credential.icon || <Award className="h-6 w-6" />)}
+                {credential.isLocked ? <Lock className="h-5 w-5" /> : <Icon className="h-6 w-6" />}
             </div>
 
             <div className="space-y-0.5">

@@ -1,126 +1,38 @@
-import { useState } from "react";
 import {
   Calendar,
   MapPin,
   School,
   ArrowRight,
-  Bot,
-  Globe,
-  Smartphone,
-  Brain,
-  Printer,
-  PenTool,
-  Cpu,
-  Wifi,
-  Shield,
+  User,
   Star,
   Award,
-  Zap
+  Circle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { motion } from "framer-motion";
-import { PathwayCard, type PathwayProps } from "@/components/student/PathwayCard";
+import { PathwayCard } from "@/components/student/PathwayCard";
 import { MicroCredentialBadge } from "@/components/student/MicroCredentialBadge";
 import { Avatar } from "@/components/ui/avatar";
-
-// Mock Data
-const upcomingEvents = [
-  { id: 1, title: "Robotics Hackathon", date: "Oct 24, 2025", type: "event", color: "var(--fundi-orange)" },
-  { id: 2, title: "Web Dev Project Due", date: "Oct 30, 2025", type: "deadline", color: "var(--fundi-purple)" },
-  { id: 3, title: "3D Printing Workshop", date: "Nov 05, 2025", type: "workshop", color: "var(--fundi-cyan)" },
-];
-
-const mockPathways: PathwayProps[] = [
-  {
-    id: "rob", title: "Robotics", icon: <Bot className="h-6 w-6" />,
-    progress: 65, status: "good", microCredentialsEarned: 2, totalMicroCredentials: 5,
-    currentModule: "Advanced Sensors", color: "var(--fundi-orange)"
-  },
-  {
-    id: "web", title: "Web Development", icon: <Globe className="h-6 w-6" />,
-    progress: 30, status: "warning", microCredentialsEarned: 1, totalMicroCredentials: 4,
-    currentModule: "CSS Flexbox", color: "var(--fundi-purple)"
-  },
-  {
-    id: "app", title: "App Development", icon: <Smartphone className="h-6 w-6" />,
-    progress: 10, status: "good", microCredentialsEarned: 0, totalMicroCredentials: 4,
-    currentModule: "React Native Basics", color: "var(--fundi-cyan)"
-  },
-  {
-    id: "ai", title: "AI Tools", icon: <Brain className="h-6 w-6" />,
-    progress: 5, status: "good", microCredentialsEarned: 0, totalMicroCredentials: 3,
-    currentModule: "Intro to LLMs", color: "var(--fundi-lime)"
-  },
-  {
-    id: "ele", title: "Electronics", icon: <Cpu className="h-6 w-6" />,
-    progress: 40, status: "good", microCredentialsEarned: 1, totalMicroCredentials: 3,
-    currentModule: "Circuit Design 101", color: "var(--fundi-pink)"
-  },
-  {
-    id: "iot", title: "Internet of Things", icon: <Wifi className="h-6 w-6" />,
-    progress: 15, status: "warning", microCredentialsEarned: 0, totalMicroCredentials: 3,
-    currentModule: "Connecting ESP32", color: "var(--fundi-orange)"
-  },
-  {
-    id: "3dp", title: "3D Printing", icon: <Printer className="h-6 w-6" />,
-    progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 2,
-    currentModule: "Not Started", color: "var(--fundi-purple)"
-  },
-  {
-    id: "cad", title: "CAD", icon: <PenTool className="h-6 w-6" />,
-    progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 2,
-    currentModule: "Not Started", color: "var(--fundi-cyan)"
-  },
-  {
-    id: "sec", title: "Data & Security", icon: <Shield className="h-6 w-6" />,
-    progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 4,
-    currentModule: "Not Started", color: "var(--fundi-lime)"
-  },
-];
-
-const earnedBadges = [
-  { id: "b1", name: "Bot Builder L1", pathway: "Robotics", icon: <Bot className="h-6 w-6" />, color: "var(--fundi-orange)" },
-  { id: "b2", name: "Circuit Master", pathway: "Electronics", icon: <Zap className="h-6 w-6" />, color: "var(--fundi-pink)" },
-  { id: "b3", name: "HTML Hero", pathway: "Web Dev", icon: <Globe className="h-6 w-6" />, color: "var(--fundi-purple)" },
-];
-
-const nextBadge = { id: "b4", name: "Sensor Wizard", pathway: "Robotics", isLocked: true, color: "var(--fundi-orange)" };
-
-const activeProjects = [
-  {
-    id: 1,
-    title: "Line Following Robot",
-    pathway: "Robotics",
-    description: "Building a robot that follows a black line on a white surface using IR sensors.",
-    status: "In Progress",
-    progress: 75,
-    dueDate: "Oct 28",
-    color: "var(--fundi-orange)"
-  },
-  {
-    id: 2,
-    title: "Personal Portfolio Site",
-    pathway: "Web Development",
-    description: "Creating a responsive portfolio website to showcase my projects.",
-    status: "Planning",
-    progress: 15,
-    dueDate: "Nov 10",
-    color: "var(--fundi-purple)"
-  }
-];
+import {
+  upcomingEvents,
+  mockPathways,
+  earnedBadges,
+  nextBadge,
+  activeProjects
+} from "@/data/studentDashboardData";
 
 const StudentDashboard = () => {
   const user = getCurrentUser();
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Student';
 
   return (
-    <div className="min-h-screen p-3 md:p-4 lg:p-6 bg-gray-50/50">
+    <div className="min-h-screen p-4 lg:p-6 bg-gray-50/50">
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Header Section */}
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-4">
           <div className="flex items-center gap-4">
             <Avatar
               src={user?.avatar_url}
@@ -129,19 +41,19 @@ const StudentDashboard = () => {
               className="hidden md:flex border-4 border-white shadow-lg"
             />
             <div>
-              <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
+              <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2 text-[var(--fundi-black)]">
                 Welcome back, {user?.first_name || 'Student'}!
               </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 text-sm text-gray-600">
+                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
                   <School className="h-4 w-4 text-gray-500" />
                   {user?.tenant_name || 'Future Fundi Academy'}
                 </span>
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm">
+                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
                   <MapPin className="h-4 w-4 text-gray-500" />
                   Year 9 • Class 9B
                 </span>
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm">
+                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   Term 2, Week 12
                 </span>
@@ -149,20 +61,20 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
             <p className="text-sm font-medium text-gray-500">Upcoming Activities</p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto md:flex">
               {upcomingEvents.map((event, i) => (
                 <motion.div
                   key={event.id}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-white px-3 py-2 rounded-lg shadow-sm border-l-4 text-xs"
+                  className="bg-white px-3 py-2 rounded-lg shadow-sm border-l-4 text-xs flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-2 md:gap-0"
                   style={{ borderLeftColor: event.color }}
                 >
                   <p className="font-bold">{event.date}</p>
-                  <p className="text-gray-600">{event.title}</p>
+                  <p className="text-gray-600 line-clamp-1">{event.title}</p>
                 </motion.div>
               ))}
             </div>
@@ -178,13 +90,13 @@ const StudentDashboard = () => {
             {/* My Pathways Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="heading-font text-2xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+                <h2 className="heading-font text-2xl font-bold text-[var(--fundi-black)]">
                   My Pathways
                 </h2>
-                <Button variant="ghost" className="text-sm">View All</Button>
+                <Button variant="ghost" className="text-sm hover:text-[var(--fundi-orange)]">View All</Button>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {mockPathways.map((pathway, i) => (
                   <motion.div
                     key={pathway.id}
@@ -201,12 +113,9 @@ const StudentDashboard = () => {
             {/* Projects (Artifacts) Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="heading-font text-2xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+                <h2 className="heading-font text-2xl font-bold text-[var(--fundi-black)]">
                   Active Projects
                 </h2>
-                {/* <Button variant="outline" className="text-xs gap-2">
-                  <Bot className="h-4 w-4" /> New Project
-                </Button> */}
               </div>
 
               <div className="space-y-4">
@@ -217,21 +126,21 @@ const StudentDashboard = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 + (i * 0.1) }}
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden border-l-4" style={{ borderLeftColor: project.color }}>
+                    <Card className="hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden border-l-4 group" style={{ borderLeftColor: project.color }}>
                       <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
                               {project.pathway}
                             </span>
-                            <span className="text-xs text-gray-400">• Due {project.dueDate}</span>
+                            <span className="text-xs text-gray-400 font-medium">• Due {project.dueDate}</span>
                           </div>
-                          <h3 className="font-bold text-lg text-gray-900">{project.title}</h3>
-                          <p className="text-sm text-gray-600">{project.description}</p>
+                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-[var(--fundi-orange)] transition-colors">{project.title}</h3>
+                          <p className="text-sm text-gray-600 leading-relaxed">{project.description}</p>
                         </div>
 
-                        <div className="flex items-center gap-4 min-w-[140px]">
-                          <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-4 min-w-[140px] pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 mt-2 sm:mt-0">
+                          <div className="flex-1 space-y-1.5 ">
                             <div className="flex justify-between text-xs font-semibold">
                               <span className="text-gray-500">{project.status}</span>
                               <span style={{ color: project.color }}>{project.progress}%</span>
@@ -243,7 +152,7 @@ const StudentDashboard = () => {
                               />
                             </div>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600 shrink-0">
                             <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
@@ -307,7 +216,7 @@ const StudentDashboard = () => {
                     ))}
                     <MicroCredentialBadge credential={nextBadge} />
                   </div>
-                  <Button variant="outline" className="w-full mt-4 text-xs">
+                  <Button variant="outline" className="w-full mt-4 text-xs font-medium hover:text-[var(--fundi-orange)]">
                     View Full Credential Passport
                   </Button>
                 </CardContent>
@@ -316,8 +225,11 @@ const StudentDashboard = () => {
 
             {/* Upcoming Dates Vertical (Optional extra) */}
             <div className="pt-4">
-              <h3 className="font-bold text-gray-500 text-sm uppercase tracking-wide mb-3">Timeline</h3>
-              <div className="border-l-2 border-gray-100 ml-3 space-y-6">
+              <h3 className="font-bold text-gray-500 text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Circle className="h-3 w-3 fill-current" />
+                Timeline
+              </h3>
+              <div className="border-l-2 border-gray-100 ml-1.5 space-y-6">
                 {upcomingEvents.map((event, i) => (
                   <div key={`tl-${event.id}`} className="relative pl-6">
                     <div
