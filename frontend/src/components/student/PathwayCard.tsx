@@ -34,7 +34,7 @@ export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onCli
             whileHover={{ y: -5, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
-                "bg-white rounded-xl shadow-sm border p-5 cursor-pointer transition-all hover:shadow-md",
+                "bg-white rounded-xl shadow-sm border p-5 cursor-pointer transition-all duration-200 hover:shadow-md",
                 "flex flex-col gap-4 relative overflow-hidden"
             )}
             onClick={onClick}

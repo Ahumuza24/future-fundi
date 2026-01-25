@@ -79,12 +79,12 @@ export const JourneySection = () => {
                                 <motion.div
                                     key={index}
                                     variants={fadeInUp}
-                                    className="relative"
+                                    className="relative group"
                                 >
-                                    <div className="bg-white rounded-2xl p-8 text-center shadow-lg hover:shadow-xl transition-shadow h-full flex flex-col items-center">
+                                    <div className="bg-white rounded-2xl p-8 pt-10 text-center shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-5px_rgba(0,0,0,0.15)] hover:-translate-y-2 transition-all duration-200 h-full flex flex-col items-center border border-gray-100 relative z-20 cursor-pointer">
                                         {/* Step Number */}
                                         <div
-                                            className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                                            className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ring-4 ring-gray-50 group-hover:ring-white transition-all duration-200"
                                             style={{ backgroundColor: step.color }}
                                         >
                                             {index + 1}
@@ -92,14 +92,14 @@ export const JourneySection = () => {
 
                                         {/* Icon */}
                                         <div
-                                            className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center shrink-0"
-                                            style={{ backgroundColor: `${step.color}20` }}
+                                            className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3"
+                                            style={{ backgroundColor: `${step.color}15` }}
                                         >
                                             <Icon className="h-10 w-10" style={{ color: step.color }} />
                                         </div>
 
                                         <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
-                                        <p className="text-gray-600">{step.description}</p>
+                                        <p className="text-gray-600 leading-relaxed">{step.description}</p>
                                     </div>
                                 </motion.div>
                             );

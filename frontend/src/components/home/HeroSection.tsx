@@ -43,22 +43,31 @@ export const HeroSection = () => {
                     variants={staggerContainer}
                     className="text-center"
                 >
+                    {/* Badge */}
+                    <motion.div
+                        variants={fadeInUp}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-gray-200 shadow-sm text-gray-600 text-sm font-medium mb-8 hover:bg-white/80 transition-colors cursor-default"
+                    >
+                        <span className="flex h-2 w-2 rounded-full bg-[#FF6B35]"></span>
+                        Empowering the Next Generation of Makers
+                    </motion.div>
+
                     {/* Main Title */}
                     <motion.h1
                         variants={fadeInUp}
-                        className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight"
+                        className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-[1.1] tracking-tight"
                     >
-                        Where <span className="text-[#FF6B35]">Young Minds</span>
+                        Where <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B35] to-[#FF8C61]">Young Minds</span>
                         <br />
-                        Grow Into <span className="bg-gradient-to-r from-[#00C4B4] to-[#C7F464] bg-clip-text text-transparent">Makers</span>
+                        Grow Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00C4B4] via-[#2DD4BF] to-[#C7F464]">Makers</span>
                     </motion.h1>
 
                     {/* Subtitle */}
                     <motion.p
                         variants={fadeInUp}
-                        className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto mb-10"
+                        className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed font-light"
                     >
-                        Future Fundi transforms weekly STEM learning into verified skills,
+                        Future Fundi transforms weekly <span className="font-semibold text-gray-900">STEM learning</span> into verified skills,
                         micro-credentials, and career pathways for learners across East Africa.
                     </motion.p>
 

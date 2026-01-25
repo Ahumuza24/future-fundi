@@ -126,17 +126,17 @@ const StudentDashboard = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 + (i * 0.1) }}
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden border-l-4" style={{ borderLeftColor: project.color }}>
+                    <Card className="hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden border-l-4 group" style={{ borderLeftColor: project.color }}>
                       <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
                               {project.pathway}
                             </span>
-                            <span className="text-xs text-gray-400">• Due {project.dueDate}</span>
+                            <span className="text-xs text-gray-400 font-medium">• Due {project.dueDate}</span>
                           </div>
-                          <h3 className="font-bold text-lg text-gray-900">{project.title}</h3>
-                          <p className="text-sm text-gray-600">{project.description}</p>
+                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-[var(--fundi-orange)] transition-colors">{project.title}</h3>
+                          <p className="text-sm text-gray-600 leading-relaxed">{project.description}</p>
                         </div>
 
                         <div className="flex items-center gap-4 min-w-[140px] pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 mt-2 sm:mt-0">

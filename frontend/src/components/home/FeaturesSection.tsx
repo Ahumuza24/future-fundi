@@ -76,7 +76,7 @@ export const FeaturesSection = () => {
                                         variants={fadeInUp}
                                         onMouseEnter={() => setHoveredFeature(index)}
                                         onMouseLeave={() => setHoveredFeature(null)}
-                                        className={`flex items-start gap-4 p-4 rounded-xl transition-all cursor-pointer ${hoveredFeature === index ? 'bg-[#FF6B35]/10 scale-105' : 'hover:bg-gray-50'
+                                        className={`flex items-start gap-4 p-4 rounded-xl transition-all duration-200 cursor-pointer ${hoveredFeature === index ? 'bg-[#FF6B35]/10 scale-105' : 'hover:bg-gray-50'
                                             }`}
                                     >
                                         <div className="w-12 h-12 rounded-xl bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
