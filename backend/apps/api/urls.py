@@ -16,6 +16,7 @@ from .views import (
     ArtifactViewSet,
     DashboardKpisView,
     LearnerViewSet,
+    health_check,
 )
 
 router = routers.DefaultRouter()
@@ -43,4 +44,5 @@ router.register(r"achievements", AchievementViewSet, basename="achievements")
 urlpatterns = [
     path("", include(router.urls)),
     path("dashboard/kpis/", DashboardKpisView.as_view(), name="dashboard-kpis"),
+    path("health/", health_check, name="health-check"),
 ]
