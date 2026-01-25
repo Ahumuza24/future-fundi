@@ -23,6 +23,12 @@ import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 const router = createBrowserRouter([
+  // Landing page - no layout (full-screen, no sidebar/topbar)
+  {
+    path: "/",
+    element: <HomePage />,
+  },
+  // Auth pages - no layout
   {
     path: "/login",
     element: <LoginPage />,
@@ -31,14 +37,12 @@ const router = createBrowserRouter([
     path: "/signup",
     element: <SignUpPage />,
   },
+  // All app routes with PageLayout (sidebar + topbar)
   {
     path: "/",
     element: <PageLayout />,
     children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
+      // Student Routes
       {
         path: "student",
         element: (
@@ -47,6 +51,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      // Parent Routes
       {
         path: "parent",
         element: (
@@ -179,11 +184,12 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "*",
-        element: <NotFoundPage />,
-      },
     ],
+  },
+  // 404 fallback
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 
