@@ -19,6 +19,7 @@ import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourseManagement from "@/pages/AdminCourseManagement";
 import CurriculumDataEntry from "@/pages/CurriculumDataEntry";
+import ActivityManagement from "@/pages/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
@@ -181,6 +182,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
             <CurriculumDataEntry />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/activities",
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
+            <ActivityManagement />
           </ProtectedRoute>
         ),
       },

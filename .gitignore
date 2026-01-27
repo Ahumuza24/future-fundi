@@ -27,3 +27,6 @@ docs
 
 #dotenv
 .env
+
+# Deployment credentials
+backend/app.yaml

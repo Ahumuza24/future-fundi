@@ -176,7 +176,7 @@ class ModuleViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
-        from django.conf import settings
+       
         from django.core.files.storage import default_storage
 
         module = self.get_object()
@@ -490,3 +490,129 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
         achievements = Achievement.objects.filter(learner=learner)
         serializer = AchievementSerializer(achievements, many=True)
         return Response(serializer.data)
+
+
+class ActivityViewSet(viewsets.ModelViewSet):
+    """Activity management for data entry and admin users.
+
+    Allows CRUD operations on upcoming activities.
+    """
+
+    from apps.api.serializers import ActivitySerializer
+    from apps.core.models import Activity
+
+    serializer_class = ActivitySerializer
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            # Anyone authenticated can view
+            return [permissions.IsAuthenticated()]
+        # Only admin/data_entry can create/update/delete
+        return [CanManageCourses()]
+
+    def get_queryset(self):
+        from apps.core.models import Activity
+
+        queryset = Activity.objects.all().select_related("course", "created_by")
+
+        # Filter by status if provided
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Filter by date range
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+        if date_from:
+            queryset = queryset.filter(date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(date__lte=date_to)
+
+        return queryset.order_by("date", "start_time")
+
+    @action(detail=False, methods=["get"])
+    def upcoming(self, request):
+        """Get upcoming activities only."""
+        from datetime import date
+
+        from apps.api.serializers import ActivitySerializer
+        from apps.core.models import Activity
+
+        activities = Activity.objects.filter(
+            status="upcoming", date__gte=date.today()
+        ).order_by("date", "start_time")[:10]
+
+        serializer = ActivitySerializer(activities, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="upload-media")
+    def upload_media(self, request, pk=None):
+        """Upload media file to an activity."""
+        import os
+        import uuid
+
+        from django.conf import settings
+        from django.core.files.storage import default_storage
+
+        activity = self.get_object()
+        file = request.FILES.get("file")
+
+        if not file:
+            return Response({"error": "No file provided"}, status=400)
+
+        # Validate file type
+        allowed_types = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "video/mp4",
+            "video/quicktime",
+        ]
+        if file.content_type not in allowed_types:
+            return Response({"error": "Invalid file type"}, status=400)
+
+        # Generate unique filename
+        ext = os.path.splitext(file.name)[1]
+        filename = f"activities/{activity.id}/{uuid.uuid4()}{ext}"
+
+        # Save file
+        path = default_storage.save(filename, file)
+        url = default_storage.url(path)
+
+        # Update activity media_files
+        media_entry = {
+            "id": str(uuid.uuid4()),
+            "type": "image" if file.content_type.startswith("image") else "video",
+            "name": file.name,
+            "url": url,
+            "content_type": file.content_type,
+        }
+
+        media_files = list(activity.media_files or [])
+        media_files.append(media_entry)
+        activity.media_files = media_files
+        activity.save()
+
+        return Response(
+            {
+                "message": "File uploaded successfully",
+                "media_files": activity.media_files,
+            }
+        )
+
+    @action(
+        detail=True, methods=["delete"], url_path="delete-media/(?P<media_id>[^/.]+)"
+    )
+    def delete_media(self, request, pk=None, media_id=None):
+        """Delete a media file from an activity."""
+        activity = self.get_object()
+
+        media_files = list(activity.media_files or [])
+        media_files = [m for m in media_files if m.get("id") != media_id]
+        activity.media_files = media_files
+        activity.save()
+
+        return Response(
+            {"message": "Media deleted", "media_files": activity.media_files}
+        )

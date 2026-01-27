@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from apps.core.models import (
     Achievement,
+    Activity,
     Artifact,
     Assessment,
     Attendance,
@@ -451,6 +452,7 @@ class ModuleSerializer(serializers.ModelSerializer):
             "competences",
             "media_files",
             "course",
+            "badge_name",
         ]
         read_only_fields = ["id"]
 
@@ -522,14 +524,19 @@ class CourseListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for course listings."""
 
     level_count = serializers.IntegerField(source="levels.count", read_only=True)
+    modules = ModuleSerializer(many=True, read_only=True)
+    careers = CareerSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
         fields = [
             "id",
             "name",
+            "description",
             "level_count",
             "is_active",
+            "modules",
+            "careers",
         ]
 
 
@@ -671,6 +678,8 @@ class CourseAdminSerializer(serializers.ModelSerializer):
     """Admin serializer for creating/updating courses and levels."""
 
     levels = CourseLevelSerializer(many=True, required=False)
+    modules = ModuleSerializer(many=True, read_only=True)
+    careers = CareerSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
@@ -681,6 +690,8 @@ class CourseAdminSerializer(serializers.ModelSerializer):
             "is_active",
             "tenant",
             "levels",
+            "modules",
+            "careers",
             "created_at",
             "updated_at",
         ]
@@ -712,3 +723,40 @@ class CourseAdminSerializer(serializers.ModelSerializer):
                 CourseLevel.objects.create(course=instance, **level_data)
 
         return instance
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+    """Serializer for Activity CRUD operations."""
+
+    course_name = serializers.CharField(source="course.name", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.get_full_name", read_only=True
+    )
+
+    class Meta:
+        model = Activity
+        fields = [
+            "id",
+            "name",
+            "description",
+            "date",
+            "start_time",
+            "end_time",
+            "location",
+            "status",
+            "course",
+            "course_name",
+            "media_files",
+            "created_by",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_by", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Set created_by from request user
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            validated_data["created_by"] = request.user
+        return super().create(validated_data)

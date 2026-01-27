@@ -199,6 +199,13 @@ class Module(BaseUUIDModel):
         help_text="Primary pathway this module belongs to",
     )
 
+    # Gamification
+    badge_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Name of the badge earned upon completion of this module",
+    )
+
     objects = models.Manager()  # Explicit default manager
 
 
@@ -739,3 +746,62 @@ class Achievement(BaseUUIDModel):
 
     def __str__(self) -> str:
         return f"{self.learner.full_name} - {self.name}"
+
+
+class Activity(BaseUUIDModel):
+    """Upcoming activities for learners.
+
+    Managed by data_entry or admin users via the curriculum entry dashboard.
+    """
+
+    STATUS_CHOICES = [
+        ("upcoming", "Upcoming"),
+        ("ongoing", "Ongoing"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    name = models.CharField(max_length=255, db_index=True)
+    description = models.TextField(blank=True)
+    date = models.DateField(db_index=True, help_text="Activity date")
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="upcoming", db_index=True
+    )
+
+    # Optional links to curriculum
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activities",
+        help_text="Related pathway/course",
+    )
+
+    # Media storage (similar to Module)
+    media_files = models.JSONField(
+        default=list, blank=True, help_text="List of media file references"
+    )
+
+    # Tracking
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activities_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_activity"
+        verbose_name = "Activity"
+        verbose_name_plural = "Activities"
+        ordering = ["date", "start_time"]
+
+    def __str__(self) -> str:
+        return f"{self.name} - {self.date}"

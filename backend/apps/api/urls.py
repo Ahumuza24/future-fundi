@@ -4,6 +4,7 @@ from rest_framework import routers
 from .child_views import ChildViewSet
 from .course_views import (
     AchievementViewSet,
+    ActivityViewSet,
     CareerViewSet,
     CourseLevelViewSet,
     CourseViewSet,
@@ -40,6 +41,7 @@ router.register(r"careers", CareerViewSet, basename="careers")
 router.register(r"enrollments", LearnerEnrollmentViewSet, basename="enrollments")
 router.register(r"progress", LearnerProgressViewSet, basename="progress")
 router.register(r"achievements", AchievementViewSet, basename="achievements")
+router.register(r"activities", ActivityViewSet, basename="activities")
 
 urlpatterns = [
     path("", include(router.urls)),

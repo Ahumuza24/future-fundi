@@ -103,6 +103,7 @@ export const childApi = {
     consent_media?: boolean;
     equity_flag?: boolean;
     joined_at?: string;
+    pathway_ids?: string[];
   }) => api.post('/children/', data),
   
   // Update child information
@@ -306,3 +307,55 @@ export const achievementApi = {
   getForLearner: (learnerId: string) => api.get(`/achievements/for-learner/${learnerId}/`),
 };
 
+// Activity API
+export const activityApi = {
+  // Get all activities
+  getAll: (params?: { status?: string; date_from?: string; date_to?: string }) =>
+    api.get('/activities/', { params }),
+
+  // Get activity by ID
+  getById: (id: string) => api.get(`/activities/${id}/`),
+
+  // Get upcoming activities
+  getUpcoming: () => api.get('/activities/upcoming/'),
+
+  // Create activity
+  create: (data: {
+    name: string;
+    description?: string;
+    date: string;
+    start_time?: string;
+    end_time?: string;
+    location?: string;
+    status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+    course?: string;
+  }) => api.post('/activities/', data),
+
+  // Update activity
+  update: (id: string, data: Partial<{
+    name: string;
+    description: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    location: string;
+    status: string;
+    course: string;
+  }>) => api.patch(`/activities/${id}/`, data),
+
+  // Delete activity
+  delete: (id: string) => api.delete(`/activities/${id}/`),
+
+  // Upload media
+  uploadMedia: (activityId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/activities/${activityId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Delete media
+  deleteMedia: (activityId: string, mediaId: string) =>
+    api.delete(`/activities/${activityId}/delete-media/${mediaId}/`),
+};
