@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from apps.core.models import (
     Achievement,
+    Activity,
     Artifact,
     Assessment,
     Attendance,
@@ -712,3 +713,40 @@ class CourseAdminSerializer(serializers.ModelSerializer):
                 CourseLevel.objects.create(course=instance, **level_data)
 
         return instance
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+    """Serializer for Activity CRUD operations."""
+
+    course_name = serializers.CharField(source="course.name", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.get_full_name", read_only=True
+    )
+
+    class Meta:
+        model = Activity
+        fields = [
+            "id",
+            "name",
+            "description",
+            "date",
+            "start_time",
+            "end_time",
+            "location",
+            "status",
+            "course",
+            "course_name",
+            "media_files",
+            "created_by",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_by", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Set created_by from request user
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            validated_data["created_by"] = request.user
+        return super().create(validated_data)
