@@ -103,6 +103,7 @@ export const childApi = {
     consent_media?: boolean;
     equity_flag?: boolean;
     joined_at?: string;
+    pathway_ids?: string[];
   }) => api.post('/children/', data),
   
   // Update child information

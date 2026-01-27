@@ -61,7 +61,7 @@ interface ChildFormData {
 interface ApiError {
     response?: {
         data?: {
-            [key: string]: string[] | string;
+            [key: string]: string[] | string | undefined;
             detail?: string;
         };
     };
