@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { childApi } from "@/lib/api";
 import {
-  Users, Calendar,
-  Settings, BookOpen, Plus
+  Users, Calendar, BookOpen, Award, CheckCircle,
+  MessageSquare, AlertCircle, Clock, Zap, Star
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChildManagement from "@/components/ChildManagement";
-import CourseLadder from "@/components/student/CourseLadder";
-import AchievementsList from "@/components/student/AchievementsList";
-import SuggestedActivities from "@/components/student/SuggestedActivities";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Child {
   id: string;
@@ -18,22 +17,59 @@ interface Child {
   last_name: string;
   full_name: string;
   age?: number;
-  date_of_birth?: string;
 }
 
-interface ChildDashboard {
-  pathway: {
-    score: number | null;
-    gate: string | null;
+interface DashboardData {
+  child: Child;
+  subscription: {
+    status: string;
+    tier: string;
+    expires_at: string;
   };
-  artifacts_count: number;
-  weekly_pulse: any;
+  pathways: Array<{
+    id: string;
+    name: string;
+    current_level: string;
+    progress: number;
+    description: string;
+  }>;
+  badges: Array<{
+    id: string;
+    name: string;
+    module_name: string;
+    earned_at: string;
+    icon: string;
+  }>;
+  artifacts: Array<{
+    id: string;
+    title: string;
+    submitted_at: string;
+    learner_name: string;
+  }>;
+  upcoming_activities: Array<{
+    id: string;
+    title: string;
+    date: string;
+    time: string;
+    type: string;
+  }>;
+  micro_lessons: Array<{
+    id: string;
+    title: string;
+    category: string;
+    duration: string;
+  }>;
+  teachers: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
 }
 
 const ParentPortal = () => {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-  const [childDashboard, setChildDashboard] = useState<ChildDashboard | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showManagement, setShowManagement] = useState(false);
 
@@ -43,7 +79,7 @@ const ParentPortal = () => {
 
   useEffect(() => {
     if (selectedChildId) {
-      fetchChildDashboard(selectedChildId);
+      fetchDashboard(selectedChildId);
     }
   }, [selectedChildId]);
 
@@ -51,39 +87,28 @@ const ParentPortal = () => {
     try {
       setLoading(true);
       const response = await childApi.getAll();
-      // Handle both paginated and non-paginated responses
       const childrenData = response.data.results || response.data;
       const childrenArray = Array.isArray(childrenData) ? childrenData : [];
       setChildren(childrenArray);
 
-      // Auto-select first child if available
       if (childrenArray.length > 0 && !selectedChildId) {
         setSelectedChildId(childrenArray[0].id);
       }
     } catch (err) {
       console.error("Failed to fetch children:", err);
-      setChildren([]); // Ensure it's always an array on error
+      setChildren([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchChildDashboard = async (childId: string) => {
+  const fetchDashboard = async (childId: string) => {
     try {
       const response = await childApi.getDashboard(childId);
-      setChildDashboard(response.data);
+      setDashboardData(response.data);
     } catch (err) {
-      console.error("Failed to fetch child dashboard:", err);
+      console.error("Failed to fetch dashboard:", err);
     }
-  };
-
-  const selectedChild = children.find(c => c.id === selectedChildId);
-
-  const getGateColor = (gate: string | null) => {
-    if (!gate) return "var(--fundi-gray)";
-    if (gate.includes("GREEN")) return "var(--fundi-lime)";
-    if (gate.includes("AMBER")) return "var(--fundi-yellow)";
-    return "var(--fundi-orange)";
   };
 
   if (loading) {
@@ -91,7 +116,7 @@ const ParentPortal = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-orange)] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Loading your portal...</p>
         </div>
       </div>
     );
@@ -99,10 +124,10 @@ const ParentPortal = () => {
 
   if (showManagement) {
     return (
-      <div className="min-h-screen p-3 md:p-4 lg:p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="min-h-screen p-4 md:p-8 bg-gray-50/50">
+        <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="heading-font text-3xl md:text-4xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+            <h1 className="heading-font text-3xl font-bold text-[var(--fundi-black)]">
               Manage Children
             </h1>
             <Button
@@ -110,7 +135,7 @@ const ParentPortal = () => {
                 setShowManagement(false);
                 fetchChildren();
               }}
-              className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="bg-white hover:bg-gray-100 text-gray-700 border"
             >
               Back to Dashboard
             </Button>
@@ -123,209 +148,358 @@ const ParentPortal = () => {
 
   if (children.length === 0) {
     return (
-      <div className="min-h-screen p-3 md:p-4 lg:p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="text-center p-12">
-            <Users className="h-20 w-20 mx-auto mb-6 text-gray-400" />
-            <h2 className="heading-font text-3xl font-bold mb-4" style={{ color: 'var(--fundi-black)' }}>
-              Welcome to Future Fundi!
-            </h2>
-            <p className="text-gray-600 text-lg mb-6">
-              Start by adding your children to track their learning journey
-            </p>
-            <Button
-              onClick={() => setShowManagement(true)}
-              style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
-              className="text-lg px-8 py-6"
-            >
-              <Plus className="h-6 w-6 mr-2" />
-              Add Your First Child
-            </Button>
-          </Card>
-        </div>
+      <div className="min-h-screen p-8 flex items-center justify-center bg-gray-50/50">
+        <Card className="max-w-2xl w-full text-center p-12 shadow-xl border-dashed border-4 border-gray-200">
+          <div className="w-24 h-24 bg-[var(--fundi-orange)]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Users className="h-12 w-12 text-[var(--fundi-orange)]" />
+          </div>
+          <h2 className="heading-font text-3xl font-bold mb-4 text-[var(--fundi-black)]">
+            Welcome to Future Fundi!
+          </h2>
+          <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+            Get started by adding your children to track their amazing robotics journey.
+          </p>
+          <Button
+            onClick={() => setShowManagement(true)}
+            style={{ backgroundColor: "var(--fundi-orange)" }}
+            className="text-white text-lg px-8 py-6 rounded-xl hover:opacity-90 transition-opacity"
+          >
+            + Add Your First Child
+          </Button>
+        </Card>
       </div>
     );
   }
 
+  const COLORS = [
+    "var(--fundi-orange)",
+    "var(--fundi-cyan)",
+    "var(--fundi-lime)",
+    "var(--fundi-purple)",
+    "var(--fundi-pink)",
+    "var(--fundi-yellow)"
+  ];
+
   return (
-    <div className="min-h-screen p-3 md:p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        {/* Header */}
-        <header className="stagger flex items-center justify-between" style={{ animationDelay: '0ms' }}>
+    <div className="min-h-screen p-4 md:p-8 bg-gray-50/30">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--fundi-black)' }}>
+            <h1 className="heading-font text-3xl md:text-4xl font-bold text-[var(--fundi-black)]">
               Parent Portal
             </h1>
-            <p className="text-gray-600">Track your children's growth and celebrate their achievements</p>
+            <p className="text-gray-600 mt-1">Foundations for the future.</p>
           </div>
-          <Button
-            onClick={() => setShowManagement(true)}
-            style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
-            className="flex items-center gap-2"
-          >
-            <Settings className="h-5 w-5" />
-            Manage Children
-          </Button>
-        </header>
 
-        {/* Child Selector */}
-        <Card className="stagger border-l-4" style={{ animationDelay: '50ms', borderLeftColor: 'var(--fundi-purple)' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-6 w-6" style={{ color: 'var(--fundi-purple)' }} />
-              Your Children ({children.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {children.map((child) => (
-                <motion.div
+          <div className="flex items-center gap-3">
+            {/* Child Switcher */}
+            <div className="flex bg-white rounded-full p-1 shadow-sm border">
+              {children.map(child => (
+                <button
                   key={child.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedChildId(child.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedChildId === child.id
+                      ? "bg-[var(--fundi-orange)] text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
                 >
-                  <Card
-                    className={`hover:shadow-lg transition-all cursor-pointer ${selectedChildId === child.id ? 'ring-2 ring-purple-500 shadow-lg' : ''
-                      }`}
-                    onClick={() => setSelectedChildId(child.id)}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg">{child.full_name}</CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        {child.age && (
-                          <>
-                            <Calendar className="h-4 w-4" />
-                            {child.age} years old
-                          </>
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    {selectedChildId === child.id && childDashboard && (
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm text-gray-600">Pathway Score</div>
-                            <div className="text-2xl font-bold mono-font" style={{ color: 'var(--fundi-orange)' }}>
-                              {childDashboard.pathway.score || "N/A"}
-                            </div>
-                          </div>
-                          {childDashboard.pathway.gate && (
-                            <div className="px-3 py-1 rounded" style={{
-                              backgroundColor: getGateColor(childDashboard.pathway.gate)
-                            }}>
-                              <span className="text-sm font-bold">{childDashboard.pathway.gate}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                </motion.div>
+                  {child.first_name}
+                </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Selected Child Dashboard */}
-        <AnimatePresence mode="wait">
-          {selectedChild && childDashboard && (
-            <motion.div
-              key={selectedChildId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
+            <Button
+              onClick={() => setShowManagement(true)}
+              variant="outline"
+              className="rounded-full border-gray-300"
             >
-              {/* Student Dashboard View for Parent */}
-              <div className="grid lg:grid-cols-12 gap-6 stagger" style={{ animationDelay: '100ms' }}>
-                {/* Left Column - Course Progress */}
-                <div className="lg:col-span-4 space-y-6">
-                  <CourseLadder learnerId={selectedChildId || undefined} />
-                </div>
+              <Users className="h-4 w-4 mr-2" />
+              Manage
+            </Button>
+          </div>
+        </div>
 
-                {/* Right Column - Activities, Achievements, Portfolio */}
-                <div className="lg:col-span-8 space-y-6">
+        {dashboardData && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                  {/* Stats Summary from Parent Portal (Optional, but keeping for quick data) */}
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
-                      <CardHeader className="p-4 pb-2">
-                        <CardDescription>Total Artifacts</CardDescription>
-                        <CardTitle className="text-2xl mono-font" style={{ color: 'var(--fundi-cyan)' }}>
-                          {childDashboard.artifacts_count}
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
-                      <CardHeader className="p-4 pb-2">
-                        <CardDescription>Current Gate</CardDescription>
-                        <CardTitle className="text-xl" style={{ color: getGateColor(childDashboard.pathway.gate) }}>
-                          {childDashboard.pathway.gate || "Not Set"}
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
-                      <CardHeader className="p-4 pb-2">
-                        <CardDescription>Weekly Pulse</CardDescription>
-                        <CardTitle className="text-xl" style={{ color: 'var(--fundi-orange)' }}>
-                          Active
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
+            {/* LEFT COLUMN: Profile & Status */}
+            <div className="lg:col-span-4 space-y-8">
+
+              {/* Child Profile Card */}
+              <Card className="border-t-4 border-t-[var(--fundi-cyan)] shadow-sm overflow-hidden">
+                <CardContent className="p-6 text-center">
+                  <div className="w-24 h-24 bg-[var(--fundi-cyan)]/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[var(--fundi-cyan)]">
+                    <span className="heading-font text-3xl text-[var(--fundi-cyan)]">
+                      {dashboardData.child.first_name[0]}
+                    </span>
                   </div>
+                  <h2 className="heading-font text-2xl font-bold text-gray-900">
+                    {dashboardData.child.full_name}
+                  </h2>
+                  <p className="text-gray-500 font-medium">Future Innovator • {dashboardData.child.age} Years Old</p>
 
-                  <SuggestedActivities />
+                  <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-gray-600">Subscription Status</span>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded uppercase tracking-wide">
+                        {dashboardData.subscription.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Zap className="h-4 w-4 text-[var(--fundi-yellow)]" />
+                      <span>{dashboardData.subscription.tier} Plan</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <AchievementsList />
-
-                  {/* Student Portfolio List */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="heading-font text-2xl font-bold" style={{ color: 'var(--fundi-black)' }}>
-                        {selectedChild.first_name}'s Portfolio
-                      </h2>
-                      <Button variant="outline" className="gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        View Full Portfolio
+              {/* Enrolled Pathways */}
+              <div>
+                <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
+                  <BookOpen className="h-5 w-5 text-[var(--fundi-purple)]" />
+                  Current Learning Pathways
+                </h3>
+                <div className="space-y-4">
+                  {dashboardData.pathways.length > 0 ? (
+                    dashboardData.pathways.map((pathway, i) => (
+                      <Card key={pathway.id} className="border-l-4 hover:shadow-md transition-shadow"
+                        style={{ borderLeftColor: i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)' }}>
+                        <CardContent className="p-5">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-gray-900 line-clamp-1">{pathway.name}</h4>
+                            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                              L{pathway.current_level.replace(/\D/g, '') || '1'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                            {pathway.description || "Learning logical thinking and problem solving."}
+                          </p>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full"
+                              style={{
+                                width: '35%', // Placeholder progress
+                                backgroundColor: i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)'
+                              }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-right mt-1 text-gray-400 font-medium">In Progress</p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center p-6 bg-white rounded-xl border border-dashed">
+                      <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No active pathways</p>
+                      <Button variant="link" onClick={() => setShowManagement(true)} className="text-[var(--fundi-orange)]">
+                        Enroll in a pathway
                       </Button>
                     </div>
-
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {[1, 2, 3].map((i) => (
-                        <Card
-                          key={i}
-                          className="hover:scale-105 hover:shadow-lg transition-all cursor-pointer overflow-hidden group border-0 shadow-md"
-                        >
-                          <div
-                            className="h-32 bg-gradient-to-br rounded-t-lg relative overflow-hidden"
-                            style={{
-                              background: i === 1
-                                ? 'linear-gradient(135deg, var(--fundi-orange), var(--fundi-pink))'
-                                : i === 2
-                                  ? 'linear-gradient(135deg, var(--fundi-cyan), var(--fundi-lime))'
-                                  : 'linear-gradient(135deg, var(--fundi-purple), var(--fundi-cyan))'
-                            }}
-                          >
-                            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
-                          </div>
-                          <CardHeader className="p-4 pb-2">
-                            <CardTitle className="text-base">Robot Prototype {i}</CardTitle>
-                            <CardDescription className="text-xs">Robotics • Oct {10 + i}</CardDescription>
-                          </CardHeader>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
+                  )}
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Upcoming Activities */}
+              <div>
+                <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
+                  <Calendar className="h-5 w-5 text-[var(--fundi-orange)]" />
+                  Upcoming Activities
+                </h3>
+                <Card className="border-0 shadow-sm bg-white">
+                  <CardContent className="p-0">
+                    {dashboardData.upcoming_activities.length > 0 ? (
+                      <div className="divide-y">
+                        {dashboardData.upcoming_activities.map((activity) => (
+                          <div key={activity.id} className="p-4 flex gap-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-[var(--fundi-orange)]/10 text-[var(--fundi-orange)] rounded-lg flex-shrink-0">
+                              <span className="text-xs font-bold uppercase">{format(new Date(activity.date), 'MMM')}</span>
+                              <span className="text-lg font-bold">{format(new Date(activity.date), 'd')}</span>
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-gray-900">{activity.title}</h5>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {activity.time.substring(0, 5)}
+                                </span>
+                                <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
+                                  {activity.type}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-gray-500 text-sm">
+                        No upcoming activities scheduled.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+            </div>
+
+            {/* RIGHT COLUMN: Badges, Artifacts, Lessons */}
+            <div className="lg:col-span-8 space-y-8">
+
+              {/* Badges Collection */}
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
+                    <Award className="h-5 w-5 text-[var(--fundi-yellow)]" />
+                    Earned Badges
+                  </h3>
+                  <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border">
+                    Total: {dashboardData.badges.length}
+                  </span>
+                </div>
+
+                {dashboardData.badges.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {dashboardData.badges.map((badge, i) => (
+                      <motion.div
+                        key={badge.id}
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-[var(--fundi-yellow)]/20 flex items-center justify-center p-3">
+                          <Award className="w-8 h-8 text-[var(--fundi-yellow-dark)]" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-gray-900 leading-tight mb-1">{badge.name}</h4>
+                          <p className="text-xs text-gray-500">{format(new Date(badge.earned_at), 'MMM yyyy')}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl p-8 text-center border border-dashed text-gray-400">
+                    <Award className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p>Completing modules will unlock badges!</p>
+                  </div>
+                )}
+              </section>
+
+              {/* Artifacts Gallery */}
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
+                    <Star className="h-5 w-5 text-[var(--fundi-lime)]" />
+                    Recent Artifacts
+                  </h3>
+                  <Button variant="ghost" size="sm" className="text-[var(--fundi-lime)] hover:text-green-700 hover:bg-green-50">
+                    View All
+                  </Button>
+                </div>
+
+                {dashboardData.artifacts.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {dashboardData.artifacts.map((artifact, i) => (
+                      <Card key={artifact.id} className="overflow-hidden hover:shadow-lg transition-shadow border-0 shadow ring-1 ring-gray-100">
+                        <div className="h-32 bg-gray-100 relative group">
+                          {/* Placeholder for real image since we don't have URLs in this specific payload yet */}
+                          <div
+                            className="absolute inset-0 flex items-center justify-center text-white font-bold text-4xl opacity-30"
+                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                          >
+                            {artifact.title[0]}
+                          </div>
+                        </div>
+                        <CardContent className="p-3">
+                          <h4 className="font-bold text-gray-900 truncate">{artifact.title}</h4>
+                          <p className="text-xs text-gray-500 mt-1">{format(new Date(artifact.submitted_at), 'd MMM, yyyy')}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl p-8 text-center border border-dashed text-gray-400">
+                    <Star className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p>No artifacts captured yet.</p>
+                  </div>
+                )}
+              </section>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Micro Lessons (Parents) */}
+                <section>
+                  <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
+                    <Zap className="h-5 w-5 text-[var(--fundi-pink)]" />
+                    Micro Lessons for You
+                  </h3>
+                  <Card className="border-0 shadow-sm bg-white overflow-hidden">
+                    <div className="divide-y relative">
+                      {dashboardData.micro_lessons.map(lesson => (
+                        <div key={lesson.id} className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer group">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-pink-50 flex items-center justify-center text-pink-500">
+                              <CheckCircle className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-gray-900">{lesson.title}</p>
+                              <p className="text-xs text-gray-500">{lesson.category} • {lesson.duration}</p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 text-[var(--fundi-pink)]">
+                            Start
+                          </Button>
+                        </div>
+                      ))}
+                      {/* Overlay placeholder message */}
+                      <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                    </div>
+                  </Card>
+                </section>
+
+                {/* Teachers & Contact */}
+                <section>
+                  <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
+                    <MessageSquare className="h-5 w-5 text-[var(--fundi-red)]" />
+                    Your Teachers
+                  </h3>
+                  <Card className="border-0 shadow-sm bg-white">
+                    <CardContent className="p-4 space-y-4">
+                      {dashboardData.teachers.map(teacher => (
+                        <div key={teacher.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                              <UserIcon className="h-6 w-6 text-gray-500" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-gray-900">{teacher.name}</p>
+                              <p className="text-xs text-gray-500">{teacher.role}</p>
+                            </div>
+                          </div>
+                          <Button size="icon" variant="ghost" className="text-[var(--fundi-red)] bg-red-50 hover:bg-red-100 rounded-full h-8 w-8">
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="pt-2 text-center">
+                        <p className="text-xs text-gray-400 italic">Chat functionality coming soon</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// Helper icon
+const UserIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
 
 export default ParentPortal;

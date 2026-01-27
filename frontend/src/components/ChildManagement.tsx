@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { childApi } from "@/lib/api";
+import { childApi, courseApi } from "@/lib/api";
 import { Plus, Edit, Trash2, User, Calendar, CheckCircle, AlertCircle, School, GraduationCap, Key } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -32,10 +32,12 @@ interface ChildFormData {
     new_password_confirm?: string;
     consent_media: boolean;
     equity_flag: boolean;
+    pathway_ids?: string[];
 }
 
 export default function ChildManagement() {
     const [children, setChildren] = useState<Child[]>([]);
+    const [courses, setCourses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -50,13 +52,24 @@ export default function ChildManagement() {
         password_confirm: "",
         consent_media: true,
         equity_flag: false,
+        pathway_ids: [],
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
     useEffect(() => {
         fetchChildren();
+        fetchCourses();
     }, []);
+
+    const fetchCourses = async () => {
+        try {
+            const response = await courseApi.getAll();
+            setCourses(response.data.results || response.data || []);
+        } catch (err) {
+            console.error("Failed to fetch courses", err);
+        }
+    };
 
     const fetchChildren = async () => {
         try {
@@ -374,7 +387,7 @@ export default function ChildManagement() {
                                                         value={formData.username}
                                                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                        placeholder="e.g., emma_j2024"
+                                                        placeholder="e.g., cedric_ahumuza"
                                                         required
                                                     />
                                                 </div>
@@ -472,6 +485,48 @@ export default function ChildManagement() {
                                             My child requires additional support
                                         </label>
                                     </div>
+
+                                    {/* Pathway Selection (Only for new children for now) */}
+                                    {!editingChild && (
+                                        <div className="pt-4 border-t-2 border-gray-200">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2" style={{ color: "var(--fundi-black)" }}>
+                                                <GraduationCap className="h-5 w-5" />
+                                                Select Pathways (Max 2)
+                                            </h3>
+                                            <div className="grid md:grid-cols-2 gap-3">
+                                                {courses.map(course => (
+                                                    <div
+                                                        key={course.id}
+                                                        onClick={() => {
+                                                            const current = formData.pathway_ids || [];
+                                                            if (current.includes(course.id)) {
+                                                                setFormData({ ...formData, pathway_ids: current.filter(id => id !== course.id) });
+                                                            } else {
+                                                                if (current.length < 2) {
+                                                                    setFormData({ ...formData, pathway_ids: [...current, course.id] });
+                                                                }
+                                                            }
+                                                        }}
+                                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${(formData.pathway_ids || []).includes(course.id)
+                                                            ? "border-[var(--fundi-orange)] bg-orange-50"
+                                                            : "border-gray-200 hover:border-gray-300"
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-bold text-sm">{course.name}</span>
+                                                            {(formData.pathway_ids || []).includes(course.id) && (
+                                                                <CheckCircle className="h-4 w-4 text-[var(--fundi-orange)]" />
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {courses.length === 0 && (
+                                                <p className="text-sm text-gray-500 italic">Loading available pathways...</p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="flex gap-3">
                                         <Button
