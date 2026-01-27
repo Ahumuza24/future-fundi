@@ -524,14 +524,19 @@ class CourseListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for course listings."""
 
     level_count = serializers.IntegerField(source="levels.count", read_only=True)
+    modules = ModuleSerializer(many=True, read_only=True)
+    careers = CareerSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
         fields = [
             "id",
             "name",
+            "description",
             "level_count",
             "is_active",
+            "modules",
+            "careers",
         ]
 
 
@@ -673,6 +678,8 @@ class CourseAdminSerializer(serializers.ModelSerializer):
     """Admin serializer for creating/updating courses and levels."""
 
     levels = CourseLevelSerializer(many=True, required=False)
+    modules = ModuleSerializer(many=True, read_only=True)
+    careers = CareerSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
@@ -683,6 +690,8 @@ class CourseAdminSerializer(serializers.ModelSerializer):
             "is_active",
             "tenant",
             "levels",
+            "modules",
+            "careers",
             "created_at",
             "updated_at",
         ]
