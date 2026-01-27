@@ -176,7 +176,7 @@ class ModuleViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
-        from django.conf import settings
+       
         from django.core.files.storage import default_storage
 
         module = self.get_object()

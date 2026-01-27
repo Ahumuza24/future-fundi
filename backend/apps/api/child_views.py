@@ -4,19 +4,12 @@ from datetime import date, timedelta
 
 from apps.core.models import (
     Activity,
-    Artifact,
     Attendance,
-    Course,
     Learner,
-    LearnerCourseEnrollment,
-    LearnerLevelProgress,
-    Module,
-    PathwayInputs,
     Session,
-    WeeklyPulse,
 )
 from django.db.models import Q
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -25,12 +18,9 @@ from .serializers import (
     ChildCreateSerializer,
     ChildDetailSerializer,
     ChildUpdateSerializer,
-    CourseSerializer,
     LearnerSerializer,
-    ModuleSerializer,
     PathwayInputsSerializer,
-    WeeklyPulseSerializer,
-)
+   )
 
 
 class IsParent(permissions.BasePermission):
