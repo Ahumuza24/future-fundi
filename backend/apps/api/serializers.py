@@ -452,6 +452,7 @@ class ModuleSerializer(serializers.ModelSerializer):
             "competences",
             "media_files",
             "course",
+            "badge_name",
         ]
         read_only_fields = ["id"]
 

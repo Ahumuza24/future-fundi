@@ -199,6 +199,13 @@ class Module(BaseUUIDModel):
         help_text="Primary pathway this module belongs to",
     )
 
+    # Gamification
+    badge_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Name of the badge earned upon completion of this module",
+    )
+
     objects = models.Manager()  # Explicit default manager
 
 

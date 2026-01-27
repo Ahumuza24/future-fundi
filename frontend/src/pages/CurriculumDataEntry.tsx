@@ -37,6 +37,7 @@ interface Module {
     competences: string[];
     media_files: MediaFile[];
     course: string;
+    badge_name?: string;
 }
 
 interface Course {
@@ -171,8 +172,8 @@ export default function CurriculumDataEntry() {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => togglePathway(course.id)}
                                 className={`cursor-pointer rounded-2xl border-2 p-5 transition-all duration-200 ${isSelected
-                                        ? `${colors.border} bg-white shadow-lg ring-2 ring-offset-2 ring-[#FF6B35]`
-                                        : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-md'
+                                    ? `${colors.border} bg-white shadow-lg ring-2 ring-offset-2 ring-[#FF6B35]`
+                                    : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-md'
                                     }`}
                             >
                                 {/* Pathway Icon & Name */}
@@ -583,6 +584,11 @@ function ModuleCard({ module, courseId, colors, isEditing, onEdit, onClose, onUp
                                         <Image className="h-3 w-3" /> {mediaFiles.length}
                                     </span>
                                 )}
+                                {module.badge_name && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full" title={`Badge: ${module.badge_name}`}>
+                                        <GraduationCap className="h-3 w-3" /> Badge
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -610,6 +616,17 @@ function ModuleCard({ module, courseId, colors, isEditing, onEdit, onClose, onUp
                         className="border-t"
                     >
                         <div className="p-4 space-y-4">
+                            {fullModule.badge_name && (
+                                <div className="flex items-center gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200 w-fit">
+                                    <div className="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center shadow-sm">
+                                        <GraduationCap className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-yellow-800 font-medium uppercase">Completion Badge</p>
+                                        <p className="text-sm font-bold text-gray-900">{fullModule.badge_name}</p>
+                                    </div>
+                                </div>
+                            )}
                             {/* Content */}
                             {fullModule.content && (
                                 <div>
@@ -738,13 +755,14 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
         suggested_activities: Array.isArray(module?.suggested_activities) ? module.suggested_activities : [],
         materials: Array.isArray(module?.materials) ? module.materials : [],
         competences: Array.isArray(module?.competences) ? module.competences : [],
+        badge_name: module?.badge_name || '',
     });
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(module?.media_files || []);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
     const handleSave = async () => {
-        if (!formData.name.trim()) return;
+        if (!formData.name.trim() || !formData.badge_name.trim()) return;
         setSaving(true);
         try {
             if (module) {
@@ -814,6 +832,20 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                         placeholder="e.g., Introduction to Sensors"
+                        className="mt-1"
+                    />
+                </div>
+
+                {/* Badge Name */}
+                <div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                        <GraduationCap className={`h-4 w-4 ${colors.text}`} />
+                        Completion Badge Name *
+                    </Label>
+                    <Input
+                        value={formData.badge_name}
+                        onChange={e => setFormData({ ...formData, badge_name: e.target.value })}
+                        placeholder="e.g., Sensor Specialist Badge"
                         className="mt-1"
                     />
                 </div>
