@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from apps.core.models import (
+    Activity,
     Artifact,
     Attendance,
     Course,
@@ -14,6 +15,7 @@ from apps.core.models import (
     Session,
     WeeklyPulse,
 )
+from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -92,7 +94,9 @@ class ChildViewSet(viewsets.ModelViewSet):
             "course", "current_level"
         )
         pathways_data = []
+        enrolled_course_ids = []
         for enrollment in enrollments:
+            enrolled_course_ids.append(enrollment.course.id)
             pathways_data.append(
                 {
                     "id": str(enrollment.course.id),
@@ -135,22 +139,64 @@ class ChildViewSet(viewsets.ModelViewSet):
         # 4. Artifacts
         recent_artifacts = child.artifacts.order_by("-submitted_at")[:6]
 
-        # 5. Upcoming Activities (Sessions)
-        upcoming_sessions = Session.objects.filter(
-            learners=child, date__gte=date.today(), status="scheduled"
-        ).order_by("date", "start_time")[:5]
+        # 5. Upcoming Activities (Sessions AND Activity objects)
+        today = date.today()
 
-        upcoming_activities = []
-        for session in upcoming_sessions:
-            upcoming_activities.append(
+        # A. Sessions (Classes)
+        upcoming_sessions = Session.objects.filter(
+            learners=child, date__gte=today, status="scheduled"
+        ).order_by("date", "start_time")
+
+        # B. General Activities (Events)
+        # Filter: Global activities OR activities for courses the child is enrolled in
+        upcoming_events = Activity.objects.filter(
+            Q(course__isnull=True) | Q(course__in=enrolled_course_ids),
+            date__gte=today,
+            status__in=["upcoming", "ongoing"],
+        ).order_by("date", "start_time")
+
+        # Combine and sort
+        combined_activities = []
+
+        for s in upcoming_sessions:
+            combined_activities.append(
                 {
-                    "id": str(session.id),
-                    "title": session.module.name,
-                    "date": session.date,
-                    "time": session.start_time,
+                    "id": str(s.id),
+                    "title": s.module.name,
+                    "date": s.date,
+                    "time": s.start_time,
+                    "end_time": s.end_time,
                     "type": "Class",
+                    "description": s.module.description,
+                    "location": "Classroom",
+                    "datetime": f"{s.date}T{s.start_time or '00:00:00'}",
                 }
             )
+
+        for a in upcoming_events:
+            combined_activities.append(
+                {
+                    "id": str(a.id),
+                    "title": a.name,
+                    "date": a.date,
+                    "time": a.start_time,
+                    "end_time": a.end_time,
+                    "type": "Event",
+                    "description": a.description,
+                    "location": a.location,
+                    "datetime": f"{a.date}T{a.start_time or '00:00:00'}",
+                }
+            )
+
+        # Sort combined list by datetime
+        combined_activities.sort(key=lambda x: x["datetime"])
+
+        # Take top 5 and remove helper field
+        upcoming_activities = []
+        for item in combined_activities[:5]:
+            item_copy = item.copy()
+            del item_copy["datetime"]
+            upcoming_activities.append(item_copy)
 
         # 6. Micro Lessons (Placeholders)
         micro_lessons = [

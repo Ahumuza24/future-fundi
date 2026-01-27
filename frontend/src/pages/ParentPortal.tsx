@@ -10,6 +10,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChildManagement from "@/components/ChildManagement";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Child {
   id: string;
@@ -51,7 +59,10 @@ interface DashboardData {
     title: string;
     date: string;
     time: string;
+    end_time: string | null;
     type: string;
+    description?: string;
+    location?: string;
   }>;
   micro_lessons: Array<{
     id: string;
@@ -73,6 +84,10 @@ const ParentPortal = () => {
   const [loading, setLoading] = useState(true);
   const [showManagement, setShowManagement] = useState(false);
 
+  // Activity Dialog State
+  const [selectedActivity, setSelectedActivity] = useState<DashboardData['upcoming_activities'][0] | null>(null);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+
   useEffect(() => {
     fetchChildren();
   }, []);
@@ -84,6 +99,7 @@ const ParentPortal = () => {
   }, [selectedChildId]);
 
   const fetchChildren = async () => {
+    // ... existing implementation
     try {
       setLoading(true);
       const response = await childApi.getAll();
@@ -123,6 +139,7 @@ const ParentPortal = () => {
   }
 
   if (showManagement) {
+    // ... existing implementation
     return (
       <div className="min-h-screen p-4 md:p-8 bg-gray-50/50">
         <div className="max-w-6xl mx-auto space-y-6">
@@ -147,6 +164,7 @@ const ParentPortal = () => {
   }
 
   if (children.length === 0) {
+    // ... existing implementation
     return (
       <div className="min-h-screen p-8 flex items-center justify-center bg-gray-50/50">
         <Card className="max-w-2xl w-full text-center p-12 shadow-xl border-dashed border-4 border-gray-200">
@@ -294,7 +312,7 @@ const ParentPortal = () => {
                     <div className="text-center p-6 bg-white rounded-xl border border-dashed">
                       <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">No active pathways</p>
-                      <Button variant="link" onClick={() => setShowManagement(true)} className="text-[var(--fundi-orange)]">
+                      <Button variant="ghost" onClick={() => setShowManagement(true)} className="text-[var(--fundi-orange)] hover:bg-orange-50 underline">
                         Enroll in a pathway
                       </Button>
                     </div>
@@ -313,22 +331,33 @@ const ParentPortal = () => {
                     {dashboardData.upcoming_activities.length > 0 ? (
                       <div className="divide-y">
                         {dashboardData.upcoming_activities.map((activity) => (
-                          <div key={activity.id} className="p-4 flex gap-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-[var(--fundi-orange)]/10 text-[var(--fundi-orange)] rounded-lg flex-shrink-0">
+                          <div
+                            key={activity.id}
+                            onClick={() => {
+                              setSelectedActivity(activity);
+                              setIsActivityDialogOpen(true);
+                            }}
+                            className="p-4 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                          >
+                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-[var(--fundi-orange)]/10 text-[var(--fundi-orange)] rounded-lg flex-shrink-0 group-hover:bg-[var(--fundi-orange)] group-hover:text-white transition-colors">
                               <span className="text-xs font-bold uppercase">{format(new Date(activity.date), 'MMM')}</span>
                               <span className="text-lg font-bold">{format(new Date(activity.date), 'd')}</span>
                             </div>
-                            <div>
-                              <h5 className="font-bold text-gray-900">{activity.title}</h5>
+                            <div className="flex-1">
+                              <h5 className="font-bold text-gray-900 group-hover:text-[var(--fundi-orange)] transition-colors">{activity.title}</h5>
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
                                   {activity.time.substring(0, 5)}
+                                  {activity.end_time && ` - ${activity.end_time.substring(0, 5)}`}
                                 </span>
                                 <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
                                   {activity.type}
                                 </span>
                               </div>
+                            </div>
+                            <div className="flex items-center text-gray-300 group-hover:text-[var(--fundi-orange)]">
+                              <Zap className="h-4 w-4 rotate-90" />
                             </div>
                           </div>
                         ))}
@@ -346,7 +375,6 @@ const ParentPortal = () => {
 
             {/* RIGHT COLUMN: Badges, Artifacts, Lessons */}
             <div className="lg:col-span-8 space-y-8">
-
               {/* Badges Collection */}
               <section>
                 <div className="flex items-center justify-between mb-4">
@@ -490,16 +518,75 @@ const ParentPortal = () => {
             </div>
           </div>
         )}
+
+        {/* Activity Details Dialog */}
+        <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-[var(--fundi-orange)]/10 rounded-lg">
+                  <Calendar className="h-6 w-6 text-[var(--fundi-orange)]" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <DialogTitle>{selectedActivity?.title}</DialogTitle>
+                  <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded w-fit mt-1">
+                    {selectedActivity?.type}
+                  </span>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 text-sm">
+                <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
+                <div>
+                  <span className="font-semibold block text-gray-700">Date & Time</span>
+                  <p className="text-gray-600">
+                    {selectedActivity && format(new Date(selectedActivity.date), 'EEEE, MMMM do, yyyy')}
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedActivity?.time.substring(0, 5)}
+                    {selectedActivity?.end_time && ` - ${selectedActivity?.end_time.substring(0, 5)}`}
+                  </p>
+                </div>
+              </div>
+
+              {selectedActivity?.location && (
+                <div className="flex items-start gap-3 text-sm">
+                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block text-gray-700">Location</span>
+                    <p className="text-gray-600">{selectedActivity.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedActivity?.description && (
+                <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 border">
+                  {selectedActivity.description}
+                </div>
+              )}
+            </div>
+            <DialogFooter className="sm:justify-start">
+              <Button type="button" variant="secondary" onClick={() => setIsActivityDialogOpen(false)} className="w-full">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 };
 
-// Helper icon
+// Helper icons
 const UserIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
     <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
+);
+
+const MapPin = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
 );
 
 export default ParentPortal;

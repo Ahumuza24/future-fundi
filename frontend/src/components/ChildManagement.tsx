@@ -493,34 +493,71 @@ export default function ChildManagement() {
                                                 <GraduationCap className="h-5 w-5" />
                                                 Select Pathways (Max 2)
                                             </h3>
-                                            <div className="grid md:grid-cols-2 gap-3">
-                                                {courses.map(course => (
-                                                    <div
-                                                        key={course.id}
-                                                        onClick={() => {
-                                                            const current = formData.pathway_ids || [];
-                                                            if (current.includes(course.id)) {
-                                                                setFormData({ ...formData, pathway_ids: current.filter(id => id !== course.id) });
-                                                            } else {
-                                                                if (current.length < 2) {
-                                                                    setFormData({ ...formData, pathway_ids: [...current, course.id] });
-                                                                }
-                                                            }
+                                            <div className="space-y-4">
+                                                {/* Primary Pathway */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1">Primary Pathway</label>
+                                                    <select
+                                                        value={formData.pathway_ids?.[0] || ""}
+                                                        onChange={(e) => {
+                                                            const newId = e.target.value;
+                                                            const currentIds = formData.pathway_ids || [];
+                                                            const secondId = currentIds.length > 1 ? currentIds[1] : undefined;
+
+                                                            let newIds: string[] = [];
+                                                            if (newId) newIds.push(newId);
+                                                            if (secondId && secondId !== newId) newIds.push(secondId);
+
+                                                            setFormData({ ...formData, pathway_ids: newIds });
                                                         }}
-                                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${(formData.pathway_ids || []).includes(course.id)
-                                                            ? "border-[var(--fundi-orange)] bg-orange-50"
-                                                            : "border-gray-200 hover:border-gray-300"
-                                                            }`}
+                                                        className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] bg-white"
                                                     >
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="font-bold text-sm">{course.name}</span>
-                                                            {(formData.pathway_ids || []).includes(course.id) && (
-                                                                <CheckCircle className="h-4 w-4 text-[var(--fundi-orange)]" />
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                                                    </div>
-                                                ))}
+                                                        <option value="">Select a pathway...</option>
+                                                        {courses.map(course => (
+                                                            <option
+                                                                key={course.id}
+                                                                value={course.id}
+                                                                // Disable if this course is already selected as the secondary pathway
+                                                                disabled={(formData.pathway_ids?.length || 0) > 1 && formData.pathway_ids?.[1] === course.id}
+                                                            >
+                                                                {course.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Secondary Pathway */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1">Secondary Pathway (Optional)</label>
+                                                    <select
+                                                        value={(formData.pathway_ids?.length || 0) > 1 ? formData.pathway_ids?.[1] : ""}
+                                                        onChange={(e) => {
+                                                            const newId = e.target.value;
+                                                            const currentIds = formData.pathway_ids || [];
+                                                            const firstId = currentIds[0];
+
+                                                            let newIds: string[] = [];
+                                                            if (firstId) newIds.push(firstId);
+                                                            if (newId && newId !== firstId) newIds.push(newId);
+
+                                                            setFormData({ ...formData, pathway_ids: newIds });
+                                                        }}
+                                                        className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                                                        disabled={!formData.pathway_ids || formData.pathway_ids.length === 0}
+                                                    >
+                                                        <option value="">Select a second pathway...</option>
+                                                        {courses.map(course => (
+                                                            <option
+                                                                key={course.id}
+                                                                value={course.id}
+                                                                // Disable if this course is already selected as the primary pathway
+                                                                disabled={formData.pathway_ids?.[0] === course.id}
+                                                            >
+                                                                {course.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                             {courses.length === 0 && (
                                                 <p className="text-sm text-gray-500 italic">Loading available pathways...</p>
