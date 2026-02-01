@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { studentApi } from "@/lib/api";
 import {
-    ChevronLeft,
     ChevronRight,
     CheckCircle,
-    Lock,
     Play,
     FileText,
     Award,
@@ -82,6 +80,7 @@ const PathwayLearning = () => {
     const [selectedModule, setSelectedModule] = useState<Module | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: string; name: string } | null>(null);
 
     useEffect(() => {
         const fetchPathwayData = async () => {
@@ -95,7 +94,13 @@ const PathwayLearning = () => {
                 // Auto-select current level or first unlocked level
                 const currentLevel = response.data.levels.find((l: Level) => l.isCurrent);
                 const firstUnlockedLevel = response.data.levels.find((l: Level) => !l.isLocked);
-                setSelectedLevel(currentLevel || firstUnlockedLevel || response.data.levels[0]);
+                const levelToSelect = currentLevel || firstUnlockedLevel || response.data.levels[0];
+                setSelectedLevel(levelToSelect);
+
+                // Auto-select first module
+                if (levelToSelect && levelToSelect.modules.length > 0) {
+                    setSelectedModule(levelToSelect.modules[0]);
+                }
 
                 setError(null);
             } catch (err) {
@@ -109,14 +114,16 @@ const PathwayLearning = () => {
         fetchPathwayData();
     }, [enrollmentId]);
 
-    // Auto-select first module when level changes
+    // ESC key to close modal
     useEffect(() => {
-        if (selectedLevel && selectedLevel.modules.length > 0) {
-            setSelectedModule(selectedLevel.modules[0]);
-        } else {
-            setSelectedModule(null);
-        }
-    }, [selectedLevel]);
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSelectedMedia(null);
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
 
     if (loading) {
         return (
@@ -135,7 +142,6 @@ const PathwayLearning = () => {
                 <div className="text-center">
                     <p className="text-red-600 mb-4">{error || 'No data available'}</p>
                     <Button onClick={() => navigate('/student/dashboard')}>
-                        <ChevronLeft className="mr-2 h-4 w-4" />
                         Back to Dashboard
                     </Button>
                 </div>
@@ -143,19 +149,47 @@ const PathwayLearning = () => {
         );
     }
 
-    const currentModuleIndex = selectedLevel?.modules.findIndex(m => m.id === selectedModule?.id) ?? -1;
-    const canGoNext = currentModuleIndex < (selectedLevel?.modules.length ?? 0) - 1;
+    // Get all unique modules (avoid duplicates)
+    const allModules = pathwayData.levels.flatMap(level =>
+        level.modules.map(module => ({ ...module, levelName: level.name }))
+    );
+
+    // Remove duplicates based on module ID
+    const uniqueModules = allModules.filter((module, index, self) =>
+        index === self.findIndex((m) => m.id === module.id)
+    );
+
+    // Calculate total and completed using unique modules
+    const totalModules = uniqueModules.length;
+    const completedModules = pathwayData.levels.reduce((sum, level) => {
+        return sum + (level.progress.completed ? level.modules.length : 0);
+    }, 0);
+
+    const currentModuleIndex = uniqueModules.findIndex(m => m.id === selectedModule?.id);
+    const canGoNext = currentModuleIndex < uniqueModules.length - 1;
     const canGoPrevious = currentModuleIndex > 0;
 
     const handleNextModule = () => {
-        if (canGoNext && selectedLevel) {
-            setSelectedModule(selectedLevel.modules[currentModuleIndex + 1]);
+        if (canGoNext) {
+            const nextModule = uniqueModules[currentModuleIndex + 1];
+            setSelectedModule(nextModule);
+            // Update selected level
+            const nextLevel = pathwayData.levels.find(l =>
+                l.modules.some(m => m.id === nextModule.id)
+            );
+            if (nextLevel) setSelectedLevel(nextLevel);
         }
     };
 
     const handlePreviousModule = () => {
-        if (canGoPrevious && selectedLevel) {
-            setSelectedModule(selectedLevel.modules[currentModuleIndex - 1]);
+        if (canGoPrevious) {
+            const prevModule = uniqueModules[currentModuleIndex - 1];
+            setSelectedModule(prevModule);
+            // Update selected level
+            const prevLevel = pathwayData.levels.find(l =>
+                l.modules.some(m => m.id === prevModule.id)
+            );
+            if (prevLevel) setSelectedLevel(prevLevel);
         }
     };
 
@@ -166,19 +200,11 @@ const PathwayLearning = () => {
                 <div className="max-w-7xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate('/student/dashboard')}
-                            >
-                                <ChevronLeft className="h-4 w-4 mr-1" />
-                                Dashboard
-                            </Button>
                             <div className="h-6 w-px bg-gray-300" />
                             <div>
                                 <h1 className="font-bold text-lg text-gray-900">{pathwayData.course.name}</h1>
                                 <p className="text-sm text-gray-500">
-                                    Level {pathwayData.currentLevel.levelNumber} • {pathwayData.progress.completedLevels}/{pathwayData.progress.totalLevels} Levels Completed
+                                    {selectedModule ? selectedModule.name : 'Select a microcredential'} • {completedModules}/{totalModules} Microcredentials Completed
                                 </p>
                             </div>
                         </div>
@@ -197,64 +223,40 @@ const PathwayLearning = () => {
 
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="grid grid-cols-12 gap-6">
-                    {/* Sidebar - Levels & Modules */}
+                    {/* Sidebar - Microcredentials */}
                     <div className="col-span-3 space-y-4">
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-semibold text-gray-700">Course Content</CardTitle>
+                                <CardTitle className="text-sm font-semibold text-gray-700">Microcredentials</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto">
-                                {pathwayData.levels.map((level) => (
-                                    <div key={level.id} className="space-y-1">
-                                        {/* Level Header */}
-                                        <button
-                                            onClick={() => !level.isLocked && setSelectedLevel(level)}
-                                            disabled={level.isLocked}
-                                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${level.isLocked
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                    : selectedLevel?.id === level.id
-                                                        ? 'bg-[var(--fundi-orange)] text-white'
-                                                        : 'hover:bg-gray-100 text-gray-700'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    {level.isLocked ? (
-                                                        <Lock className="h-4 w-4" />
-                                                    ) : level.progress.completed ? (
-                                                        <CheckCircle className="h-4 w-4 text-green-500" />
-                                                    ) : (
-                                                        <BookOpen className="h-4 w-4" />
-                                                    )}
-                                                    <span className="font-medium text-sm">{level.name}</span>
-                                                </div>
-                                                {!level.isLocked && (
-                                                    <span className="text-xs">{Math.round(level.progress.completionPercentage)}%</span>
-                                                )}
-                                            </div>
-                                        </button>
-
-                                        {/* Modules List */}
-                                        {selectedLevel?.id === level.id && !level.isLocked && (
-                                            <div className="ml-4 space-y-1">
-                                                {level.modules.map((module, idx) => (
-                                                    <button
-                                                        key={module.id}
-                                                        onClick={() => setSelectedModule(module)}
-                                                        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${selectedModule?.id === module.id
-                                                                ? 'bg-orange-50 text-[var(--fundi-orange)] font-medium'
-                                                                : 'hover:bg-gray-50 text-gray-600'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-semibold text-gray-400">{idx + 1}</span>
-                                                            <span className="truncate">{module.name}</span>
-                                                        </div>
-                                                    </button>
-                                                ))}
+                            <CardContent className="space-y-1 max-h-[calc(100vh-250px)] overflow-y-auto">
+                                {uniqueModules.map((module, globalIndex) => (
+                                    <button
+                                        key={module.id}
+                                        onClick={() => {
+                                            setSelectedModule(module);
+                                            const moduleLevel = pathwayData.levels.find(l =>
+                                                l.modules.some(m => m.id === module.id)
+                                            );
+                                            if (moduleLevel) setSelectedLevel(moduleLevel);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${selectedModule?.id === module.id
+                                            ? 'bg-[var(--fundi-orange)] text-white font-medium'
+                                            : 'hover:bg-orange-50 text-gray-700'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold opacity-70">{globalIndex + 1}</span>
+                                            <span className="truncate flex-1">{module.name}</span>
+                                        </div>
+                                        {module.badgeName && (
+                                            <div className={`flex items-center gap-1 mt-1 text-xs ${selectedModule?.id === module.id ? 'opacity-90' : 'opacity-70'
+                                                }`}>
+                                                <Award className="h-3 w-3" />
+                                                <span>{module.badgeName}</span>
                                             </div>
                                         )}
-                                    </div>
+                                    </button>
                                 ))}
                             </CardContent>
                         </Card>
@@ -277,7 +279,7 @@ const PathwayLearning = () => {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                                                            Module {currentModuleIndex + 1} of {selectedLevel?.modules.length}
+                                                            Microcredential {currentModuleIndex + 1} of {uniqueModules.length}
                                                         </span>
                                                         {selectedModule.badgeName && (
                                                             <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded flex items-center gap-1">
@@ -314,19 +316,96 @@ const PathwayLearning = () => {
                                                     <div className="flex items-center gap-2 mb-3">
                                                         <Play className="h-5 w-5 text-gray-500" />
                                                         <h3 className="text-lg font-semibold">Media Resources</h3>
+                                                        <span className="text-xs text-gray-500">({selectedModule.mediaFiles.length} files)</span>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        {selectedModule.mediaFiles.map((media: any, idx: number) => (
-                                                            <div key={idx} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                                                <p className="font-medium text-sm">{media.name || `Resource ${idx + 1}`}</p>
-                                                                <p className="text-xs text-gray-500 mt-1">{media.type || 'Media file'}</p>
-                                                            </div>
-                                                        ))}
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {selectedModule.mediaFiles.map((media: any, idx: number) => {
+                                                            // Support multiple property names for URL
+                                                            const relativeUrl = media.url || media.file || media.path || media.src || media.link;
+
+                                                            // Convert relative URL to absolute URL
+                                                            const mediaUrl = relativeUrl?.startsWith('http')
+                                                                ? relativeUrl
+                                                                : relativeUrl?.startsWith('/')
+                                                                    ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'}${relativeUrl}`
+                                                                    : relativeUrl;
+
+                                                            const isImage = media.type?.toLowerCase().includes('image') ||
+                                                                media.content_type?.toLowerCase().includes('image') ||
+                                                                mediaUrl?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+                                                            const isVideo = media.type?.toLowerCase().includes('video') ||
+                                                                media.content_type?.toLowerCase().includes('video') ||
+                                                                mediaUrl?.match(/\.(mp4|webm|ogg|mov)$/i);
+
+                                                            return (
+                                                                <div
+                                                                    key={`media-${selectedModule.id}-${idx}`}
+                                                                    className="border rounded-lg overflow-hidden hover:shadow-lg transition-all cursor-pointer bg-white group"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        if (mediaUrl) {
+                                                                            setSelectedMedia({
+                                                                                url: mediaUrl,
+                                                                                type: media.content_type || media.type || (isImage ? 'image' : isVideo ? 'video' : 'file'),
+                                                                                name: media.name || media.title || `Resource ${idx + 1}`
+                                                                            });
+                                                                        } else {
+                                                                            console.error('No URL found in media object:', media);
+                                                                            alert('This media file has no URL');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <div className="relative h-32 bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                                        {isImage && mediaUrl ? (
+                                                                            <>
+                                                                                <img
+                                                                                    src={mediaUrl}
+                                                                                    alt={media.name || `Resource ${idx + 1}`}
+                                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                                                    onError={(e) => {
+                                                                                        console.error('Image failed to load:', mediaUrl);
+                                                                                        const target = e.currentTarget;
+                                                                                        target.style.display = 'none';
+                                                                                        const fallback = target.nextElementSibling as HTMLElement;
+                                                                                        if (fallback) fallback.classList.remove('hidden');
+                                                                                    }}
+                                                                                />
+                                                                                <div className="hidden flex-col items-center justify-center text-gray-400">
+                                                                                    <FileText className="h-8 w-8 mb-1" />
+                                                                                    <span className="text-xs">Image unavailable</span>
+                                                                                </div>
+                                                                            </>
+                                                                        ) : isVideo && mediaUrl ? (
+                                                                            <div className="relative w-full h-full bg-gray-900 flex items-center justify-center">
+                                                                                <Play className="h-12 w-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                                                <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                                                                    Video
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="flex flex-col items-center justify-center text-gray-400">
+                                                                                <FileText className="h-8 w-8 mb-1" />
+                                                                                <span className="text-xs">{media.type?.split('/')[0] || 'No URL'}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="p-2">
+                                                                        <p className="font-medium text-xs truncate" title={media.name || `Resource ${idx + 1}`}>
+                                                                            {media.name || media.title || `Resource ${idx + 1}`}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-500 truncate">
+                                                                            {isImage ? 'Image' : isVideo ? 'Video' : media.type || 'File'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Learning Outcomes */}
+                                            {/* Competencies */}
                                             {selectedModule.competences && selectedModule.competences.length > 0 && (
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-3">
@@ -386,15 +465,14 @@ const PathwayLearning = () => {
                                                     onClick={handlePreviousModule}
                                                     disabled={!canGoPrevious}
                                                 >
-                                                    <ChevronLeft className="mr-2 h-4 w-4" />
-                                                    Previous Module
+                                                    Previous
                                                 </Button>
                                                 <Button
                                                     onClick={handleNextModule}
                                                     disabled={!canGoNext}
                                                     className="bg-[var(--fundi-orange)] hover:bg-orange-600"
                                                 >
-                                                    Next Module
+                                                    Next Microcredential
                                                     <ChevronRight className="ml-2 h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -405,7 +483,7 @@ const PathwayLearning = () => {
                                 <Card>
                                     <CardContent className="py-12 text-center">
                                         <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600">Select a module to start learning</p>
+                                        <p className="text-gray-600">Select a microcredential to start learning</p>
                                     </CardContent>
                                 </Card>
                             )}
@@ -413,6 +491,74 @@ const PathwayLearning = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Media Modal */}
+            {selectedMedia && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+                    onClick={() => setSelectedMedia(null)}
+                >
+                    <div className="relative max-w-6xl max-h-[90vh] w-full">
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setSelectedMedia(null)}
+                            className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+                        >
+                            <div className="flex items-center gap-2 text-sm">
+                                <span>Press ESC or click outside to close</span>
+                                <span className="text-2xl">×</span>
+                            </div>
+                        </button>
+
+                        {/* Media Content */}
+                        <div
+                            className="bg-white rounded-lg overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {selectedMedia.type?.toLowerCase().includes('image') ? (
+                                <div className="flex flex-col">
+                                    <img
+                                        src={selectedMedia.url}
+                                        alt={selectedMedia.name}
+                                        className="w-full max-h-[70vh] object-contain bg-gray-100"
+                                    />
+                                    <div className="p-4 border-t">
+                                        <p className="font-medium text-gray-900">{selectedMedia.name}</p>
+                                        <p className="text-sm text-gray-500 mt-1">Image</p>
+                                    </div>
+                                </div>
+                            ) : selectedMedia.type?.toLowerCase().includes('video') ? (
+                                <div className="flex flex-col">
+                                    <video
+                                        controls
+                                        autoPlay
+                                        className="w-full max-h-[70vh] bg-black"
+                                    >
+                                        <source src={selectedMedia.url} type={selectedMedia.type} />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <div className="p-4 border-t">
+                                        <p className="font-medium text-gray-900">{selectedMedia.name}</p>
+                                        <p className="text-sm text-gray-500 mt-1">Video</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center">
+                                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                                    <p className="font-medium text-gray-900 mb-2">{selectedMedia.name}</p>
+                                    <p className="text-sm text-gray-500 mb-4">{selectedMedia.type}</p>
+                                    <Button
+                                        onClick={() => window.open(selectedMedia.url, '_blank')}
+                                        className="bg-[var(--fundi-orange)] hover:bg-orange-600"
+                                    >
+                                        Download File
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
