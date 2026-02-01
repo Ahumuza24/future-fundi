@@ -5,6 +5,7 @@ import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
 import StudentDashboard from "@/pages/StudentDashboard";
+import PathwayLearning from "@/pages/PathwayLearning";
 import ParentPortal from "@/pages/ParentPortal";
 import ParentMyChildren from "@/pages/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
@@ -49,6 +50,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['learner', 'admin']}>
             <StudentDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "student/pathway/:enrollmentId",
+        element: (
+          <ProtectedRoute allowedRoles={['learner', 'admin']}>
+            <PathwayLearning />
           </ProtectedRoute>
         ),
       },

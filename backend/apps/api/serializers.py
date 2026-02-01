@@ -53,6 +53,9 @@ class ChildCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=True)
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, required=True)
+    pathway_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, write_only=True, allow_empty=True
+    )
 
     class Meta:
         model = Learner
@@ -68,6 +71,7 @@ class ChildCreateSerializer(serializers.ModelSerializer):
             "username",
             "password",
             "password_confirm",
+            "pathway_ids",
         ]
 
     def validate(self, attrs):
@@ -99,15 +103,24 @@ class ChildCreateSerializer(serializers.ModelSerializer):
                     {"date_of_birth": "Child must be between 6 and 18 years old."}
                 )
 
+        # Validate max 2 pathways
+        pathways = attrs.get("pathway_ids", [])
+        if len(pathways) > 2:
+            raise serializers.ValidationError(
+                {"pathway_ids": "You can select a maximum of 2 pathways."}
+            )
+
         return attrs
 
     def create(self, validated_data):
+        from apps.core.models import Course, CourseLevel, LearnerCourseEnrollment
         from apps.users.models import User
 
         # Extract user-related fields
         username = validated_data.pop("username")
         password = validated_data.pop("password")
         validated_data.pop("password_confirm")  # Remove confirm password
+        pathway_ids = validated_data.pop("pathway_ids", [])
 
         # Parent and tenant are set from the request context
         parent = self.context["request"].user
@@ -128,6 +141,22 @@ class ChildCreateSerializer(serializers.ModelSerializer):
         learner = Learner.objects.create(
             parent=parent, tenant=tenant, user=user, **validated_data  # Can be None
         )
+
+        # Enroll in selected pathways
+        for course_id in pathway_ids:
+            try:
+                course = Course.objects.get(id=course_id, tenant=tenant)
+                # Find the first level
+                first_level = course.levels.order_by("level_number").first()
+                LearnerCourseEnrollment.objects.create(
+                    learner=learner,
+                    course=course,
+                    current_level=first_level,
+                    is_active=True,
+                )
+            except Course.DoesNotExist:
+                # Skip if course doesn't exist or doesn't belong to tenant
+                continue
 
         return learner
 

@@ -76,6 +76,13 @@ export const artifactApi = {
     }),
 };
 
+export const studentApi = {
+  // Get complete dashboard data for authenticated student
+  getDashboard: () => api.get('/student/dashboard/'),
+  // Get pathway learning content
+  getPathwayLearning: (enrollmentId: string) => api.get(`/pathway-learning/${enrollmentId}/learn/`),
+};
+
 export const dashboardApi = {
   getKpis: () => api.get('/api/dashboard/kpis/'),
   getTrends: () => api.get('/api/dashboard/trends/'),

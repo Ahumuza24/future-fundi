@@ -6,26 +6,151 @@ import {
   User,
   Star,
   Award,
-  Circle
+  Circle,
+  Bot,
+  Code,
+  Palette,
+  Briefcase,
+  Video,
+  Paintbrush,
+  Music,
+  Beaker,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
+import { studentApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import { PathwayCard } from "@/components/student/PathwayCard";
 import { MicroCredentialBadge } from "@/components/student/MicroCredentialBadge";
 import { Avatar } from "@/components/ui/avatar";
-import {
-  upcomingEvents,
-  mockPathways,
-  earnedBadges,
-  nextBadge,
-  activeProjects
-} from "@/data/studentDashboardData";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+// Icon mapping utility
+const iconMap: Record<string, React.ElementType> = {
+  Bot,
+  Code,
+  Palette,
+  Briefcase,
+  Video,
+  Paintbrush,
+  Music,
+  Beaker,
+  GraduationCap,
+};
+
+const getIconComponent = (iconName: string): React.ElementType => {
+  return iconMap[iconName] || GraduationCap;
+};
+
+interface DashboardData {
+  learner: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    currentSchool: string;
+    currentClass: string;
+    age?: number;
+  };
+  pathways: Array<{
+    id: string;
+    title: string;
+    description: string;
+    progress: number;
+    currentLevel: string;
+    currentLevelNumber: number;
+    currentModule: string;
+    totalLevels: number;
+    currentLevelProgress: number;
+    color: string;
+    icon: string;
+    status: "good" | "warning" | "critical";
+    microCredentialsEarned: number;
+    totalMicroCredentials: number;
+  }>;
+  upcomingActivities: Array<{
+    id: string;
+    title: string;
+    date: string;
+    time: string;
+    type: string;
+    color: string;
+  }>;
+  activeProjects: Array<{
+    id: string;
+    title: string;
+    description: string;
+    pathway: string;
+    progress: number;
+    status: string;
+    dueDate: string;
+    color: string;
+  }>;
+  badges: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    earnedAt: string | null;
+    earnedDate?: string;
+    type: string;
+    pathway: string;
+    color: string;
+    isLocked: boolean;
+  }>;
+}
 
 const StudentDashboard = () => {
   const user = getCurrentUser();
+  const navigate = useNavigate();
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Student';
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await studentApi.getDashboard();
+        setDashboardData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-orange)] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !dashboardData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'No data available'}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 lg:p-6 bg-gray-50/50">
@@ -42,17 +167,19 @@ const StudentDashboard = () => {
             />
             <div>
               <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2 text-[var(--fundi-black)]">
-                Welcome back, {user?.first_name || 'Student'}!
+                Welcome back, {dashboardData.learner.firstName || 'Student'}!
               </h1>
               <div className="flex flex-wrap items-center gap-2 md:gap-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
                   <School className="h-4 w-4 text-gray-500" />
-                  {user?.tenant_name || 'Future Fundi Academy'}
+                  {dashboardData.learner.currentSchool || user?.tenant_name || 'Future Fundi Academy'}
                 </span>
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  Year 9 • Class 9B
-                </span>
+                {dashboardData.learner.currentClass && (
+                  <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    {dashboardData.learner.currentClass}
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   Term 2, Week 12
@@ -64,7 +191,7 @@ const StudentDashboard = () => {
           <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
             <p className="text-sm font-medium text-gray-500">Upcoming Activities</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto md:flex">
-              {upcomingEvents.map((event, i) => (
+              {dashboardData.upcomingActivities.slice(0, 3).map((event, i) => (
                 <motion.div
                   key={event.id}
                   initial={{ opacity: 0, x: 20 }}
@@ -97,14 +224,22 @@ const StudentDashboard = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {mockPathways.map((pathway, i) => (
+                {dashboardData.pathways.map((pathway, i) => (
                   <motion.div
                     key={pathway.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
                   >
-                    <PathwayCard pathway={pathway} />
+                    <PathwayCard
+                      pathway={{
+                        ...pathway,
+                        icon: getIconComponent(pathway.icon)
+                      }}
+                      onClick={() => {
+                        navigate(`/student/pathway/${pathway.id}`);
+                      }}
+                    />
                   </motion.div>
                 ))}
               </div>
@@ -119,7 +254,7 @@ const StudentDashboard = () => {
               </div>
 
               <div className="space-y-4">
-                {activeProjects.map((project, i) => (
+                {dashboardData.activeProjects.map((project, i) => (
                   <motion.div
                     key={project.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -211,10 +346,15 @@ const StudentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
-                    {earnedBadges.map((badge) => (
-                      <MicroCredentialBadge key={badge.id} credential={badge} />
+                    {dashboardData.badges.map((badge) => (
+                      <MicroCredentialBadge
+                        key={badge.id}
+                        credential={{
+                          ...badge,
+                          icon: badge.icon.startsWith('🏆') ? Award : getIconComponent(badge.icon)
+                        }}
+                      />
                     ))}
-                    <MicroCredentialBadge credential={nextBadge} />
                   </div>
                   <Button variant="outline" className="w-full mt-4 text-xs font-medium hover:text-[var(--fundi-orange)]">
                     View Full Credential Passport
@@ -230,7 +370,7 @@ const StudentDashboard = () => {
                 Timeline
               </h3>
               <div className="border-l-2 border-gray-100 ml-1.5 space-y-6">
-                {upcomingEvents.map((event, i) => (
+                {dashboardData.upcomingActivities.map((event, i) => (
                   <div key={`tl-${event.id}`} className="relative pl-6">
                     <div
                       className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm"

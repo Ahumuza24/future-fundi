@@ -12,6 +12,8 @@ from .course_views import (
     LearnerProgressViewSet,
     ModuleViewSet,
 )
+from .pathway_learning_views import PathwayLearningViewSet
+from .student_views import StudentDashboardViewSet
 from .teacher_views import QuickArtifactViewSet, TeacherSessionViewSet
 from .views import (
     ArtifactViewSet,
@@ -26,6 +28,12 @@ router.register(r"artifacts", ArtifactViewSet, basename="artifacts")
 router.register(
     r"children", ChildViewSet, basename="children"
 )  # Parent's children management
+router.register(
+    r"student", StudentDashboardViewSet, basename="student"
+)  # Student dashboard
+router.register(
+    r"pathway-learning", PathwayLearningViewSet, basename="pathway-learning"
+)  # Pathway learning interface
 
 # Teacher endpoints
 router.register(r"teacher/sessions", TeacherSessionViewSet, basename="teacher-sessions")
