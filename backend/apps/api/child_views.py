@@ -20,7 +20,7 @@ from .serializers import (
     ChildUpdateSerializer,
     LearnerSerializer,
     PathwayInputsSerializer,
-   )
+)
 
 
 class IsParent(permissions.BasePermission):
@@ -79,14 +79,49 @@ class ChildViewSet(viewsets.ModelViewSet):
             "expires_at": (date.today() + timedelta(days=30)).isoformat(),
         }
 
-        # 2. Pathways (Enrollments)
-        enrollments = child.course_enrollments.filter(is_active=True).select_related(
-            "course", "current_level"
+        # 2. Pathways (Enrollments) - Enhanced with modules and careers
+        enrollments = (
+            child.course_enrollments.filter(is_active=True)
+            .select_related("course", "current_level")
+            .prefetch_related("course__modules", "course__careers")
         )
+
         pathways_data = []
         enrolled_course_ids = []
+
         for enrollment in enrollments:
             enrolled_course_ids.append(enrollment.course.id)
+
+            # Get modules (microcredentials) for this pathway
+            modules = enrollment.course.modules.all()
+            modules_data = [
+                {
+                    "id": str(module.id),
+                    "name": module.name,
+                    "description": module.description or "",
+                    "badge_name": module.badge_name or "",
+                }
+                for module in modules
+            ]
+
+            # Get careers for this pathway
+            careers = enrollment.course.careers.all()
+            careers_data = [
+                {
+                    "id": str(career.id),
+                    "title": career.title,
+                    "description": career.description or "",
+                }
+                for career in careers
+            ]
+
+            # Calculate actual progress
+            total_levels = enrollment.course.levels.count()
+            completed_levels = enrollment.level_progress.filter(completed=True).count()
+            progress = (
+                int((completed_levels / total_levels * 100)) if total_levels > 0 else 0
+            )
+
             pathways_data.append(
                 {
                     "id": str(enrollment.course.id),
@@ -96,8 +131,12 @@ class ChildViewSet(viewsets.ModelViewSet):
                         if enrollment.current_level
                         else "Not Started"
                     ),
-                    "progress": 0,  # Calculate actual progress if needed
-                    "description": enrollment.course.description,
+                    "progress": progress,
+                    "description": enrollment.course.description or "",
+                    "modules": modules_data,  # Microcredentials
+                    "careers": careers_data,  # Potential careers
+                    "total_modules": len(modules_data),
+                    "total_careers": len(careers_data),
                 }
             )
 

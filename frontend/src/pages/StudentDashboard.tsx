@@ -180,10 +180,6 @@ const StudentDashboard = () => {
                     {dashboardData.learner.currentClass}
                   </span>
                 )}
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md shadow-sm border border-gray-100">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  Term 2, Week 12
-                </span>
               </div>
             </div>
           </div>

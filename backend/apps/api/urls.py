@@ -1,6 +1,11 @@
 from django.urls import include, path
 from rest_framework import routers
 
+from .admin_views import (
+    AdminAnalyticsViewSet,
+    AdminTenantViewSet,
+    AdminUserViewSet,
+)
 from .child_views import ChildViewSet
 from .course_views import (
     AchievementViewSet,
@@ -40,6 +45,11 @@ router.register(r"teacher/sessions", TeacherSessionViewSet, basename="teacher-se
 router.register(
     r"teacher/quick-artifacts", QuickArtifactViewSet, basename="teacher-quick-artifacts"
 )
+
+# Admin endpoints
+router.register(r"admin/users", AdminUserViewSet, basename="admin-users")
+router.register(r"admin/tenants", AdminTenantViewSet, basename="admin-tenants")
+router.register(r"admin/analytics", AdminAnalyticsViewSet, basename="admin-analytics")
 
 # Course & Progress endpoints
 router.register(r"courses", CourseViewSet, basename="courses")
