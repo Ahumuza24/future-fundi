@@ -5,6 +5,7 @@ import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
 import StudentDashboard from "@/pages/StudentDashboard";
+import PathwayLearning from "@/pages/PathwayLearning";
 import ParentPortal from "@/pages/ParentPortal";
 import ParentMyChildren from "@/pages/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
@@ -18,6 +19,8 @@ import TeacherCommunication from "@/pages/TeacherCommunication";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourseManagement from "@/pages/AdminCourseManagement";
+import UserManagement from "@/pages/UserManagement";
+import SchoolManagement from "@/pages/SchoolManagement";
 import CurriculumDataEntry from "@/pages/CurriculumDataEntry";
 import ActivityManagement from "@/pages/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
@@ -49,6 +52,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['learner', 'admin']}>
             <StudentDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "student/pathway/:enrollmentId",
+        element: (
+          <ProtectedRoute allowedRoles={['learner', 'admin']}>
+            <PathwayLearning />
           </ProtectedRoute>
         ),
       },
@@ -190,6 +201,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
             <ActivityManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/users",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <UserManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/schools",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SchoolManagement />
           </ProtectedRoute>
         ),
       },

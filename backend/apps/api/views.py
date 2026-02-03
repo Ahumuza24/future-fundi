@@ -154,6 +154,145 @@ class LearnerViewSet(viewsets.ModelViewSet):
     def portfolio_pdf(self, request, pk: str) -> Response:
         return Response({"detail": "Not implemented"}, status=501)
 
+    @action(detail=True, methods=["get"], url_path="dashboard")
+    def dashboard(self, request, pk: str) -> Response:
+        """Get comprehensive dashboard data for the learner."""
+        learner = self.get_object()
+        from datetime import date
+
+        from apps.core.models import Activity, Session
+        from django.db.models import Q
+
+        # 1. Pathways (Enrollments)
+        enrollments = learner.course_enrollments.filter(is_active=True).select_related(
+            "course", "current_level"
+        )
+        pathways_data = []
+        enrolled_course_ids = []
+        for enrollment in enrollments:
+            enrolled_course_ids.append(enrollment.course.id)
+            pathways_data.append(
+                {
+                    "id": str(enrollment.course.id),
+                    "name": enrollment.course.name,
+                    "level": (
+                        enrollment.current_level.name
+                        if enrollment.current_level
+                        else "Not Started"
+                    ),
+                    "progress": 0,  # TODO: Calculate actual progress
+                    "description": enrollment.course.description,
+                    "color": "#F05722",  # Default brand color
+                }
+            )
+
+        # 2. Upcoming Activities
+        today = date.today()
+        # Sessions (Classes)
+        upcoming_sessions = Session.objects.filter(
+            learners=learner, date__gte=today, status="scheduled"
+        ).order_by("date", "start_time")[:5]
+
+        # General Activities
+        upcoming_events = Activity.objects.filter(
+            Q(course__isnull=True) | Q(course__in=enrolled_course_ids),
+            date__gte=today,
+            status__in=["upcoming", "ongoing"],
+        ).order_by("date", "start_time")[:5]
+
+        # Combine
+        combined_activities = []
+        for s in upcoming_sessions:
+            combined_activities.append(
+                {
+                    "id": str(s.id),
+                    "title": s.module.name,
+                    "date": s.date.isoformat(),
+                    "time": s.start_time.strftime("%H:%M") if s.start_time else None,
+                    "type": "Class",
+                    "color": "#3B82F6",  # Blue for classes
+                    "datetime": f"{s.date}T{s.start_time or '00:00:00'}",
+                }
+            )
+
+        for a in upcoming_events:
+            combined_activities.append(
+                {
+                    "id": str(a.id),
+                    "title": a.name,
+                    "date": a.date.isoformat(),
+                    "time": a.start_time.strftime("%H:%M") if a.start_time else None,
+                    "type": "Event",
+                    "color": "#10B981",  # Green for events
+                    "datetime": f"{a.date}T{a.start_time or '00:00:00'}",
+                }
+            )
+
+        combined_activities.sort(key=lambda x: x["datetime"])
+        upcoming_activities = combined_activities[:5]
+
+        # 3. Active Projects (Pending Artifacts requirements)
+        # For now, simplistic approach: recently updated progress that isn't complete
+        active_projects = []
+        progress_records = (
+            learner.level_progress.filter(completed=False)
+            .select_related("level")
+            .order_by("-updated_at")[:3]
+        )
+
+        for progress in progress_records:
+            active_projects.append(
+                {
+                    "id": str(progress.id),
+                    "title": f"{progress.level.name} Project",
+                    "description": progress.level.description
+                    or "Complete your level requirements.",
+                    "pathway": progress.level.course.name,
+                    "dueDate": "Ongoing",
+                    "progress": progress.completion_percentage,
+                    "status": "In Progress",
+                    "color": "#F05722",
+                }
+            )
+
+        # 4. Badges (Achievements)
+        # Using Achievement model if populated, otherwise mock/derived logic
+        # For now, let's look at completed levels as badges
+        completed_levels = learner.level_progress.filter(completed=True).select_related(
+            "level"
+        )
+        badges = []
+        for p in completed_levels:
+            badges.append(
+                {
+                    "id": str(p.id),
+                    "name": p.level.name,
+                    "course": p.level.course.name,
+                    "icon": "award",
+                    "earned_at": p.completed_at,
+                }
+            )
+
+        return Response(
+            {
+                "learner": {
+                    "first_name": learner.first_name,
+                    "last_name": learner.last_name,
+                    "school": learner.current_school,
+                    "class": learner.current_class,
+                    "tenant_name": (
+                        learner.tenant.name
+                        if learner.tenant
+                        else "Future Fundi Academy"
+                    ),
+                },
+                "pathways": pathways_data,
+                "upcoming_activities": upcoming_activities,
+                "active_projects": active_projects,
+                "badges": badges,
+            }
+        )
+
 
 class ArtifactViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedTenant]

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { childApi } from "@/lib/api";
 import {
   Users, Calendar, BookOpen, Award, CheckCircle,
-  MessageSquare, AlertCircle, Clock, Zap, Star
+  MessageSquare, AlertCircle, Clock, Zap, Star,
+  ChevronUp, ChevronDown, Briefcase
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChildManagement from "@/components/ChildManagement";
@@ -40,6 +41,19 @@ interface DashboardData {
     current_level: string;
     progress: number;
     description: string;
+    modules: Array<{
+      id: string;
+      name: string;
+      description: string;
+      badge_name: string;
+    }>;
+    careers: Array<{
+      id: string;
+      title: string;
+      description: string;
+    }>;
+    total_modules: number;
+    total_careers: number;
   }>;
   badges: Array<{
     id: string;
@@ -87,6 +101,9 @@ const ParentPortal = () => {
   // Activity Dialog State
   const [selectedActivity, setSelectedActivity] = useState<DashboardData['upcoming_activities'][0] | null>(null);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+
+  // Pathway Expansion State
+  const [expandedPathway, setExpandedPathway] = useState<string | null>(null);
 
   useEffect(() => {
     fetchChildren();
@@ -282,32 +299,156 @@ const ParentPortal = () => {
                 </h3>
                 <div className="space-y-4">
                   {dashboardData.pathways.length > 0 ? (
-                    dashboardData.pathways.map((pathway, i) => (
-                      <Card key={pathway.id} className="border-l-4 hover:shadow-md transition-shadow"
-                        style={{ borderLeftColor: i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)' }}>
-                        <CardContent className="p-5">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-gray-900 line-clamp-1">{pathway.name}</h4>
-                            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
-                              L{pathway.current_level.replace(/\D/g, '') || '1'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                            {pathway.description || "Learning logical thinking and problem solving."}
-                          </p>
-                          <div className="w-full bg-gray-100 rounded-full h-2">
+                    dashboardData.pathways.map((pathway, i) => {
+                      const isExpanded = expandedPathway === pathway.id;
+                      const pathwayColor = i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)';
+
+                      return (
+                        <Card
+                          key={pathway.id}
+                          className="border-l-4 hover:shadow-md transition-all"
+                          style={{ borderLeftColor: pathwayColor }}
+                        >
+                          <CardContent className="p-5">
+                            {/* Header - Always Visible */}
                             <div
-                              className="h-2 rounded-full"
-                              style={{
-                                width: '35%', // Placeholder progress
-                                backgroundColor: i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)'
-                              }}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-right mt-1 text-gray-400 font-medium">In Progress</p>
-                        </CardContent>
-                      </Card>
-                    ))
+                              className="cursor-pointer"
+                              onClick={() => setExpandedPathway(isExpanded ? null : pathway.id)}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-bold text-gray-900">{pathway.name}</h4>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                                    L{pathway.current_level.replace(/\D/g, '') || '1'}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                                {pathway.description || "Learning logical thinking and problem solving."}
+                              </p>
+
+                              {/* Progress Bar */}
+                              <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                                <div
+                                  className="h-2 rounded-full transition-all"
+                                  style={{
+                                    width: `${pathway.progress}%`,
+                                    backgroundColor: pathwayColor
+                                  }}
+                                ></div>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-gray-400 font-medium">{pathway.progress}% Complete</span>
+                                <div className="flex gap-3">
+                                  <span className="text-gray-500">
+                                    <Star className="h-3 w-3 inline mr-1" />
+                                    {pathway.total_modules} Micro-credentials
+                                  </span>
+                                  <span className="text-gray-500">
+                                    <Briefcase className="h-3 w-3 inline mr-1" />
+                                    {pathway.total_careers} Careers
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-4 mt-4 border-t space-y-4">
+                                    {/* Micro-credentials Section */}
+                                    <div>
+                                      <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                                        <Star className="h-4 w-4" style={{ color: pathwayColor }} />
+                                        Micro-credentials ({pathway.modules.length})
+                                      </h5>
+                                      {pathway.modules.length > 0 ? (
+                                        <div className="space-y-2">
+                                          {pathway.modules.map((module) => (
+                                            <div
+                                              key={module.id}
+                                              className="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                                            >
+                                              <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1">
+                                                  <p className="font-medium text-sm text-gray-900">{module.name}</p>
+                                                  {module.description && (
+                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                                      {module.description}
+                                                    </p>
+                                                  )}
+                                                </div>
+                                                {module.badge_name && (
+                                                  <div className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
+                                                    <Award className="h-3 w-3" />
+                                                    {module.badge_name}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-gray-400 italic">No micro-credentials defined yet</p>
+                                      )}
+                                    </div>
+
+                                    {/* Careers Section */}
+                                    <div>
+                                      <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                                        <Briefcase className="h-4 w-4" style={{ color: pathwayColor }} />
+                                        Potential Career Paths ({pathway.careers.length})
+                                      </h5>
+                                      {pathway.careers.length > 0 ? (
+                                        <div className="grid grid-cols-1 gap-2">
+                                          {pathway.careers.map((career) => (
+                                            <div
+                                              key={career.id}
+                                              className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-100"
+                                            >
+                                              <p className="font-medium text-sm text-gray-900 flex items-center gap-2">
+                                                <Briefcase className="h-3 w-3 text-blue-600" />
+                                                {career.title}
+                                              </p>
+                                              {career.description && (
+                                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                                  {career.description}
+                                                </p>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-gray-400 italic">No career paths defined yet</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
                   ) : (
                     <div className="text-center p-6 bg-white rounded-xl border border-dashed">
                       <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />

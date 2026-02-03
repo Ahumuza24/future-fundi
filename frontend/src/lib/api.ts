@@ -76,6 +76,13 @@ export const artifactApi = {
     }),
 };
 
+export const studentApi = {
+  // Get complete dashboard data for authenticated student
+  getDashboard: () => api.get('/student/dashboard/'),
+  // Get pathway learning content
+  getPathwayLearning: (enrollmentId: string) => api.get(`/pathway-learning/${enrollmentId}/learn/`),
+};
+
 export const dashboardApi = {
   getKpis: () => api.get('/api/dashboard/kpis/'),
   getTrends: () => api.get('/api/dashboard/trends/'),
@@ -358,4 +365,45 @@ export const activityApi = {
   // Delete media
   deleteMedia: (activityId: string, mediaId: string) =>
     api.delete(`/activities/${activityId}/delete-media/${mediaId}/`),
+};
+
+// Admin API (admin-only endpoints)
+export const adminApi = {
+  // User Management
+  users: {
+    getAll: (params?: any) => api.get('/admin/users/', { params }),
+    getById: (id: string) => api.get(`/admin/users/${id}/`),
+    create: (data: any) => api.post('/admin/users/', data),
+    update: (id: string, data: any) => api.put(`/admin/users/${id}/`, data),
+    delete: (id: string) => api.delete(`/admin/users/${id}/`),
+    bulkImport: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return api.post('/admin/users/bulk-import/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    },
+    export: (params?: any) => api.get('/admin/users/export/', { 
+      params,
+      responseType: 'blob'
+    }),
+    stats: () => api.get('/admin/users/stats/'),
+  },
+
+  // School/Tenant Management
+  tenants: {
+    getAll: (params?: any) => api.get('/admin/tenants/', { params }),
+    getById: (id: string) => api.get(`/admin/tenants/${id}/`),
+    create: (data: any) => api.post('/admin/tenants/', data),
+    update: (id: string, data: any) => api.put(`/admin/tenants/${id}/`, data),
+    delete: (id: string) => api.delete(`/admin/tenants/${id}/`),
+    stats: (id: string) => api.get(`/admin/tenants/${id}/stats/`),
+  },
+
+  // Analytics
+  analytics: {
+    overview: () => api.get('/admin/analytics/overview/'),
+    users: (params?: any) => api.get('/admin/analytics/users/', { params }),
+    enrollments: (params?: any) => api.get('/admin/analytics/enrollments/', { params }),
+  },
 };
