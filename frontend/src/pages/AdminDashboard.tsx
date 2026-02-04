@@ -69,29 +69,25 @@ const AdminDashboard = () => {
       // Fetch analytics overview
       const analyticsResponse = await adminApi.analytics.overview();
 
-      // Debug logging - shows exactly what we received
-      console.log('📊 Analytics API Response:', {
-        fullResponse: analyticsResponse,
-        data: analyticsResponse?.data,
-        hasUsers: !!analyticsResponse?.data?.users,
-        hasSchools: !!analyticsResponse?.data?.schools,
-      });
+      // Debug logging - shows exactly what we received as a STRING
+      console.log('📊 Analytics API Response Data:', JSON.stringify(analyticsResponse?.data, null, 2));
 
-      // Validate response structure
-      if (analyticsResponse?.data?.users && analyticsResponse?.data?.schools) {
-        setAnalytics(analyticsResponse.data);
+      const data = analyticsResponse?.data;
+
+      // Validate response structure (checking for users object)
+      if (data && data.users) {
+        setAnalytics(data);
       } else {
-        console.error('❌ Invalid analytics response structure:', analyticsResponse);
-        console.error('Expected: { data: { users: {...}, schools: {...} } }');
-        console.error('Received keys:', Object.keys(analyticsResponse?.data || {}));
+        console.error('❌ Invalid analytics response structure. Data keys:', Object.keys(data || {}));
         setError('Invalid data received from server');
-        // Set default empty analytics to prevent crashes
+
+        // Attempt to show what we CAN show, or defaults
         setAnalytics({
-          users: { total: 0, active: 0, learners: 0, teachers: 0, parents: 0, active_today: 0, new_last_7_days: 0 },
-          schools: { total: 0 },
-          courses: { total: 0, modules: 0 },
-          enrollments: { total: 0, new_last_7_days: 0 },
-          activity: { sessions: 0, artifacts: 0, events: 0 }
+          users: data?.users || { total: 0, active: 0, learners: 0, teachers: 0, parents: 0, active_today: 0, new_last_7_days: 0 },
+          schools: data?.schools || { total: 0 },
+          courses: data?.courses || { total: 0, modules: 0 },
+          enrollments: data?.enrollments || { total: 0, new_last_7_days: 0 },
+          activity: data?.activity || { sessions: 0, artifacts: 0, events: 0 }
         });
       }
 
