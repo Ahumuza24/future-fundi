@@ -385,33 +385,33 @@ export const activityApi = {
 export const adminApi = {
   // User Management
   users: {
-    getAll: (params?: any) => api.get('/admin/users/', { params }),
-    getById: (id: string) => api.get(`/admin/users/${id}/`),
-    create: (data: any) => api.post('/admin/users/', data),
-    update: (id: string, data: any) => api.put(`/admin/users/${id}/`, data),
-    delete: (id: string) => api.delete(`/admin/users/${id}/`),
+    getAll: (params?: any) => api.get('/api/admin/users/', { params }),
+    getById: (id: string) => api.get(`/api/admin/users/${id}/`),
+    create: (data: any) => api.post('/api/admin/users/', data),
+    update: (id: string, data: any) => api.put(`/api/admin/users/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/admin/users/${id}/`),
     bulkImport: (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return api.post('/admin/users/bulk-import/', formData, {
+      return api.post('/api/admin/users/bulk-import/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
     },
-    export: (params?: any) => api.get('/admin/users/export/', { 
+    export: (params?: any) => api.get('/api/admin/users/export/', { 
       params,
       responseType: 'blob'
     }),
-    stats: () => api.get('/admin/users/stats/'),
+    stats: () => api.get('/api/admin/users/stats/'),
   },
 
   // School/Tenant Management
   tenants: {
-    getAll: (params?: any) => api.get('/admin/tenants/', { params }),
-    getById: (id: string) => api.get(`/admin/tenants/${id}/`),
-    create: (data: any) => api.post('/admin/tenants/', data),
-    update: (id: string, data: any) => api.put(`/admin/tenants/${id}/`, data),
-    delete: (id: string) => api.delete(`/admin/tenants/${id}/`),
-    stats: (id: string) => api.get(`/admin/tenants/${id}/stats/`),
+    getAll: (params?: any) => api.get('/api/admin/tenants/', { params }),
+    getById: (id: string) => api.get(`/api/admin/tenants/${id}/`),
+    create: (data: any) => api.post('/api/admin/tenants/', data),
+    update: (id: string, data: any) => api.put(`/api/admin/tenants/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/admin/tenants/${id}/`),
+    stats: (id: string) => api.get(`/api/admin/tenants/${id}/stats/`),
   },
 
   // Analytics

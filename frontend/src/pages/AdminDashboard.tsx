@@ -68,20 +68,13 @@ const AdminDashboard = () => {
     try {
       // Fetch analytics overview
       const analyticsResponse = await adminApi.analytics.overview();
-
-      // Debug logging - shows exactly what we received as a STRING
-      console.log('📊 Analytics API Response Data:', JSON.stringify(analyticsResponse?.data, null, 2));
-
       const data = analyticsResponse?.data;
 
-      // Validate response structure (checking for users object)
+      // Validate response structure
       if (data && data.users) {
         setAnalytics(data);
       } else {
-        console.error('❌ Invalid analytics response structure. Data keys:', Object.keys(data || {}));
-        setError('Invalid data received from server');
-
-        // Attempt to show what we CAN show, or defaults
+        // Set safe defaults if data is invalid
         setAnalytics({
           users: data?.users || { total: 0, active: 0, learners: 0, teachers: 0, parents: 0, active_today: 0, new_last_7_days: 0 },
           schools: data?.schools || { total: 0 },
@@ -98,13 +91,7 @@ const AdminDashboard = () => {
         : schoolsResponse.data.results || [];
       setSchools(schoolsData.slice(0, 3)); // Show first 3 schools
     } catch (error: any) {
-      console.error('❌ Failed to fetch dashboard data:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        response: error?.response,
-        status: error?.response?.status,
-        data: error?.response?.data,
-      });
+      console.error('Failed to fetch dashboard data:', error);
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load dashboard data';
       setError(errorMessage);
       // Set default empty analytics to prevent crashes
