@@ -416,8 +416,8 @@ export const adminApi = {
 
   // Analytics
   analytics: {
-    overview: () => api.get('/admin/analytics/overview/'),
-    users: (params?: any) => api.get('/admin/analytics/users/', { params }),
-    enrollments: (params?: any) => api.get('/admin/analytics/enrollments/', { params }),
+    overview: () => api.get('/api/admin/analytics/overview/'),
+    users: (params?: any) => api.get('/api/admin/analytics/users/', { params }),
+    enrollments: (params?: any) => api.get('/api/admin/analytics/enrollments/', { params }),
   },
 };
