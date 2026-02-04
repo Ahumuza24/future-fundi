@@ -59,6 +59,7 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -66,6 +67,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       // Fetch analytics overview
       const analyticsResponse = await adminApi.analytics.overview();
@@ -77,8 +79,26 @@ const AdminDashboard = () => {
         ? schoolsResponse.data
         : schoolsResponse.data.results || [];
       setSchools(schoolsData.slice(0, 3)); // Show first 3 schools
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to load dashboard data');
+
+      // Set default analytics data to prevent crashes
+      setAnalytics({
+        users: {
+          total: 0,
+          active: 0,
+          learners: 0,
+          teachers: 0,
+          parents: 0,
+          active_today: 0,
+          new_last_7_days: 0,
+        },
+        schools: { total: 0 },
+        courses: { total: 0, modules: 0 },
+        enrollments: { total: 0, new_last_7_days: 0 },
+        activity: { sessions: 0, artifacts: 0, events: 0 },
+      });
     } finally {
       setLoading(false);
     }
@@ -94,6 +114,30 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
+  // Show error state if data failed to load
+  if (error && !analytics) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-6 w-6" />
+              Failed to Load Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-600">{error}</p>
+            <Button onClick={fetchData} className="w-full gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen p-3 md:p-4 lg:p-6">
@@ -118,6 +162,26 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </header>
+
+        {/* Error Banner */}
+        {error && (
+          <Card className="border-l-4 border-l-red-500 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900">Failed to load live data</p>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                  <p className="text-sm text-red-600 mt-2">Showing default values. Click Refresh to try again.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Key Metrics */}
         <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '50ms' }}>
