@@ -122,9 +122,32 @@ export default function UserManagement() {
     const fetchStats = async () => {
         try {
             const response = await adminApi.users.stats();
-            setStats(response.data);
+            // Validate response structure
+            if (response?.data) {
+                setStats(response.data);
+            } else {
+                console.error('Invalid stats response structure:', response);
+                // Set default empty stats to prevent crashes
+                setStats({
+                    total_users: 0,
+                    active_users: 0,
+                    inactive_users: 0,
+                    role_distribution: {},
+                    recent_registrations_30d: 0,
+                    active_today: 0
+                });
+            }
         } catch (error) {
             console.error('Failed to fetch stats:', error);
+            // Set default empty stats to prevent crashes
+            setStats({
+                total_users: 0,
+                active_users: 0,
+                inactive_users: 0,
+                role_distribution: {},
+                recent_registrations_30d: 0,
+                active_today: 0
+            });
         }
     };
 

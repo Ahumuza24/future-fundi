@@ -56,6 +56,7 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -63,10 +64,26 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       // Fetch analytics overview
       const analyticsResponse = await adminApi.analytics.overview();
-      setAnalytics(analyticsResponse.data);
+
+      // Validate response structure
+      if (analyticsResponse?.data?.users && analyticsResponse?.data?.schools) {
+        setAnalytics(analyticsResponse.data);
+      } else {
+        console.error('Invalid analytics response structure:', analyticsResponse);
+        setError('Invalid data received from server');
+        // Set default empty analytics to prevent crashes
+        setAnalytics({
+          users: { total: 0, active: 0, learners: 0, teachers: 0, parents: 0, active_today: 0, new_last_7_days: 0 },
+          schools: { total: 0 },
+          courses: { total: 0, modules: 0 },
+          enrollments: { total: 0, new_last_7_days: 0 },
+          activity: { sessions: 0, artifacts: 0, events: 0 }
+        });
+      }
 
       // Fetch schools
       const schoolsResponse = await adminApi.tenants.getAll();
@@ -74,8 +91,18 @@ const AdminDashboard = () => {
         ? schoolsResponse.data
         : schoolsResponse.data.results || [];
       setSchools(schoolsData.slice(0, 3)); // Show first 3 schools
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load dashboard data';
+      setError(errorMessage);
+      // Set default empty analytics to prevent crashes
+      setAnalytics({
+        users: { total: 0, active: 0, learners: 0, teachers: 0, parents: 0, active_today: 0, new_last_7_days: 0 },
+        schools: { total: 0 },
+        courses: { total: 0, modules: 0 },
+        enrollments: { total: 0, new_last_7_days: 0 },
+        activity: { sessions: 0, artifacts: 0, events: 0 }
+      });
     } finally {
       setLoading(false);
     }
@@ -115,6 +142,35 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </header>
+
+        {/* Error Banner */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-100">
+                  <Shield className="h-5 w-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900">Error Loading Dashboard</h3>
+                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Showing default values. Please refresh or contact support if the problem persists.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchData}
+                  className="border-red-300 hover:bg-red-100"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Key Metrics */}
         <div className="grid md:grid-cols-3 gap-4 stagger" style={{ animationDelay: '50ms' }}>
