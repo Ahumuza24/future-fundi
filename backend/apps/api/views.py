@@ -4,8 +4,7 @@ from typing import Any, Dict
 
 from apps.core.models import Artifact, Learner, PathwayInputs
 from django.db import connection
-from django.db.models import Prefetch
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import (
     action,
     api_view,
@@ -15,17 +14,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import (
-    IsLeader,
-    IsLearner,
-    IsLearnerOrParent,
-    IsParent,
-    IsTeacher,
     IsTeacherOrLeader,
 )
 from .serializers import (
     ArtifactSerializer,
     LearnerSerializer,
-    PathwayInputsSerializer,
 )
 
 
@@ -46,11 +39,12 @@ class LearnerViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticatedTenant]
     serializer_class = LearnerSerializer
-    throttle_classes = []  # Will be set in settings
+    # throttle_classes defaults to settings (UserRateThrottle, etc.)
 
     def get_queryset(self):
         # Use _base_manager to bypass TenantManager and avoid conflicts with pagination/prefetch
         # Manually apply tenant filtering to ensure it works with sliced querysets
+        from apps.core.models import ParentContact
         from apps.core.tenant import get_current_tenant
 
         tenant_id = get_current_tenant()
@@ -67,7 +61,6 @@ class LearnerViewSet(viewsets.ModelViewSet):
             qs = qs.filter(user=user)
         elif user.role == "parent":
             # Parents can see their child's profile
-            from apps.core.models import ParentContact
 
             parent_contacts = ParentContact.objects.filter(
                 email=user.email
@@ -189,9 +182,13 @@ class LearnerViewSet(viewsets.ModelViewSet):
         # 2. Upcoming Activities
         today = date.today()
         # Sessions (Classes)
-        upcoming_sessions = Session.objects.filter(
-            learners=learner, date__gte=today, status="scheduled"
-        ).order_by("date", "start_time")[:5]
+        upcoming_sessions = (
+            Session.objects.filter(
+                learners=learner, date__gte=today, status="scheduled"
+            )
+            .select_related("module")
+            .order_by("date", "start_time")[:5]
+        )
 
         # General Activities
         upcoming_events = Activity.objects.filter(
@@ -236,7 +233,7 @@ class LearnerViewSet(viewsets.ModelViewSet):
         active_projects = []
         progress_records = (
             learner.level_progress.filter(completed=False)
-            .select_related("level")
+            .select_related("level", "level__course")
             .order_by("-updated_at")[:3]
         )
 
@@ -259,7 +256,7 @@ class LearnerViewSet(viewsets.ModelViewSet):
         # Using Achievement model if populated, otherwise mock/derived logic
         # For now, let's look at completed levels as badges
         completed_levels = learner.level_progress.filter(completed=True).select_related(
-            "level"
+            "level", "level__course"
         )
         badges = []
         for p in completed_levels:

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from apps.core.models import Learner, School
+from apps.core.models import School
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -94,13 +93,13 @@ class RegisterSerializer(serializers.ModelSerializer):
             except School.DoesNotExist:
                 raise serializers.ValidationError(
                     {"school_code": "Invalid school code."}
-                )
+                ) from None
 
         return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
-        school_code = validated_data.pop("school_code", None)
+        validated_data.pop("school_code", None)
         tenant = validated_data.pop("tenant", None)
 
         # All new registrations are parent accounts

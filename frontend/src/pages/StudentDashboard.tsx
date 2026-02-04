@@ -1,9 +1,7 @@
 import {
-  Calendar,
   MapPin,
   School,
   ArrowRight,
-  User,
   Star,
   Award,
   Circle,

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -6,24 +6,26 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('access_token');
     if (token) {
-      config.headers = config.headers ?? {};
-      (config.headers as any).Authorization = `Bearer ${token}`;
+      if (config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh and normalize errors
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle Token Refresh
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
@@ -37,8 +39,9 @@ api.interceptors.response.use(
           const { access } = response.data;
           localStorage.setItem('access_token', access);
 
-          originalRequest.headers = originalRequest.headers ?? {};
-          (originalRequest.headers as any).Authorization = `Bearer ${access}`;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${access}`;
+          }
           return api(originalRequest);
         }
       } catch (refreshError) {
@@ -48,6 +51,17 @@ api.interceptors.response.use(
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
+    }
+
+    // Normalize Error Response
+    if (error.response?.data) {
+        const data = error.response.data as any;
+        // Check for new backend error format
+        if (data.error && data.error.message) {
+             error.message = data.error.message;
+        } else if (data.detail) {
+             error.message = data.detail;
+        }
     }
 
     return Promise.reject(error);

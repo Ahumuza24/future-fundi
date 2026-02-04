@@ -176,7 +176,6 @@ class ModuleViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
-       
         from django.core.files.storage import default_storage
 
         module = self.get_object()
@@ -198,7 +197,7 @@ class ModuleViewSet(viewsets.ModelViewSet):
         content_type = uploaded_file.content_type
         if content_type not in allowed_types:
             return Response(
-                {"error": f"File type not allowed. Allowed: images and videos"},
+                {"error": "File type not allowed. Allowed: images and videos"},
                 status=400,
             )
 
@@ -266,7 +265,8 @@ class ModuleViewSet(viewsets.ModelViewSet):
                 if default_storage.exists(file_path):
                     default_storage.delete(file_path)
         except Exception:
-            pass  # File might already be deleted
+            # File might already be deleted or storage error
+            pass
 
         module.media_files.remove(media_to_delete)
         module.save()
@@ -551,7 +551,6 @@ class ActivityViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
-        from django.conf import settings
         from django.core.files.storage import default_storage
 
         activity = self.get_object()

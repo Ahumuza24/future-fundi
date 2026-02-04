@@ -630,7 +630,7 @@ export default function ChildManagement() {
                                                             const currentIds = formData.pathway_ids || [];
                                                             const secondId = currentIds.length > 1 ? currentIds[1] : undefined;
 
-                                                            let newIds: string[] = [];
+                                                            const newIds: string[] = [];
                                                             if (newId) newIds.push(newId);
                                                             if (secondId && secondId !== newId) newIds.push(secondId);
 
@@ -662,7 +662,7 @@ export default function ChildManagement() {
                                                             const currentIds = formData.pathway_ids || [];
                                                             const firstId = currentIds[0];
 
-                                                            let newIds: string[] = [];
+                                                            const newIds: string[] = [];
                                                             if (firstId) newIds.push(firstId);
                                                             if (newId && newId !== firstId) newIds.push(newId);
 

@@ -21,6 +21,13 @@ from apps.core.models import (
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+# Import standard response but we might not use it directly inside serializers
+# as DRF handles validation errors via exceptions.
+# However, let's keep it clean.
+# Actually, the exception handler we added earlier will catch ValidationError and format it.
+# So we just need to ensure we raise serializers.ValidationError.
+from .utils.validators import validate_password_strength
+
 User = get_user_model()
 
 
@@ -145,6 +152,8 @@ class ChildCreateSerializer(serializers.ModelSerializer):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Passwords do not match."})
 
+        validate_password_strength(attrs["password"])
+
         # Check if username already exists
         from apps.users.models import User
 
@@ -179,7 +188,7 @@ class ChildCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        from apps.core.models import Course, CourseLevel, LearnerCourseEnrollment
+        from apps.core.models import Course, LearnerCourseEnrollment
         from apps.users.models import User
 
         # Extract user-related fields
@@ -522,10 +531,6 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "submitted_at"]
 
-
-# =============================================================================
-# COURSE SERIALIZERS
-# =============================================================================
 
 # =============================================================================
 # COURSE SERIALIZERS

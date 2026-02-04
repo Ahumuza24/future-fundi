@@ -229,8 +229,14 @@ const router = createBrowserRouter([
   },
 ]);
 
+import ErrorBoundary from "@/components/ErrorBoundary";
+
 const App = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  );
 };
 
 export default App;

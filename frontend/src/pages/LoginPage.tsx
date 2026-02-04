@@ -48,11 +48,23 @@ const LoginPage = () => {
         navigate("/");
       }
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        "Invalid username or password"
-      );
+      console.error("Login failed:", err);
+      let errorMessage = "Invalid username or password";
+
+      // Standardized backend error?
+      if (err.response?.data?.error?.message) {
+        errorMessage = err.response.data.error.message;
+      }
+      // Fallback to old structure or detail
+      else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+      else if (err.message) {
+        // Axios error message as last resort if no response
+        if (!err.response) errorMessage = "Network error. Please check your connection.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

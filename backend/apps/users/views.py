@@ -173,7 +173,14 @@ def register_view(request):
             status=status.HTTP_201_CREATED,
         )
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Note: exception handler will catch standard serializer errors if we raise,
+    # but here we return manually. To standardize, we could rely on exception handler
+    # or use standard error wrapper if we want to change structure.
+    # For now, let's just return standardized success.
+    # If invalid, serializer.errors is a dict.
+    from apps.api.utils.responses import validation_error_response
+
+    return validation_error_response(serializer.errors)
 
 
 @api_view(["POST"])

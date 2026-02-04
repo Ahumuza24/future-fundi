@@ -1,16 +1,14 @@
 import os
 import random
-from datetime import date, timedelta
+from datetime import date
 
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fundi.settings")
 django.setup()
 
-from apps.core.models import (
+from apps.core.models import (  # noqa: E402
     Artifact,
-    Assessment,
-    Credential,
     GateSnapshot,
     Learner,
     Module,
@@ -18,7 +16,7 @@ from apps.core.models import (
     School,
     WeeklyPulse,
 )
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model  # noqa: E402
 
 User = get_user_model()
 
