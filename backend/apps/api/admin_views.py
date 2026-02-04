@@ -361,19 +361,18 @@ class AdminTenantViewSet(viewsets.ModelViewSet):
         )
 
 
-class AdminAnalyticsViewSet(viewsets.ViewSet):
-    """
-    Admin analytics endpoints.
+from rest_framework.views import APIView
 
-    Endpoints:
-    - GET /admin/analytics/ - System overview (default list action)
-    - GET /admin/analytics/users/ - User analytics
-    - GET /admin/analytics/enrollments/ - Enrollment analytics
+
+class AdminAnalyticsView(APIView):
+    """
+    Admin analytics endpoint.
+    GET /api/admin/analytics/ - System overview
     """
 
     permission_classes = [IsAdminUser]
 
-    def list(self, request):
+    def get(self, request):
         """Get system overview statistics."""
         # User stats
         total_users = User.objects.count()
@@ -434,6 +433,16 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
                 },
             }
         )
+
+
+class AdminAnalyticsViewSet(viewsets.ViewSet):
+    """
+    Admin analytics endpoints.
+    GET /api/admin/analytics/users/ - User analytics
+    GET /api/admin/analytics/enrollments/ - Enrollment analytics
+    """
+
+    permission_classes = [IsAdminUser]
 
     @action(detail=False, methods=["get"])
     def users(self, request):

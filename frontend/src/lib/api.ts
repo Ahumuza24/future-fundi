@@ -416,7 +416,7 @@ export const adminApi = {
 
   // Analytics
   analytics: {
-    overview: () => api.get('/admin/analytics/'),  // Changed from /overview/ to match backend list() method
+    overview: () => api.get('/admin/analytics/overview/'),
     users: (params?: any) => api.get('/admin/analytics/users/', { params }),
     enrollments: (params?: any) => api.get('/admin/analytics/enrollments/', { params }),
   },

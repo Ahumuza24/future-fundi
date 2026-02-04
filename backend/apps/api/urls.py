@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from .admin_views import (
+    AdminAnalyticsView,
     AdminAnalyticsViewSet,
     AdminTenantViewSet,
     AdminUserViewSet,
@@ -62,7 +63,15 @@ router.register(r"achievements", AchievementViewSet, basename="achievements")
 router.register(r"activities", ActivityViewSet, basename="activities")
 
 urlpatterns = [
+    # Custom endpoints that need specific routing
+    path(
+        "admin/analytics/overview/",
+        AdminAnalyticsView.as_view(),
+        name="admin-analytics-overview",
+    ),
+    # Router URLs
     path("", include(router.urls)),
+    # Other custom views
     path("dashboard/kpis/", DashboardKpisView.as_view(), name="dashboard-kpis"),
     path("health/", health_check, name="health-check"),
 ]
