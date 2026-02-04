@@ -1,10 +1,27 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { childApi } from "@/lib/api";
-import { Plus, Edit, Trash2, User, Calendar, CheckCircle, AlertCircle, School, GraduationCap, Key } from "lucide-react";
+import { childApi, courseApi } from "@/lib/api";
+import {
+    Plus, Edit, Trash2, User, Calendar, CheckCircle,
+    AlertCircle, School, GraduationCap, Key
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// --- Interfaces ---
+
+/**
+ * Represents a course or pathway available for enrollment.
+ */
+interface Course {
+    id: string;
+    name: string;
+    description: string;
+}
+
+/**
+ * Represents a Child/Learner entity.
+ */
 interface Child {
     id: string;
     first_name: string;
@@ -19,26 +36,54 @@ interface Child {
     joined_at?: string;
 }
 
+/**
+ * Form data structure for creating or updating a child.
+ */
 interface ChildFormData {
     first_name: string;
     last_name: string;
     date_of_birth: string;
     current_school: string;
     current_class: string;
-    username?: string;
-    password?: string;
-    password_confirm?: string;
-    new_password?: string;
-    new_password_confirm?: string;
+    username?: string; // Required for new child, optional for edit
+    password?: string; // Required for new child, optional for edit
+    password_confirm?: string; // Required for new child, optional for edit
+    new_password?: string; // Only for editing existing child's password
+    new_password_confirm?: string; // Only for editing existing child's password
     consent_media: boolean;
     equity_flag: boolean;
+    pathway_ids?: string[];
 }
 
+/**
+ * Error structure from API responses.
+ */
+interface ApiError {
+    response?: {
+        data?: {
+            [key: string]: string[] | string | undefined;
+            detail?: string;
+        };
+    };
+}
+
+// --- Component ---
+
+/**
+ * ChildManagement Component
+ * 
+ * Allows parents to manage their children: list, add, edit, and delete.
+ * handles form validation, API interactions, and state management.
+ */
 export default function ChildManagement() {
+    // State
     const [children, setChildren] = useState<Child[]>([]);
+    const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingChild, setEditingChild] = useState<Child | null>(null);
+
+    // Form State
     const [formData, setFormData] = useState<ChildFormData>({
         first_name: "",
         last_name: "",
@@ -50,14 +95,35 @@ export default function ChildManagement() {
         password_confirm: "",
         consent_media: true,
         equity_flag: false,
+        pathway_ids: [],
     });
+
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
+    // Initial Data Fetch
     useEffect(() => {
         fetchChildren();
+        fetchCourses();
     }, []);
 
+    /**
+     * Fetches all available courses/pathways.
+     */
+    const fetchCourses = async () => {
+        try {
+            const response = await courseApi.getAll();
+            const data = response.data.results || response.data || [];
+            setCourses(Array.isArray(data) ? data : []);
+        } catch (err: unknown) {
+            console.error("Failed to fetch courses", err);
+            // Optionally, set a user-facing error for courses
+        }
+    };
+
+    /**
+     * Fetches the list of children associated with the parent.
+     */
     const fetchChildren = async () => {
         try {
             setLoading(true);
@@ -65,7 +131,7 @@ export default function ChildManagement() {
             // Handle both paginated and non-paginated responses
             const childrenData = response.data.results || response.data;
             setChildren(Array.isArray(childrenData) ? childrenData : []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError("Failed to load children");
             console.error(err);
             setChildren([]);
@@ -74,7 +140,12 @@ export default function ChildManagement() {
         }
     };
 
-    const calculateAge = (dobString: string) => {
+    /**
+     * Calculates age from date of birth.
+     * @param dobString - Date of birth in string format (e.g., "YYYY-MM-DD").
+     * @returns The calculated age in years.
+     */
+    const calculateAge = (dobString: string): number => {
         if (!dobString) return 0;
         const dob = new Date(dobString);
         const today = new Date();
@@ -86,7 +157,12 @@ export default function ChildManagement() {
         return age;
     };
 
-    const validateAge = (dob: string) => {
+    /**
+     * Validates that the child is between 6 and 18 years old.
+     * @param dob - Date of birth in string format.
+     * @returns True if age is valid, false otherwise.
+     */
+    const validateAge = (dob: string): boolean => {
         const age = calculateAge(dob);
         if (age < 6 || age > 18) {
             setError("Child must be between 6 and 18 years old.");
@@ -95,6 +171,40 @@ export default function ChildManagement() {
         return true;
     };
 
+    /**
+     * Handles specific error messages from the backend.
+     * @param err - The error object caught from an API call.
+     */
+    const handleApiError = (err: unknown) => {
+        const errorObj = err as ApiError;
+        const data = errorObj.response?.data;
+
+        let errorMsg = "An unexpected error occurred.";
+
+        if (data) {
+            if (data.detail && typeof data.detail === 'string') {
+                errorMsg = data.detail;
+            } else {
+                // Check for specific field errors
+                const fields = ['date_of_birth', 'username', 'password', 'new_password', 'password_confirm', 'new_password_confirm'];
+                for (const field of fields) {
+                    if (Array.isArray(data[field])) {
+                        errorMsg = (data[field] as string[])[0];
+                        break;
+                    } else if (typeof data[field] === 'string') {
+                        errorMsg = data[field] as string;
+                        break;
+                    }
+                }
+            }
+        }
+        setError(errorMsg);
+    };
+
+    /**
+     * Submits the form to add a new child.
+     * @param e - The form event.
+     */
     const handleAddChild = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -104,27 +214,39 @@ export default function ChildManagement() {
             return;
         }
 
+        // Ensure required fields for new child are present
+        if (!formData.username || !formData.password || !formData.password_confirm) {
+            setError("Username, password, and password confirmation are required for a new child.");
+            return;
+        }
+
         try {
             await childApi.create({
-                ...formData,
-                username: formData.username!,
-                password: formData.password!,
-                password_confirm: formData.password_confirm!,
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                date_of_birth: formData.date_of_birth,
+                current_school: formData.current_school,
+                current_class: formData.current_class,
+                username: formData.username,
+                password: formData.password,
+                password_confirm: formData.password_confirm,
+                consent_media: formData.consent_media,
+                equity_flag: formData.equity_flag,
+                pathway_ids: formData.pathway_ids,
             });
             setSuccess("Child added successfully!");
             setShowAddForm(false);
             resetForm();
             fetchChildren();
-        } catch (err: any) {
-            const errorMsg = err.response?.data?.date_of_birth?.[0] ||
-                err.response?.data?.username?.[0] ||
-                err.response?.data?.password?.[0] ||
-                err.response?.data?.detail ||
-                "Failed to add child";
-            setError(errorMsg);
+        } catch (err: unknown) {
+            handleApiError(err);
         }
     };
 
+    /**
+     * Submits the form to update an existing child.
+     * @param e - The form event.
+     */
     const handleEditChild = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingChild) return;
@@ -137,7 +259,7 @@ export default function ChildManagement() {
         }
 
         try {
-            const updateData: any = {
+            const updateData: Partial<ChildFormData> = {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 date_of_birth: formData.date_of_birth,
@@ -158,17 +280,18 @@ export default function ChildManagement() {
             setEditingChild(null);
             resetForm();
             fetchChildren();
-        } catch (err: any) {
-            const errorMsg = err.response?.data?.date_of_birth?.[0] ||
-                err.response?.data?.new_password?.[0] ||
-                err.response?.data?.detail ||
-                "Failed to update child";
-            setError(errorMsg);
+        } catch (err: unknown) {
+            handleApiError(err);
         }
     };
 
+    /**
+     * Deletes a child profile.
+     * @param id - The ID of the child to delete.
+     * @param name - The full name of the child for confirmation message.
+     */
     const handleDeleteChild = async (id: string, name: string) => {
-        if (!confirm(`Are you sure you want to remove ${name}?`)) {
+        if (!window.confirm(`Are you sure you want to remove ${name}?`)) {
             return;
         }
 
@@ -176,11 +299,16 @@ export default function ChildManagement() {
             await childApi.delete(id);
             setSuccess("Child removed successfully");
             fetchChildren();
-        } catch (err: any) {
-            setError("Failed to remove child");
+        } catch (err: unknown) {
+            setError("Failed to remove child"); // Generic error for delete, as specific messages might not be critical here
+            console.error(err);
         }
     };
 
+    /**
+     * Populates the form to edit a child.
+     * @param child - The child object to be edited.
+     */
     const startEdit = (child: Child) => {
         setEditingChild(child);
         setFormData({
@@ -193,10 +321,17 @@ export default function ChildManagement() {
             equity_flag: child.equity_flag,
             new_password: "",
             new_password_confirm: "",
+            username: "", // Username usually isn't editable or not shown here
+            password: "",
+            password_confirm: "",
+            pathway_ids: [], // Pathways are not editable via this form for existing children
         });
         setShowAddForm(false);
     };
 
+    /**
+     * Resets the form fields to their initial empty state.
+     */
     const resetForm = () => {
         setFormData({
             first_name: "",
@@ -209,9 +344,13 @@ export default function ChildManagement() {
             password_confirm: "",
             consent_media: true,
             equity_flag: false,
+            pathway_ids: [],
         });
     };
 
+    /**
+     * Cancels the edit operation and resets the form.
+     */
     const cancelEdit = () => {
         setEditingChild(null);
         resetForm();
@@ -299,7 +438,7 @@ export default function ChildManagement() {
                                             <input
                                                 type="text"
                                                 value={formData.first_name}
-                                                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, first_name: e.target.value })}
                                                 className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                 required
                                             />
@@ -309,7 +448,7 @@ export default function ChildManagement() {
                                             <input
                                                 type="text"
                                                 value={formData.last_name}
-                                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, last_name: e.target.value })}
                                                 className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                 required
                                             />
@@ -321,7 +460,7 @@ export default function ChildManagement() {
                                         <input
                                             type="date"
                                             value={formData.date_of_birth}
-                                            onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, date_of_birth: e.target.value })}
                                             className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                         />
                                     </div>
@@ -335,7 +474,7 @@ export default function ChildManagement() {
                                             <input
                                                 type="text"
                                                 value={formData.current_school}
-                                                onChange={(e) => setFormData({ ...formData, current_school: e.target.value })}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, current_school: e.target.value })}
                                                 className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                 placeholder="e.g., Kampala Primary School"
                                             />
@@ -348,7 +487,7 @@ export default function ChildManagement() {
                                             <input
                                                 type="text"
                                                 value={formData.current_class}
-                                                onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, current_class: e.target.value })}
                                                 className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                 placeholder="e.g., Primary 5"
                                             />
@@ -372,9 +511,9 @@ export default function ChildManagement() {
                                                     <input
                                                         type="text"
                                                         value={formData.username}
-                                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, username: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                        placeholder="e.g., emma_j2024"
+                                                        placeholder="e.g., cedric_ahumuza"
                                                         required
                                                     />
                                                 </div>
@@ -385,7 +524,7 @@ export default function ChildManagement() {
                                                         <input
                                                             type="password"
                                                             value={formData.password}
-                                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
                                                             className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                             placeholder="Min. 8 characters"
                                                             minLength={8}
@@ -397,7 +536,7 @@ export default function ChildManagement() {
                                                         <input
                                                             type="password"
                                                             value={formData.password_confirm}
-                                                            onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password_confirm: e.target.value })}
                                                             className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                             placeholder="Re-enter password"
                                                             minLength={8}
@@ -426,7 +565,7 @@ export default function ChildManagement() {
                                                     <input
                                                         type="password"
                                                         value={formData.new_password}
-                                                        onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, new_password: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                         placeholder="Min. 8 characters"
                                                         minLength={8}
@@ -437,7 +576,7 @@ export default function ChildManagement() {
                                                     <input
                                                         type="password"
                                                         value={formData.new_password_confirm}
-                                                        onChange={(e) => setFormData({ ...formData, new_password_confirm: e.target.value })}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, new_password_confirm: e.target.value })}
                                                         className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
                                                         placeholder="Re-enter new password"
                                                         minLength={8}
@@ -452,7 +591,7 @@ export default function ChildManagement() {
                                             type="checkbox"
                                             id="consent_media"
                                             checked={formData.consent_media}
-                                            onChange={(e) => setFormData({ ...formData, consent_media: e.target.checked })}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, consent_media: e.target.checked })}
                                             className="h-4 w-4"
                                         />
                                         <label htmlFor="consent_media" className="text-sm">
@@ -465,13 +604,92 @@ export default function ChildManagement() {
                                             type="checkbox"
                                             id="equity_flag"
                                             checked={formData.equity_flag}
-                                            onChange={(e) => setFormData({ ...formData, equity_flag: e.target.checked })}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, equity_flag: e.target.checked })}
                                             className="h-4 w-4"
                                         />
                                         <label htmlFor="equity_flag" className="text-sm">
                                             My child requires additional support
                                         </label>
                                     </div>
+
+                                    {/* Pathway Selection (Only for new children for now) */}
+                                    {!editingChild && (
+                                        <div className="pt-4 border-t-2 border-gray-200">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2" style={{ color: "var(--fundi-black)" }}>
+                                                <GraduationCap className="h-5 w-5" />
+                                                Select Pathways (Max 2)
+                                            </h3>
+                                            <div className="space-y-4">
+                                                {/* Primary Pathway */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1">Primary Pathway</label>
+                                                    <select
+                                                        value={formData.pathway_ids?.[0] || ""}
+                                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                            const newId = e.target.value;
+                                                            const currentIds = formData.pathway_ids || [];
+                                                            const secondId = currentIds.length > 1 ? currentIds[1] : undefined;
+
+                                                            let newIds: string[] = [];
+                                                            if (newId) newIds.push(newId);
+                                                            if (secondId && secondId !== newId) newIds.push(secondId);
+
+                                                            setFormData({ ...formData, pathway_ids: newIds });
+                                                        }}
+                                                        className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] bg-white"
+                                                    >
+                                                        <option value="">Select a pathway...</option>
+                                                        {courses.map(course => (
+                                                            <option
+                                                                key={course.id}
+                                                                value={course.id}
+                                                                // Disable if this course is already selected as the secondary pathway
+                                                                disabled={(formData.pathway_ids?.length || 0) > 1 && formData.pathway_ids?.[1] === course.id}
+                                                            >
+                                                                {course.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Secondary Pathway */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1">Secondary Pathway (Optional)</label>
+                                                    <select
+                                                        value={(formData.pathway_ids?.length || 0) > 1 ? formData.pathway_ids?.[1] : ""}
+                                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                            const newId = e.target.value;
+                                                            const currentIds = formData.pathway_ids || [];
+                                                            const firstId = currentIds[0];
+
+                                                            let newIds: string[] = [];
+                                                            if (firstId) newIds.push(firstId);
+                                                            if (newId && newId !== firstId) newIds.push(newId);
+
+                                                            setFormData({ ...formData, pathway_ids: newIds });
+                                                        }}
+                                                        className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                                                        disabled={!formData.pathway_ids || formData.pathway_ids.length === 0}
+                                                    >
+                                                        <option value="">Select a second pathway...</option>
+                                                        {courses.map(course => (
+                                                            <option
+                                                                key={course.id}
+                                                                value={course.id}
+                                                                // Disable if this course is already selected as the primary pathway
+                                                                disabled={formData.pathway_ids?.[0] === course.id}
+                                                            >
+                                                                {course.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            {courses.length === 0 && (
+                                                <p className="text-sm text-gray-500 italic">Loading available pathways...</p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="flex gap-3">
                                         <Button

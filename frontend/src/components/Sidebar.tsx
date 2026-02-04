@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Camera,
   MessageSquare,
-  ClipboardCheck
+  ClipboardCheck,
+  Database
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -138,6 +139,20 @@ const allNavItems: NavItem[] = [
     roles: ["leader", "admin"],
   },
 
+  {
+    title: "Curriculum Entry",
+    path: "/admin/curriculum-entry",
+    icon: Database,
+    color: "var(--fundi-purple)",
+    roles: ["admin", "data_entry"],
+  },
+  {
+    title: "Activities",
+    path: "/admin/activities",
+    icon: Calendar,
+    color: "var(--fundi-cyan)",
+    roles: ["admin", "data_entry"],
+  },
   {
     title: "User Management",
     path: "/admin/users",
@@ -325,26 +340,6 @@ const Sidebar = () => {
               );
             })}
           </nav>
-
-          {/* Footer */}
-          <div className="p-4 border-t space-y-2">
-            {isAuthenticated && (
-              <>
-
-
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 text-left"
-                >
-                  <div className="p-2 rounded-lg bg-red-100">
-                    <LogOut className="h-5 w-5 text-red-600" />
-                  </div>
-                  <span className="flex-1 text-red-600 font-semibold">Logout</span>
-                </button>
-              </>
-            )}
-
-          </div>
         </div>
       </aside>
     </>

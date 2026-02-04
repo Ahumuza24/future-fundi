@@ -24,23 +24,12 @@ interface Course {
     id: string;
     name: string;
     description: string;
-    domain: string;
-    domain_display: string;
-    min_age: number;
-    max_age: number;
     level_count: number;
     is_active: boolean;
     levels?: Level[];
 }
 
-const DOMAIN_OPTIONS = [
-    { value: 'robotics', label: 'Robotics' },
-    { value: 'coding', label: 'Coding' },
-    { value: '3d_printing', label: '3D Printing' },
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'ai_ml', label: 'AI & Machine Learning' },
-    { value: 'design', label: 'Design & Fabrication' },
-];
+
 
 export default function AdminCourseManagement() {
     const [courses, setCourses] = useState<Course[]>([]);
@@ -52,9 +41,6 @@ export default function AdminCourseManagement() {
     const [newCourse, setNewCourse] = useState({
         name: '',
         description: '',
-        domain: 'robotics',
-        min_age: 6,
-        max_age: 12,
     });
 
     useEffect(() => {
@@ -86,7 +72,7 @@ export default function AdminCourseManagement() {
                 ]
             });
             setShowNewCourseForm(false);
-            setNewCourse({ name: '', description: '', domain: 'robotics', min_age: 6, max_age: 12 });
+            setNewCourse({ name: '', description: '' });
             fetchCourses();
         } catch (error) {
             console.error("Failed to create course:", error);
@@ -174,12 +160,7 @@ export default function AdminCourseManagement() {
                             <CardTitle className="text-3xl mono-font">{courses.reduce((sum, c) => sum + c.level_count, 0)}</CardTitle>
                         </CardHeader>
                     </Card>
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-lime)' }}>
-                        <CardHeader className="p-4 pb-2">
-                            <CardDescription>Domains</CardDescription>
-                            <CardTitle className="text-3xl mono-font">{new Set(courses.map(c => c.domain)).size}</CardTitle>
-                        </CardHeader>
-                    </Card>
+
                 </div>
 
                 {/* New Course Form */}
@@ -207,18 +188,7 @@ export default function AdminCourseManagement() {
                                                 placeholder="e.g., Robotics Foundations"
                                             />
                                         </div>
-                                        <div>
-                                            <Label>Domain</Label>
-                                            <select
-                                                value={newCourse.domain}
-                                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewCourse({ ...newCourse, domain: e.target.value })}
-                                                className="w-full h-10 px-3 border rounded-md"
-                                            >
-                                                {DOMAIN_OPTIONS.map(opt => (
-                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+
                                     </div>
                                     <div>
                                         <Label>Description</Label>
@@ -227,28 +197,6 @@ export default function AdminCourseManagement() {
                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCourse({ ...newCourse, description: e.target.value })}
                                             placeholder="Course description..."
                                         />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label>Minimum Age</Label>
-                                            <Input
-                                                type="number"
-                                                value={newCourse.min_age}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCourse({ ...newCourse, min_age: parseInt(e.target.value) })}
-                                                min={6}
-                                                max={18}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Maximum Age</Label>
-                                            <Input
-                                                type="number"
-                                                value={newCourse.max_age}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCourse({ ...newCourse, max_age: parseInt(e.target.value) })}
-                                                min={6}
-                                                max={18}
-                                            />
-                                        </div>
                                     </div>
                                     <div className="flex gap-2 justify-end">
                                         <Button variant="outline" onClick={() => setShowNewCourseForm(false)}>
@@ -283,12 +231,7 @@ export default function AdminCourseManagement() {
                                         <div>
                                             <CardTitle className="text-xl">{course.name}</CardTitle>
                                             <CardDescription className="flex items-center gap-4">
-                                                <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium">
-                                                    {course.domain_display}
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <Users className="h-3 w-3" /> Ages {course.min_age}-{course.max_age}
-                                                </span>
+
                                                 <span className="flex items-center gap-1">
                                                     <Layers className="h-3 w-3" /> {course.level_count} Levels
                                                 </span>
@@ -367,6 +310,6 @@ export default function AdminCourseManagement() {
                     </Card>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

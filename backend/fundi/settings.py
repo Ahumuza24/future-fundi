@@ -3,11 +3,11 @@
 Security-first, scale-ready configuration: DRF, JWT, CORS,
 PostgreSQL, Redis cache, and multi-tenant groundwork.
 """
+
 from __future__ import annotations
 
 import os
 from datetime import timedelta
-
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Serve static files in production
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -85,7 +86,7 @@ if os.getenv("USE_SQLITE", "false").lower() == "true":
             "TEST": {
                 "MIRROR": "default",
             },
-        }
+        },
     }
 else:
     DATABASES = {
@@ -101,10 +102,18 @@ else:
         "read_replica": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.getenv("POSTGRES_REPLICA_DB", os.getenv("POSTGRES_DB", "fundi")),
-            "USER": os.getenv("POSTGRES_REPLICA_USER", os.getenv("POSTGRES_USER", "fundi")),
-            "PASSWORD": os.getenv("POSTGRES_REPLICA_PASSWORD", os.getenv("POSTGRES_PASSWORD", "password")),
-            "HOST": os.getenv("POSTGRES_REPLICA_HOST", os.getenv("POSTGRES_HOST", "localhost")),
-            "PORT": os.getenv("POSTGRES_REPLICA_PORT", os.getenv("POSTGRES_PORT", "5432")),
+            "USER": os.getenv(
+                "POSTGRES_REPLICA_USER", os.getenv("POSTGRES_USER", "fundi")
+            ),
+            "PASSWORD": os.getenv(
+                "POSTGRES_REPLICA_PASSWORD", os.getenv("POSTGRES_PASSWORD", "password")
+            ),
+            "HOST": os.getenv(
+                "POSTGRES_REPLICA_HOST", os.getenv("POSTGRES_HOST", "localhost")
+            ),
+            "PORT": os.getenv(
+                "POSTGRES_REPLICA_PORT", os.getenv("POSTGRES_PORT", "5432")
+            ),
             "CONN_MAX_AGE": 600,
         },
     }
@@ -134,7 +143,24 @@ else:
 # Static files
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Only include static dir if it exists
+_static_dir = BASE_DIR / "static"
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
+
+# Whitenoise for static file compression
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Media files (user uploads)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Security
 SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "false").lower() == "true"
@@ -147,7 +173,9 @@ SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 
 # CORS
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(
+    ","
+)
 CORS_ALLOW_CREDENTIALS = True
 
 # DRF + JWT
@@ -155,9 +183,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "apps.api.throttles.BurstRateThrottle",

@@ -5,6 +5,7 @@ import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
 import StudentDashboard from "@/pages/StudentDashboard";
+import PathwayLearning from "@/pages/PathwayLearning";
 import ParentPortal from "@/pages/ParentPortal";
 import ParentMyChildren from "@/pages/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
@@ -18,10 +19,20 @@ import TeacherCommunication from "@/pages/TeacherCommunication";
 import LeaderDashboard from "@/pages/LeaderDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourseManagement from "@/pages/AdminCourseManagement";
+import UserManagement from "@/pages/UserManagement";
+import SchoolManagement from "@/pages/SchoolManagement";
+import CurriculumDataEntry from "@/pages/CurriculumDataEntry";
+import ActivityManagement from "@/pages/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 const router = createBrowserRouter([
+  // Landing page - no layout (full-screen, no sidebar/topbar)
+  {
+    path: "/",
+    element: <HomePage />,
+  },
+  // Auth pages - no layout
   {
     path: "/login",
     element: <LoginPage />,
@@ -30,14 +41,12 @@ const router = createBrowserRouter([
     path: "/signup",
     element: <SignUpPage />,
   },
+  // All app routes with PageLayout (sidebar + topbar)
   {
     path: "/",
     element: <PageLayout />,
     children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
+      // Student Routes
       {
         path: "student",
         element: (
@@ -46,6 +55,15 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: "student/pathway/:enrollmentId",
+        element: (
+          <ProtectedRoute allowedRoles={['learner', 'admin']}>
+            <PathwayLearning />
+          </ProtectedRoute>
+        ),
+      },
+      // Parent Routes
       {
         path: "parent",
         element: (
@@ -171,10 +189,43 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "*",
-        element: <NotFoundPage />,
+        path: "admin/curriculum-entry",
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
+            <CurriculumDataEntry />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/activities",
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
+            <ActivityManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/users",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <UserManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/schools",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <SchoolManagement />
+          </ProtectedRoute>
+        ),
       },
     ],
+  },
+  // 404 fallback
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 

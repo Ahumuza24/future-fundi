@@ -2,9 +2,6 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Request interceptor to add auth token
@@ -79,6 +76,13 @@ export const artifactApi = {
     }),
 };
 
+export const studentApi = {
+  // Get complete dashboard data for authenticated student
+  getDashboard: () => api.get('/student/dashboard/'),
+  // Get pathway learning content
+  getPathwayLearning: (enrollmentId: string) => api.get(`/pathway-learning/${enrollmentId}/learn/`),
+};
+
 export const dashboardApi = {
   getKpis: () => api.get('/api/dashboard/kpis/'),
   getTrends: () => api.get('/api/dashboard/trends/'),
@@ -106,6 +110,7 @@ export const childApi = {
     consent_media?: boolean;
     equity_flag?: boolean;
     joined_at?: string;
+    pathway_ids?: string[];
   }) => api.post('/children/', data),
   
   // Update child information
@@ -187,15 +192,26 @@ export const authApi = {
     axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`, { refresh }),
   getProfile: () => 
     api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`),
+  updateProfile: (data: { first_name?: string; last_name?: string; email?: string }) =>
+    api.patch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`, data),
   getDashboard: () =>
     api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/dashboard/`),
+  
+  // Avatar management
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`, formData);
+  },
+  deleteAvatar: () =>
+    api.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`),
 };
 
 // Course API
 export const courseApi = {
-  // List all courses (optionally filter by age)
-  getAll: (params?: { domain?: string; age?: number }) => 
-    api.get('/courses/', { params }),
+  // List all courses (optionally filter by domain)
+  getAll: () => 
+    api.get('/courses/'),
   
   // Get course by ID with levels
   getById: (id: string) => api.get(`/courses/${id}/`),
@@ -210,9 +226,6 @@ export const courseApi = {
   create: (data: {
     name: string;
     description?: string;
-    domain: string;
-    min_age: number;
-    max_age: number;
     levels?: Array<{
       name: string;
       description?: string;
@@ -228,6 +241,32 @@ export const courseApi = {
   
   // Admin: Delete course
   delete: (id: string) => api.delete(`/courses/${id}/`),
+};
+
+// Module (Micro-credential) API
+export const moduleApi = {
+  getAll: (courseId?: string) => api.get('/modules/', { params: { course: courseId } }),
+  getById: (id: string) => api.get(`/modules/${id}/`),
+  create: (data: any) => api.post('/modules/', data),
+  update: (id: string, data: any) => api.patch(`/modules/${id}/`, data),
+  delete: (id: string) => api.delete(`/modules/${id}/`),
+  uploadMedia: (moduleId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/modules/${moduleId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  deleteMedia: (moduleId: string, mediaId: string) => 
+    api.delete(`/modules/${moduleId}/delete-media/${mediaId}/`),
+};
+
+// Career API
+export const careerApi = {
+  getAll: (courseId?: string) => api.get('/careers/', { params: { course: courseId } }),
+  create: (data: any) => api.post('/careers/', data),
+  update: (id: string, data: any) => api.patch(`/careers/${id}/`, data),
+  delete: (id: string) => api.delete(`/careers/${id}/`),
 };
 
 // Enrollment API
@@ -275,3 +314,96 @@ export const achievementApi = {
   getForLearner: (learnerId: string) => api.get(`/achievements/for-learner/${learnerId}/`),
 };
 
+// Activity API
+export const activityApi = {
+  // Get all activities
+  getAll: (params?: { status?: string; date_from?: string; date_to?: string }) =>
+    api.get('/activities/', { params }),
+
+  // Get activity by ID
+  getById: (id: string) => api.get(`/activities/${id}/`),
+
+  // Get upcoming activities
+  getUpcoming: () => api.get('/activities/upcoming/'),
+
+  // Create activity
+  create: (data: {
+    name: string;
+    description?: string;
+    date: string;
+    start_time?: string;
+    end_time?: string;
+    location?: string;
+    status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+    course?: string;
+  }) => api.post('/activities/', data),
+
+  // Update activity
+  update: (id: string, data: Partial<{
+    name: string;
+    description: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    location: string;
+    status: string;
+    course: string;
+  }>) => api.patch(`/activities/${id}/`, data),
+
+  // Delete activity
+  delete: (id: string) => api.delete(`/activities/${id}/`),
+
+  // Upload media
+  uploadMedia: (activityId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/activities/${activityId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Delete media
+  deleteMedia: (activityId: string, mediaId: string) =>
+    api.delete(`/activities/${activityId}/delete-media/${mediaId}/`),
+};
+
+// Admin API (admin-only endpoints)
+export const adminApi = {
+  // User Management
+  users: {
+    getAll: (params?: any) => api.get('/admin/users/', { params }),
+    getById: (id: string) => api.get(`/admin/users/${id}/`),
+    create: (data: any) => api.post('/admin/users/', data),
+    update: (id: string, data: any) => api.put(`/admin/users/${id}/`, data),
+    delete: (id: string) => api.delete(`/admin/users/${id}/`),
+    bulkImport: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return api.post('/admin/users/bulk-import/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    },
+    export: (params?: any) => api.get('/admin/users/export/', { 
+      params,
+      responseType: 'blob'
+    }),
+    stats: () => api.get('/admin/users/stats/'),
+  },
+
+  // School/Tenant Management
+  tenants: {
+    getAll: (params?: any) => api.get('/admin/tenants/', { params }),
+    getById: (id: string) => api.get(`/admin/tenants/${id}/`),
+    create: (data: any) => api.post('/admin/tenants/', data),
+    update: (id: string, data: any) => api.put(`/admin/tenants/${id}/`, data),
+    delete: (id: string) => api.delete(`/admin/tenants/${id}/`),
+    stats: (id: string) => api.get(`/admin/tenants/${id}/stats/`),
+  },
+
+  // Analytics
+  analytics: {
+    overview: () => api.get('/admin/analytics/overview/'),
+    users: (params?: any) => api.get('/admin/analytics/users/', { params }),
+    enrollments: (params?: any) => api.get('/admin/analytics/enrollments/', { params }),
+  },
+};
