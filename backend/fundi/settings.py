@@ -180,6 +180,12 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"
 )
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF Trusted Origins (Required for Django admin in production with HTTPS)
+# This prevents "Bad Request (400)" errors when accessing /admin/
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:8000,http://localhost:5173"
+).split(",")
+
 # DRF + JWT
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
