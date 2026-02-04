@@ -143,7 +143,8 @@ export default function UserManagement() {
             fetchUsers();
             fetchStats();
         } catch (error: any) {
-            showMessage('error', error.response?.data?.message || 'Failed to create user');
+            const apiError = error as { response?: { data?: { message?: string } } };
+            showMessage('error', apiError.response?.data?.message || 'Failed to create user');
         }
     };
 
@@ -158,7 +159,8 @@ export default function UserManagement() {
             resetForm();
             fetchUsers();
         } catch (error: any) {
-            showMessage('error', error.response?.data?.message || 'Failed to update user');
+            const apiError = error as { response?: { data?: { message?: string } } };
+            showMessage('error', apiError.response?.data?.message || 'Failed to update user');
         }
     };
 
@@ -220,7 +222,8 @@ export default function UserManagement() {
             fetchUsers();
             fetchStats();
         } catch (error: any) {
-            showMessage('error', error.response?.data?.error || 'Failed to import users');
+            const apiError = error as { response?: { data?: { error?: string } } };
+            showMessage('error', apiError.response?.data?.error || 'Failed to import users');
         }
     };
 

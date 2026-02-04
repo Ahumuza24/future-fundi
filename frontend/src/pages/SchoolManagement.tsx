@@ -98,7 +98,8 @@ export default function SchoolManagement() {
             resetForm();
             fetchTenants();
         } catch (error: any) {
-            showMessage('error', error.response?.data?.message || 'Failed to create school');
+            const apiError = error as { response?: { data?: { message?: string } } };
+            showMessage('error', apiError.response?.data?.message || 'Failed to create school');
         }
     };
 
@@ -113,7 +114,8 @@ export default function SchoolManagement() {
             resetForm();
             fetchTenants();
         } catch (error: any) {
-            showMessage('error', error.response?.data?.message || 'Failed to update school');
+            const apiError = error as { response?: { data?: { message?: string } } };
+            showMessage('error', apiError.response?.data?.message || 'Failed to update school');
         }
     };
 
@@ -194,8 +196,8 @@ export default function SchoolManagement() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             className={`p-4 rounded-lg border ${message.type === 'success'
-                                    ? 'bg-green-50 border-green-200 text-green-700'
-                                    : 'bg-red-50 border-red-200 text-red-700'
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : 'bg-red-50 border-red-200 text-red-700'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
