@@ -366,16 +366,14 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
     Admin analytics endpoints.
 
     Endpoints:
-    - GET /api/admin/analytics/overview/ - System overview
-    - GET /api/admin/analytics/users/ - User analytics
-    - GET /api/admin/analytics/enrollments/ - Enrollment analytics
-    - GET /api/admin/analytics/activity/ - Activity logs
+    - GET /admin/analytics/ - System overview (default list action)
+    - GET /admin/analytics/users/ - User analytics
+    - GET /admin/analytics/enrollments/ - Enrollment analytics
     """
 
     permission_classes = [IsAdminUser]
 
-    @action(detail=False, methods=["get"])
-    def overview(self, request):
+    def list(self, request):
         """Get system overview statistics."""
         # User stats
         total_users = User.objects.count()
