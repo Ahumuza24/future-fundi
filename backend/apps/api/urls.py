@@ -19,6 +19,12 @@ from .course_views import (
     ModuleViewSet,
 )
 from .pathway_learning_views import PathwayLearningViewSet
+from .school_views import (
+    SchoolDashboardViewSet,
+    SchoolPathwayViewSet,
+    SchoolStudentViewSet,
+    SchoolTeacherViewSet,
+)
 from .student_views import StudentDashboardViewSet
 from .teacher_views import (
     BadgeManagementViewSet,
@@ -46,6 +52,14 @@ router.register(
 router.register(
     r"pathway-learning", PathwayLearningViewSet, basename="pathway-learning"
 )  # Pathway learning interface
+
+# School Admin endpoints
+router.register(
+    r"school/dashboard", SchoolDashboardViewSet, basename="school-dashboard"
+)
+router.register(r"school/students", SchoolStudentViewSet, basename="school-students")
+router.register(r"school/teachers", SchoolTeacherViewSet, basename="school-teachers")
+router.register(r"school/pathways", SchoolPathwayViewSet, basename="school-pathways")
 
 # Teacher endpoints
 router.register(r"teacher/sessions", TeacherSessionViewSet, basename="teacher-sessions")

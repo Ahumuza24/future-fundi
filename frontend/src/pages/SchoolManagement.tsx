@@ -14,7 +14,7 @@ import {
 import {
     Building, Plus, Search, Edit, Trash2, Users,
     BookOpen, Activity, FileText, CheckCircle, XCircle,
-    RefreshCw, AlertCircle, TrendingUp
+    RefreshCw, AlertCircle, TrendingUp, Copy, Key
 } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,12 +49,18 @@ export default function SchoolManagement() {
     const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
     const [tenantStats, setTenantStats] = useState<TenantStats | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [credentials, setCredentials] = useState<{ schoolName: string; email: string; password: string } | null>(null);
+    const [isCredentialsDialogOpen, setIsCredentialsDialogOpen] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
         code: '',
         is_active: true,
+        adminEmail: '',
+        adminPassword: '',
     });
+
+
 
     useEffect(() => {
         fetchTenants();
@@ -92,8 +98,48 @@ export default function SchoolManagement() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await adminApi.tenants.create(formData);
-            showMessage('success', 'School created successfully');
+            // 1. Create Tenant (School)
+            const tenantResponse = await adminApi.tenants.create(formData);
+            const tenant = tenantResponse.data;
+
+            // 2. Create Admin User for the School
+            const password = formData.adminPassword;
+            const email = formData.adminEmail;
+            // Generate unique username based on school code to avoid conflicts
+            const username = `admin_${formData.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+            // Validate that credentials are provided
+            if (!password || !email) {
+                showMessage('error', 'Please provide admin email and password');
+                return;
+            }
+
+            // We need to create the user linked to this tenant
+            try {
+                await adminApi.users.create({
+                    username,
+                    email,
+                    password,
+                    first_name: 'School',
+                    last_name: 'Admin',
+                    role: 'school',
+                    tenant_id: tenant.id // Correct field name for serializer
+                });
+
+                // 3. Show Credentials
+                setCredentials({
+                    schoolName: formData.name,
+                    email: email,
+                    password: password
+                });
+                setIsCredentialsDialogOpen(true);
+
+                showMessage('success', 'School and admin account created successfully');
+            } catch (userError) {
+                console.error("Failed to create school admin user:", userError);
+                showMessage('error', 'School created, but failed to create admin user');
+            }
+
             setIsCreateDialogOpen(false);
             resetForm();
             fetchTenants();
@@ -136,6 +182,8 @@ export default function SchoolManagement() {
             name: '',
             code: '',
             is_active: true,
+            adminEmail: '',
+            adminPassword: '',
         });
         setSelectedTenant(null);
     };
@@ -146,6 +194,8 @@ export default function SchoolManagement() {
             name: tenant.name,
             code: tenant.code,
             is_active: tenant.is_active,
+            adminEmail: '',
+            adminPassword: '',
         });
         setIsEditDialogOpen(true);
     };
@@ -337,6 +387,41 @@ export default function SchoolManagement() {
                                         Unique identifier for the school
                                     </p>
                                 </div>
+
+                                <div className="pt-4 border-t border-gray-100">
+                                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-gray-700">
+                                        <Key className="h-4 w-4 text-[var(--fundi-purple)]" />
+                                        School Admin Account
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="adminEmail">Admin Email *</Label>
+                                            <Input
+                                                id="adminEmail"
+                                                type="email"
+                                                value={formData.adminEmail}
+                                                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                                                placeholder="admin@school.com"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="adminPassword">Admin Password *</Label>
+                                            <Input
+                                                id="adminPassword"
+                                                type="text"
+                                                value={formData.adminPassword}
+                                                onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                                                placeholder="Set a secure password"
+                                                required
+                                                minLength={8}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Minimum 8 characters
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <DialogFooter className="mt-6">
@@ -481,6 +566,101 @@ export default function SchoolManagement() {
                         )}
                         <DialogFooter>
                             <Button onClick={() => setIsStatsDialogOpen(false)}>Close</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Credentials Dialog */}
+                <Dialog open={isCredentialsDialogOpen} onOpenChange={setIsCredentialsDialogOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-green-600">
+                                <CheckCircle className="h-6 w-6" />
+                                School Created Successfully
+                            </DialogTitle>
+                            <DialogDescription>
+                                Here are the login credentials for <strong>{credentials?.schoolName}</strong>
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {credentials && (
+                            <div className="space-y-4 py-4">
+                                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4">
+                                    <div className="flex">
+                                        <div className="flex-shrink-0">
+                                            <AlertCircle className="h-5 w-5 text-orange-500" />
+                                        </div>
+                                        <div className="ml-3">
+                                            <p className="text-sm text-orange-700">
+                                                Please save these credentials now. They will only be shown once.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label className="text-xs text-gray-500 uppercase font-semibold">Username / Email</Label>
+                                        <div className="flex mt-1">
+                                            <div className="flex-1 p-3 bg-gray-100 rounded-l-md font-mono text-sm border border-r-0 border-gray-200">
+                                                {credentials.email}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-l-none border-l-0"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(credentials.email);
+                                                    showMessage('success', 'Email copied');
+                                                }}
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Label className="text-xs text-gray-500 uppercase font-semibold">Password</Label>
+                                        <div className="flex mt-1">
+                                            <div className="flex-1 p-3 bg-gray-100 rounded-l-md font-mono text-sm border border-r-0 border-gray-200">
+                                                {credentials.password}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-l-none border-l-0"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(credentials.password);
+                                                    showMessage('success', 'Password copied');
+                                                }}
+                                            >
+                                                <Key className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 text-center border-t border-gray-100 mt-4">
+                                        <p className="text-sm text-gray-500 mb-2">Login Link</p>
+                                        <a
+                                            href="/login"
+                                            target="_blank"
+                                            className="text-[var(--fundi-purple)] font-medium hover:underline flex items-center justify-center gap-1"
+                                            rel="noopener noreferrer"
+                                        >
+                                            {window.location.origin}/login
+                                            <TrendingUp className="h-3 w-3" />
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter>
+                            <Button
+                                onClick={() => setIsCredentialsDialogOpen(false)}
+                                className="w-full"
+                                style={{ backgroundColor: 'var(--fundi-green)', color: 'white' }}
+                            >
+                                I have saved these credentials
+                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

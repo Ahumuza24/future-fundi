@@ -122,6 +122,12 @@ else:
 
 AUTH_USER_MODEL = "users.User"
 
+# Authentication
+AUTHENTICATION_BACKENDS = [
+    "apps.users.backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 # Caching (Redis)
 # Caching (Redis)
 if os.getenv("USE_REDIS", "false").lower() == "true":

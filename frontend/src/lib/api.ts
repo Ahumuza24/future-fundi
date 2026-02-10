@@ -460,3 +460,27 @@ export const adminApi = {
   },
 };
 
+export const schoolApi = {
+  stats: () => api.get('/api/school/dashboard/stats/'),
+
+  students: {
+    getAll: (params?: any) => api.get('/api/school/students/', { params }),
+    getById: (id: string) => api.get(`/api/school/students/${id}/`),
+    create: (data: any) => api.post('/api/school/students/', data),
+    update: (id: string, data: any) => api.put(`/api/school/students/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/school/students/${id}/`),
+  },
+
+  teachers: {
+    getAll: (params?: any) => api.get('/api/school/teachers/', { params }),
+    getById: (id: string) => api.get(`/api/school/teachers/${id}/`),
+    create: (data: any) => api.post('/api/school/teachers/', data),
+    update: (id: string, data: any) => api.put(`/api/school/teachers/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/school/teachers/${id}/`),
+  },
+
+  pathways: {
+    getAll: (params?: any) => api.get('/api/school/pathways/', { params }),
+    getById: (id: string) => api.get(`/api/school/pathways/${id}/`),
+  },
+};

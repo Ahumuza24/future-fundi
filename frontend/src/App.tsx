@@ -22,6 +22,13 @@ import TeacherAssessments from "@/pages/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/TeacherLearnerPortfolio";
 import TeacherCommunication from "@/pages/TeacherCommunication";
 import LeaderDashboard from "@/pages/LeaderDashboard";
+import SchoolDashboard from "@/pages/SchoolDashboard";
+import SchoolStudents from "@/pages/SchoolStudents";
+import SchoolTeachers from "@/pages/SchoolTeachers";
+import SchoolPathways from "@/pages/SchoolPathways";
+import SchoolProgress from "@/pages/SchoolProgress";
+import SchoolBadges from "@/pages/SchoolBadges";
+import SchoolAnalytics from "@/pages/SchoolAnalytics";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCourseManagement from "@/pages/AdminCourseManagement";
 import UserManagement from "@/pages/UserManagement";
@@ -212,6 +219,63 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['leader', 'admin']}>
             <LeaderDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      // School Routes
+      {
+        path: "school",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/students",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolStudents />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/teachers",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolTeachers />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/pathways",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolPathways />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/progress",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolProgress />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/badges",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolBadges />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/analytics",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolAnalytics />
           </ProtectedRoute>
         ),
       },

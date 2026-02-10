@@ -84,7 +84,7 @@ export default function TeacherPathways() {
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
                             <h1 className="heading-font text-3xl md:text-4xl font-bold" style={{ color: "var(--fundi-black)" }}>
-                                My Modules
+                                My Microcredentials
                             </h1>
                         </div>
                         <p className="text-gray-600 ml-14">Micro-credentials assigned to you</p>

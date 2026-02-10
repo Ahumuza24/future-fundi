@@ -16,7 +16,9 @@ import {
   Camera,
   MessageSquare,
   ClipboardCheck,
-  Database
+  Database,
+  GraduationCap,
+  TrendingUp
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -83,7 +85,7 @@ const allNavItems: NavItem[] = [
     roles: ["teacher"],
   },
   {
-    title: "Pathways & Modules",
+    title: "Microcredentials",
     path: "/teacher/pathways",
     icon: BookOpen,
     color: "var(--fundi-lime)",
@@ -144,6 +146,57 @@ const allNavItems: NavItem[] = [
     icon: FileText,
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
+  },
+
+  // School Admin Menu
+  {
+    title: "Dashboard",
+    path: "/school",
+    icon: Home,
+    color: "var(--fundi-purple)",
+    roles: ["school"],
+  },
+  {
+    title: "Students",
+    path: "/school/students",
+    icon: Users,
+    color: "var(--fundi-cyan)",
+    roles: ["school"],
+  },
+  {
+    title: "Teachers",
+    path: "/school/teachers",
+    icon: GraduationCap,
+    color: "var(--fundi-lime)",
+    roles: ["school"],
+  },
+  {
+    title: "Microcredentials",
+    path: "/school/pathways",
+    icon: BookOpen,
+    color: "var(--fundi-orange)",
+    roles: ["school"],
+  },
+  {
+    title: "Progress Tracking",
+    path: "/school/progress",
+    icon: TrendingUp,
+    color: "var(--fundi-pink)",
+    roles: ["school"],
+  },
+  {
+    title: "Badges & Artifacts",
+    path: "/school/badges",
+    icon: Award,
+    color: "var(--fundi-orange)",
+    roles: ["school"],
+  },
+  {
+    title: "Analytics",
+    path: "/school/analytics",
+    icon: BarChart3,
+    color: "var(--fundi-purple)",
+    roles: ["school"],
   },
 
   {

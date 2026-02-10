@@ -30,6 +30,7 @@ class User(AbstractUser):
         ("leader", "Leader"),
         ("admin", "Admin"),
         ("data_entry", "Data Entry"),
+        ("school", "School Admin"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -82,6 +83,10 @@ class User(AbstractUser):
     def is_admin_user(self) -> bool:
         return self.role == "admin" or self.is_superuser
 
+    @property
+    def is_school_admin(self) -> bool:
+        return self.role == "school"
+
     def get_dashboard_url(self) -> str:
         """Return the appropriate dashboard URL based on user role."""
         dashboard_map = {
@@ -91,5 +96,6 @@ class User(AbstractUser):
             "leader": "/leader",
             "admin": "/admin",
             "data_entry": "/admin/curriculum-entry",
+            "school": "/school",
         }
         return dashboard_map.get(self.role, "/student")

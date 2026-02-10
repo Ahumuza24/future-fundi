@@ -31,7 +31,8 @@ const LoginPage = () => {
       login(access, refresh, user);
 
       // Redirect based on role
-      const role = user.role || "learner";
+      // Redirect based on role
+      const role = user.user?.role || user.role || "learner";
       if (role === "learner") {
         navigate("/student");
       } else if (role === "parent") {
@@ -42,6 +43,8 @@ const LoginPage = () => {
         navigate("/leader");
       } else if (role === "admin") {
         navigate("/admin");
+      } else if (role === "school") {
+        navigate("/school");
       } else if (role === "data_entry") {
         navigate("/admin/curriculum-entry");
       } else {
@@ -49,7 +52,7 @@ const LoginPage = () => {
       }
     } catch (err: any) {
       console.error("Login failed:", err);
-      let errorMessage = "Invalid username or password";
+      let errorMessage = "Invalid username/email or password";
 
       // Standardized backend error?
       if (err.response?.data?.error?.message) {
@@ -78,61 +81,62 @@ const LoginPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="shadow-xl border-2">
-            <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-4">
-                <div
-                  className="p-2 rounded-full"
-                >
+          <Card className="shadow-xl px-1">
+            <CardHeader className="text-center pb-4 pt-8">
+              <div className="flex justify-center mb-6">
+                <div className="p-3 rounded-full bg-white shadow-sm border border-gray-100">
                   <img
                     src="/fundi_bots_logo.png"
                     alt="Fundi Bots Logo"
-                    className="h-20 w-auto object-contain"
+                    className="h-16 w-auto object-contain"
                   />
                 </div>
               </div>
-              <CardTitle className="heading-font text-3xl font-bold" style={{ color: 'var(--fundi-black)' }}>
-                Future Fundi
+              <CardTitle className="heading-font text-3xl font-bold text-[var(--fundi-black)]">
+                Welcome Back
               </CardTitle>
-              <CardDescription className="text-base mt-2">
-                Sign in to track your growth journey
+              <CardDescription className="text-base mt-2 text-gray-600">
+                Sign in to your Future Fundi account
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <CardContent className="pb-8">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                    <span className="text-sm text-red-600">{error}</span>
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                    <span className="text-sm text-red-600 font-medium">{error}</span>
                   </div>
                 )}
 
-                <div>
-                  <label htmlFor="username" className="block text-sm font-semibold mb-2">
-                    Username
+                <div className="space-y-1.5">
+                  <label htmlFor="username" className="block text-sm font-semibold text-gray-700 ml-1">
+                    Email or Username
                   </label>
                   <input
                     id="username"
                     type="text"
                     value={credentials.username}
                     onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] transition-all"
-                    placeholder="Enter your username"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-purple)] focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                    placeholder="Enter your email or username"
                     required
                     disabled={loading}
+                    autoFocus
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-semibold mb-2">
-                    Password
-                  </label>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center ml-1">
+                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
+                      Password
+                    </label>
+                  </div>
                   <input
                     id="password"
                     type="password"
                     value={credentials.password}
                     onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-purple)] focus:border-transparent transition-all bg-gray-50 focus:bg-white"
                     placeholder="Enter your password"
                     required
                     disabled={loading}
