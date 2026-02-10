@@ -434,6 +434,14 @@ class Course(BaseUUIDModel):
         help_text="If set, course is only for this school. If null, available globally.",
     )
 
+    teachers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="courses_taught",
+        blank=True,
+        limit_choices_to={"role": "teacher"},
+        help_text="Teachers assigned to this course",
+    )
+
     class Meta:
         db_table = "core_course"
         verbose_name = "Course"

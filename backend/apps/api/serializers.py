@@ -53,6 +53,13 @@ class UserSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    pathways = serializers.PrimaryKeyRelatedField(
+        source="courses_taught", many=True, read_only=True
+    )
+    pathway_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, write_only=True
+    )
+
     class Meta:
         model = User
         fields = [
@@ -62,6 +69,8 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "pathways",
+            "pathway_ids",
             "is_active",
             "tenant",
             "tenant_id",
@@ -74,22 +83,36 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create user with hashed password."""
         password = validated_data.pop("password", None)
+        pathway_ids = validated_data.pop("pathway_ids", [])
+
         user = User(**validated_data)
         if password:
             user.set_password(password)
         else:
             user.set_unusable_password()
         user.save()
+
+        # Assign pathways if applicable
+        if pathway_ids and user.role == "teacher":
+            user.courses_taught.set(pathway_ids)
+
         return user
 
     def update(self, instance, validated_data):
         """Update user, handling password separately."""
         password = validated_data.pop("password", None)
+        pathway_ids = validated_data.pop("pathway_ids", None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
             instance.set_password(password)
         instance.save()
+
+        # Update pathways if provided
+        if pathway_ids is not None and instance.role == "teacher":
+            instance.courses_taught.set(pathway_ids)
+
         return instance
 
 

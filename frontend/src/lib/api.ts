@@ -1,7 +1,7 @@
 import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
 });
 
 // Request interceptor to add auth token
@@ -32,7 +32,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
           const response = await axios.post(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/token/refresh/`,
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`,
             { refresh: refreshToken }
           );
 

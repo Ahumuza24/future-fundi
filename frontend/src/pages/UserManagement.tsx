@@ -30,7 +30,7 @@ import {
     Users, UserPlus, Search, Filter, Download, Upload,
     Edit, Trash2, CheckCircle, XCircle, RefreshCw, AlertCircle
 } from "lucide-react";
-import { adminApi } from "@/lib/api";
+import { adminApi, courseApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
@@ -48,6 +48,12 @@ interface User {
     };
     date_joined: string;
     last_login: string | null;
+    pathways?: string[]; // Add pathways field
+}
+
+interface Course {
+    id: string;
+    name: string;
 }
 
 interface UserStats {
@@ -85,6 +91,7 @@ export default function UserManagement() {
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [availablePathways, setAvailablePathways] = useState<Course[]>([]); // Store available pathways
 
     // Form state
     const [formData, setFormData] = useState({
@@ -95,12 +102,23 @@ export default function UserManagement() {
         role: 'learner' as User['role'],
         password: '',
         is_active: true,
+        pathway_ids: [] as string[], // Add pathway_ids state
     });
 
     useEffect(() => {
         fetchUsers();
         fetchStats();
+        fetchPathways(); // Fetch pathways on load
     }, [roleFilter, statusFilter]);
+
+    const fetchPathways = async () => {
+        try {
+            const response = await courseApi.getAll();
+            setAvailablePathways(Array.isArray(response.data) ? response.data : response.data.results || []);
+        } catch (error) {
+            console.error('Failed to fetch pathways:', error);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -259,6 +277,7 @@ export default function UserManagement() {
             role: 'learner',
             password: '',
             is_active: true,
+            pathway_ids: [],
         });
         setSelectedUser(null);
     };
@@ -273,6 +292,7 @@ export default function UserManagement() {
             role: user.role,
             password: '',
             is_active: user.is_active,
+            pathway_ids: user.pathways || [], // Populate existing pathways
         });
         setIsEditDialogOpen(true);
     };
@@ -583,22 +603,61 @@ export default function UserManagement() {
 
                                 <div>
                                     <Label htmlFor="role">Role *</Label>
-                                    <Select
-                                        value={formData.role}
-                                        onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="learner">Learner</SelectItem>
-                                            <SelectItem value="teacher">Teacher</SelectItem>
-                                            <SelectItem value="parent">Parent</SelectItem>
-                                            <SelectItem value="leader">Leader</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="relative">
+                                        <select
+                                            id="role"
+                                            value={formData.role}
+                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
+                                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                        >
+                                            <option value="learner">Learner</option>
+                                            <option value="teacher">Teacher</option>
+                                            <option value="parent">Parent</option>
+                                            <option value="leader">Leader</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {formData.role === 'teacher' && (
+                                    <div>
+                                        <Label>Assigned Pathways (Courses)</Label>
+                                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 mt-1.5 bg-white">
+                                            {availablePathways.length === 0 ? (
+                                                <p className="text-sm text-gray-500">No pathways available.</p>
+                                            ) : (
+                                                availablePathways.map(pathway => (
+                                                    <div key={pathway.id} className="flex items-center space-x-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`pathway-${pathway.id}`}
+                                                            checked={formData.pathway_ids.includes(pathway.id)}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    pathway_ids: checked
+                                                                        ? [...(prev.pathway_ids || []), pathway.id]
+                                                                        : (prev.pathway_ids || []).filter(id => id !== pathway.id)
+                                                                }));
+                                                            }}
+                                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <label htmlFor={`pathway-${pathway.id}`} className="text-sm cursor-pointer select-none">
+                                                            {pathway.name}
+                                                        </label>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Select the pathways this teacher is qualified to teach.</p>
+                                    </div>
+                                )}
 
                                 <div>
                                     <Label htmlFor="password">Password *</Label>
@@ -683,22 +742,60 @@ export default function UserManagement() {
 
                                 <div>
                                     <Label htmlFor="edit-role">Role *</Label>
-                                    <Select
-                                        value={formData.role}
-                                        onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="learner">Learner</SelectItem>
-                                            <SelectItem value="teacher">Teacher</SelectItem>
-                                            <SelectItem value="parent">Parent</SelectItem>
-                                            <SelectItem value="leader">Leader</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="relative">
+                                        <select
+                                            id="edit-role"
+                                            value={formData.role}
+                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
+                                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                        >
+                                            <option value="learner">Learner</option>
+                                            <option value="teacher">Teacher</option>
+                                            <option value="parent">Parent</option>
+                                            <option value="leader">Leader</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {formData.role === 'teacher' && (
+                                    <div>
+                                        <Label>Assigned Pathways (Courses)</Label>
+                                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 mt-1.5 bg-white">
+                                            {availablePathways.length === 0 ? (
+                                                <p className="text-sm text-gray-500">No pathways available.</p>
+                                            ) : (
+                                                availablePathways.map(pathway => (
+                                                    <div key={pathway.id} className="flex items-center space-x-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`edit-pathway-${pathway.id}`}
+                                                            checked={(formData.pathway_ids || []).includes(pathway.id)}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    pathway_ids: checked
+                                                                        ? [...(prev.pathway_ids || []), pathway.id]
+                                                                        : (prev.pathway_ids || []).filter(id => id !== pathway.id)
+                                                                }));
+                                                            }}
+                                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <label htmlFor={`edit-pathway-${pathway.id}`} className="text-sm cursor-pointer select-none">
+                                                            {pathway.name}
+                                                        </label>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div>
                                     <Label htmlFor="edit-password">New Password (leave blank to keep current)</Label>
