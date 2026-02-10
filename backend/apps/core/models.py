@@ -815,3 +815,166 @@ class Activity(BaseUUIDModel):
 
     def __str__(self) -> str:
         return f"{self.name} - {self.date}"
+
+
+class Badge(BaseUUIDModel):
+    """Badges awarded to learners for achievements and module completion.
+
+    Teachers can award badges manually or they can be auto-awarded
+    when a learner completes a module that has a badge_name defined.
+    """
+
+    learner = models.ForeignKey(
+        Learner,
+        on_delete=models.CASCADE,
+        related_name="badges",
+        help_text="Learner who earned this badge",
+    )
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="badges_awarded",
+        help_text="Module associated with this badge (if any)",
+    )
+    badge_name = models.CharField(
+        max_length=255,
+        help_text="Name of the badge (e.g., 'Robotics Master', 'Code Ninja')",
+    )
+    description = models.TextField(
+        blank=True, help_text="Description of what this badge represents"
+    )
+    awarded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="badges_awarded",
+        limit_choices_to={"role": "teacher"},
+        help_text="Teacher who awarded this badge",
+    )
+    awarded_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Optional tenant scope
+    tenant = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "core_badge"
+        verbose_name = "Badge"
+        verbose_name_plural = "Badges"
+        ordering = ["-awarded_at"]
+        indexes = [
+            models.Index(fields=["learner", "awarded_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.learner.full_name} - {self.badge_name}"
+
+
+class Quiz(TenantModel):
+    """Quiz/Assessment created by teachers.
+
+    Supports multiple-choice questions with auto-grading.
+    """
+
+    title = models.CharField(max_length=255, db_index=True)
+    description = models.TextField(blank=True)
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quizzes",
+        help_text="Module this quiz is associated with",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quizzes_created",
+        limit_choices_to={"role": "teacher"},
+        help_text="Teacher who created this quiz",
+    )
+
+    # Quiz content stored as JSON
+    # Format: [{"question": "...", "options": ["A", "B", "C"], "correct_answer": 0}]
+    questions = models.JSONField(
+        default=list, help_text="List of questions with options and correct answers"
+    )
+
+    passing_score = models.IntegerField(
+        default=70, help_text="Minimum score to pass (0-100)"
+    )
+    time_limit_minutes = models.IntegerField(
+        null=True, blank=True, help_text="Time limit in minutes (optional)"
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_quiz"
+        verbose_name = "Quiz"
+        verbose_name_plural = "Quizzes"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.title} by {self.created_by.get_full_name()}"
+
+
+class QuizAttempt(BaseUUIDModel):
+    """Student's attempt at completing a quiz."""
+
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="attempts")
+    learner = models.ForeignKey(
+        Learner, on_delete=models.CASCADE, related_name="quiz_attempts"
+    )
+
+    # Student's answers stored as JSON
+    # Format: [0, 2, 1, 3, ...]  (indices of selected options)
+    answers = models.JSONField(default=list, help_text="List of answer indices")
+
+    score = models.IntegerField(help_text="Score achieved (0-100)")
+    passed = models.BooleanField(default=False, help_text="Whether the student passed")
+
+    # Optional teacher feedback
+    feedback = models.TextField(
+        blank=True, help_text="Teacher's feedback on this attempt"
+    )
+    graded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quiz_attempts_graded",
+        limit_choices_to={"role": "teacher"},
+    )
+
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Optional tenant scope
+    tenant = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "core_quiz_attempt"
+        verbose_name = "Quiz Attempt"
+        verbose_name_plural = "Quiz Attempts"
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["learner", "quiz"]),
+            models.Index(fields=["quiz", "completed_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.learner.full_name} - {self.quiz.title} ({self.score}%)"

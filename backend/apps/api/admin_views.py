@@ -117,9 +117,12 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        """Soft delete - deactivate instead of deleting."""
-        instance.is_active = False
-        instance.save()
+        """Delete user - soft delete by default, hard delete if requested."""
+        if self.request.query_params.get("permanent") == "true":
+            instance.delete()
+        else:
+            instance.is_active = False
+            instance.save()
         # TODO: Add audit log
 
     @action(detail=False, methods=["post"])

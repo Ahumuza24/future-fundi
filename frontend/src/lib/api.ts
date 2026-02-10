@@ -185,6 +185,44 @@ export const teacherApi = {
     reflection?: string;
     media_refs?: any[];
   }) => api.post('/api/teacher/quick-artifacts/', data),
+  
+  // Badge Management
+  badges: {
+    getAll: () => api.get('/api/teacher/badges/'),
+    award: (data: {
+      learner: string;
+      badge_name: string;
+      description?: string;
+      module?: string;
+    }) => api.post('/api/teacher/badges/award/', data),
+    getLearnerBadges: (learnerId: string) => api.get(`/api/teacher/badges/learner/${learnerId}/`),
+    getAvailable: () => api.get('/api/teacher/badges/available/'),
+  },
+  
+  // Student Management
+  students: {
+    getAll: (params?: { search?: string; course_id?: string }) => 
+      api.get('/api/teacher/students/', { params }),
+    getById: (id: string) => api.get(`/api/teacher/students/${id}/`),
+    enroll: (data: {
+      learner_id: string;
+      course_id: string;
+      level_id?: string;
+    }) => api.post('/api/teacher/students/enroll/', data),
+  },
+  
+  // Credential Management
+  credentials: {
+    getAll: () => api.get('/api/teacher/credentials/'),
+    award: (data: {
+      learner: string;
+      name: string;
+      issuer?: string;
+      issued_at?: string;
+    }) => api.post('/api/teacher/credentials/award/', data),
+    getLearnerCredentials: (learnerId: string) => 
+      api.get(`/api/teacher/credentials/learner/${learnerId}/`),
+  },
 };
 
 export const authApi = {
@@ -389,7 +427,7 @@ export const adminApi = {
     getById: (id: string) => api.get(`/api/admin/users/${id}/`),
     create: (data: any) => api.post('/api/admin/users/', data),
     update: (id: string, data: any) => api.put(`/api/admin/users/${id}/`, data),
-    delete: (id: string) => api.delete(`/api/admin/users/${id}/`),
+    delete: (id: string, params?: { permanent?: boolean }) => api.delete(`/api/admin/users/${id}/`, { params }),
     bulkImport: (file: File) => {
       const formData = new FormData();
       formData.append('file', file);

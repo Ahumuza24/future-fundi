@@ -6,9 +6,11 @@ from apps.core.models import (
     Artifact,
     Assessment,
     Attendance,
+    Badge,
     Career,
     Course,
     CourseLevel,
+    Credential,
     Learner,
     LearnerCourseEnrollment,
     LearnerLevelProgress,
@@ -80,6 +82,7 @@ class UserSerializer(serializers.ModelSerializer):
             "tenant_id",
             "date_joined",
             "last_login",
+            "password",
         ]
         read_only_fields = ["id", "date_joined", "last_login"]
         extra_kwargs = {"password": {"write_only": True}}
@@ -916,3 +919,139 @@ class ActivitySerializer(serializers.ModelSerializer):
         if request and hasattr(request, "user"):
             validated_data["created_by"] = request.user
         return super().create(validated_data)
+
+
+# =============================================================================
+# TEACHER-SPECIFIC SERIALIZERS
+# =============================================================================
+
+
+class BadgeSerializer(serializers.ModelSerializer):
+    """Serializer for Badge model - used by teachers to award badges."""
+
+    from apps.core.models import Badge
+
+    learner_name = serializers.CharField(source="learner.full_name", read_only=True)
+    awarded_by_name = serializers.CharField(
+        source="awarded_by.get_full_name", read_only=True
+    )
+    module_name = serializers.CharField(
+        source="module.name", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = Badge
+        fields = [
+            "id",
+            "learner",
+            "learner_name",
+            "module",
+            "module_name",
+            "badge_name",
+            "description",
+            "awarded_by",
+            "awarded_by_name",
+            "awarded_at",
+        ]
+        read_only_fields = ["id", "awarded_by", "awarded_at"]
+
+    def create(self, validated_data):
+        # Set awarded_by from request user
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            validated_data["awarded_by"] = request.user
+            # Set tenant from teacher's tenant
+            validated_data["tenant"] = request.user.tenant
+        return super().create(validated_data)
+
+
+class CredentialSerializer(serializers.ModelSerializer):
+    """Serializer for Credential (microcredential) model."""
+
+    from apps.core.models import Credential
+
+    learner_name = serializers.CharField(source="learner.full_name", read_only=True)
+
+    class Meta:
+        model = Credential
+        fields = [
+            "id",
+            "learner",
+            "learner_name",
+            "name",
+            "issuer",
+            "issued_at",
+        ]
+        read_only_fields = ["id"]
+
+
+class StudentEnrollmentSerializer(serializers.ModelSerializer):
+    """Serializer for enrolling students in courses."""
+
+    learner_name = serializers.CharField(source="learner.full_name", read_only=True)
+    course_name = serializers.CharField(source="course.name", read_only=True)
+    current_level_name = serializers.CharField(
+        source="current_level.name", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = LearnerCourseEnrollment
+        fields = [
+            "id",
+            "learner",
+            "learner_name",
+            "course",
+            "course_name",
+            "current_level",
+            "current_level_name",
+            "enrolled_at",
+            "is_active",
+        ]
+        read_only_fields = ["id", "enrolled_at"]
+
+
+class TeacherStudentSerializer(serializers.ModelSerializer):
+    """Detailed student serializer for teachers - includes progress, badges, etc."""
+
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    badges_count = serializers.SerializerMethodField()
+    credentials_count = serializers.SerializerMethodField()
+    attendance_rate = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Learner
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "full_name",
+            "user_email",
+            "current_school",
+            "current_class",
+            "badges_count",
+            "credentials_count",
+            "attendance_rate",
+        ]
+        read_only_fields = ["id", "full_name"]
+
+    def get_badges_count(self, obj):
+        """Get count of badges earned by this learner."""
+        return obj.badges.count()
+
+    def get_credentials_count(self, obj):
+        """Get count of credentials earned by this learner."""
+        return obj.credentials.count()
+
+    def get_attendance_rate(self, obj):
+        """Calculate attendance rate for this learner."""
+        from apps.core.models import Attendance
+
+        total_sessions = Attendance.objects.filter(learner=obj).count()
+        if total_sessions == 0:
+            return 100  # No sessions yet, default to 100%
+
+        present_sessions = Attendance.objects.filter(
+            learner=obj, status__in=["present", "late"]
+        ).count()
+
+        return round((present_sessions / total_sessions) * 100, 1)

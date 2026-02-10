@@ -215,15 +215,19 @@ export default function UserManagement() {
     };
 
     const handleDelete = async (user: User) => {
-        if (!confirm(`Deactivate user "${user.username}"? This will disable their access.`)) return;
+        const isPermanent = !user.is_active;
+        const action = isPermanent ? 'permanently delete' : 'deactivate';
+        const warning = isPermanent ? 'This action cannot be undone!' : 'This will disable their access.';
+
+        if (!confirm(`Are you sure you want to ${action} user "${user.username}"?\n\n${warning}`)) return;
 
         try {
-            await adminApi.users.delete(user.id);
-            showMessage('success', 'User deactivated successfully');
+            await adminApi.users.delete(user.id, { permanent: isPermanent });
+            showMessage('success', `User ${isPermanent ? 'deleted' : 'deactivated'} successfully`);
             fetchUsers();
             fetchStats();
         } catch (error) {
-            showMessage('error', 'Failed to deactivate user');
+            showMessage('error', `Failed to ${action} user`);
         }
     };
 
@@ -546,6 +550,7 @@ export default function UserManagement() {
                                                             size="sm"
                                                             onClick={() => handleDelete(user)}
                                                             className="text-red-600 hover:text-red-700"
+                                                            title={user.is_active ? "Deactivate User" : "Permanently Delete User"}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

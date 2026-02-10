@@ -20,7 +20,13 @@ from .course_views import (
 )
 from .pathway_learning_views import PathwayLearningViewSet
 from .student_views import StudentDashboardViewSet
-from .teacher_views import QuickArtifactViewSet, TeacherSessionViewSet
+from .teacher_views import (
+    BadgeManagementViewSet,
+    CredentialManagementViewSet,
+    QuickArtifactViewSet,
+    StudentManagementViewSet,
+    TeacherSessionViewSet,
+)
 from .views import (
     ArtifactViewSet,
     DashboardKpisView,
@@ -45,6 +51,13 @@ router.register(
 router.register(r"teacher/sessions", TeacherSessionViewSet, basename="teacher-sessions")
 router.register(
     r"teacher/quick-artifacts", QuickArtifactViewSet, basename="teacher-quick-artifacts"
+)
+router.register(r"teacher/badges", BadgeManagementViewSet, basename="teacher-badges")
+router.register(
+    r"teacher/students", StudentManagementViewSet, basename="teacher-students"
+)
+router.register(
+    r"teacher/credentials", CredentialManagementViewSet, basename="teacher-credentials"
 )
 
 # Admin endpoints
