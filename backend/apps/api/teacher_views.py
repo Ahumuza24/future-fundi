@@ -525,7 +525,12 @@ class StudentManagementViewSet(viewsets.ViewSet):
             "level_id": "uuid" (optional - defaults to first level)
         }
         """
-        from apps.core.models import Course, CourseLevel, LearnerCourseEnrollment
+        from apps.core.models import (
+            Course,
+            CourseLevel,
+            LearnerCourseEnrollment,
+            LearnerLevelProgress,
+        )
 
         from .serializers import StudentEnrollmentSerializer
 
@@ -568,6 +573,12 @@ class StudentManagementViewSet(viewsets.ViewSet):
                 # Reactivate if was inactive
                 enrollment.is_active = True
                 enrollment.save()
+
+            # Ensure progress record exists for current level
+            if enrollment.current_level:
+                LearnerLevelProgress.objects.get_or_create(
+                    enrollment=enrollment, level=enrollment.current_level
+                )
 
             serializer = StudentEnrollmentSerializer(enrollment)
 

@@ -8,10 +8,12 @@ import {
     CheckCircle,
     Clock,
     Users,
+    UserPlus,
     Camera,
     AlertCircle,
     Play,
     CheckCheck,
+    GraduationCap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -224,6 +226,15 @@ export default function TeacherDashboard() {
                                                     </div>
 
                                                     <div className="flex items-center gap-2">
+                                                        <Button
+                                                            onClick={() => navigate(`/teacher/attendance/${session.id}`)}
+                                                            variant="outline"
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <Users className="h-4 w-4" />
+                                                            Attendance
+                                                        </Button>
+
                                                         {session.status === "scheduled" && (
                                                             <Button
                                                                 onClick={() => handleStartSession(session.id)}
@@ -266,7 +277,23 @@ export default function TeacherDashboard() {
                         <CardTitle>Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Button
+                                onClick={() => navigate("/teacher/add-student")}
+                                className="h-24 flex flex-col items-center justify-center gap-2"
+                                style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
+                            >
+                                <UserPlus className="h-8 w-8" />
+                                <span className="font-semibold">Add Student</span>
+                            </Button>
+                            <Button
+                                onClick={() => navigate("/teacher/pathways")}
+                                className="h-24 flex flex-col items-center justify-center gap-2"
+                                style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
+                            >
+                                <GraduationCap className="h-8 w-8" />
+                                <span className="font-semibold">My Modules</span>
+                            </Button>
                             <Button
                                 onClick={() => navigate("/teacher/capture-artifact")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
@@ -276,15 +303,9 @@ export default function TeacherDashboard() {
                                 <span className="font-semibold">Capture Artifact</span>
                             </Button>
                             <Button
-                                onClick={() => {
-                                    // Navigate to first session's attendance if available
-                                    if (dashboardData.today.sessions.length > 0) {
-                                        navigate(`/teacher/attendance/${dashboardData.today.sessions[0].id}`);
-                                    }
-                                }}
+                                onClick={() => navigate("/teacher/mark-attendance")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
                                 style={{ backgroundColor: "var(--fundi-purple)", color: "white" }}
-                                disabled={dashboardData.today.sessions.length === 0}
                             >
                                 <Users className="h-8 w-8" />
                                 <span className="font-semibold">Mark Attendance</span>

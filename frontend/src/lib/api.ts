@@ -185,7 +185,7 @@ export const teacherApi = {
     reflection?: string;
     media_refs?: any[];
   }) => api.post('/api/teacher/quick-artifacts/', data),
-  
+
   // Badge Management
   badges: {
     getAll: () => api.get('/api/teacher/badges/'),
@@ -198,10 +198,10 @@ export const teacherApi = {
     getLearnerBadges: (learnerId: string) => api.get(`/api/teacher/badges/learner/${learnerId}/`),
     getAvailable: () => api.get('/api/teacher/badges/available/'),
   },
-  
+
   // Student Management
   students: {
-    getAll: (params?: { search?: string; course_id?: string }) => 
+    getAll: (params?: { search?: string; course_id?: string }) =>
       api.get('/api/teacher/students/', { params }),
     getById: (id: string) => api.get(`/api/teacher/students/${id}/`),
     enroll: (data: {
@@ -210,7 +210,7 @@ export const teacherApi = {
       level_id?: string;
     }) => api.post('/api/teacher/students/enroll/', data),
   },
-  
+
   // Credential Management
   credentials: {
     getAll: () => api.get('/api/teacher/credentials/'),
@@ -220,7 +220,7 @@ export const teacherApi = {
       issuer?: string;
       issued_at?: string;
     }) => api.post('/api/teacher/credentials/award/', data),
-    getLearnerCredentials: (learnerId: string) => 
+    getLearnerCredentials: (learnerId: string) =>
       api.get(`/api/teacher/credentials/learner/${learnerId}/`),
   },
 };
@@ -459,3 +459,4 @@ export const adminApi = {
     enrollments: (params?: any) => api.get('/api/admin/analytics/enrollments/', { params }),
   },
 };
+

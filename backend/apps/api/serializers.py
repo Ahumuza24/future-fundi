@@ -548,7 +548,18 @@ class SessionDetailSerializer(serializers.ModelSerializer):
     module_name = serializers.CharField(source="module.name", read_only=True)
     teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
     attendance_records = AttendanceSerializer(many=True, read_only=True)
-    learners = LearnerSerializer(many=True, read_only=True)
+    learners = serializers.SerializerMethodField()
+
+    def get_learners(self, obj):
+        course = obj.module.course
+        if course:
+            from apps.core.models import Learner
+
+            learners = Learner.objects.filter(
+                course_enrollments__course=course, course_enrollments__is_active=True
+            ).distinct()
+            return LearnerSerializer(learners, many=True).data
+        return LearnerSerializer(obj.learners.all(), many=True).data
 
     class Meta:
         model = Session

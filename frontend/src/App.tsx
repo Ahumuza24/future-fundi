@@ -13,6 +13,10 @@ import TeacherDashboard from "@/pages/TeacherDashboard";
 import TeacherAttendance from "@/pages/TeacherAttendance";
 import TeacherArtifactCapture from "@/pages/TeacherArtifactCapture";
 import TeacherClasses from "@/pages/TeacherClasses";
+import TeacherStudents from "@/pages/TeacherStudents";
+import TeacherPathways from "@/pages/TeacherPathways";
+import AddStudent from "@/pages/AddStudent";
+import MarkAttendance from "@/pages/MarkAttendance";
 import StudentDetail from "@/pages/StudentDetail";
 import TeacherAssessments from "@/pages/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/TeacherLearnerPortfolio";
@@ -95,6 +99,46 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/students",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherStudents />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/students/:id",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <StudentDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/pathways",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherPathways />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/add-student",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <AddStudent />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/mark-attendance",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <MarkAttendance />
           </ProtectedRoute>
         ),
       },

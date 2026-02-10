@@ -370,6 +370,13 @@ class LearnerEnrollmentViewSet(viewsets.ModelViewSet):
     def progress(self, request, pk=None):
         """Get detailed progress for an enrollment."""
         enrollment = self.get_object()
+
+        # Self-healing: Ensure progress record exists for current level
+        if enrollment.current_level:
+            LearnerLevelProgress.objects.get_or_create(
+                enrollment=enrollment, level=enrollment.current_level
+            )
+
         progress = enrollment.level_progress.all().order_by("level__level_number")
         serializer = LearnerLevelProgressSerializer(progress, many=True)
         return Response(serializer.data)

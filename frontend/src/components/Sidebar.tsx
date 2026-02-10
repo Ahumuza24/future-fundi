@@ -83,7 +83,14 @@ const allNavItems: NavItem[] = [
     roles: ["teacher"],
   },
   {
-    title: "My Classes",
+    title: "Pathways & Modules",
+    path: "/teacher/pathways",
+    icon: BookOpen,
+    color: "var(--fundi-lime)",
+    roles: ["teacher"],
+  },
+  {
+    title: "My Students",
     path: "/teacher/classes",
     icon: Users,
     color: "var(--fundi-cyan)",
