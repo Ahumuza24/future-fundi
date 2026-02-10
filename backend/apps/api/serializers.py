@@ -59,6 +59,9 @@ class UserSerializer(serializers.ModelSerializer):
     pathway_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, write_only=True
     )
+    current_class = serializers.CharField(
+        required=False, allow_blank=True, max_length=100
+    )
 
     class Meta:
         model = User
@@ -69,6 +72,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "current_class",
             "pathways",
             "pathway_ids",
             "is_active",
@@ -82,8 +86,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create user with hashed password."""
+        from apps.core.models import Learner
+
         password = validated_data.pop("password", None)
         pathway_ids = validated_data.pop("pathway_ids", [])
+        current_class = validated_data.pop("current_class", "")
 
         user = User(**validated_data)
         if password:
@@ -96,12 +103,25 @@ class UserSerializer(serializers.ModelSerializer):
         if pathway_ids and user.role == "teacher":
             user.courses_taught.set(pathway_ids)
 
+        # Create Learner profile if role is learner
+        if user.role == "learner":
+            Learner.objects.create(
+                user=user,
+                tenant=user.tenant,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                current_class=current_class,
+            )
+
         return user
 
     def update(self, instance, validated_data):
         """Update user, handling password separately."""
+        from apps.core.models import Learner
+
         password = validated_data.pop("password", None)
         pathway_ids = validated_data.pop("pathway_ids", None)
+        current_class = validated_data.pop("current_class", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -112,6 +132,19 @@ class UserSerializer(serializers.ModelSerializer):
         # Update pathways if provided
         if pathway_ids is not None and instance.role == "teacher":
             instance.courses_taught.set(pathway_ids)
+
+        # Update Learner profile if applicable
+        if instance.role == "learner" and current_class is not None:
+            learner, created = Learner.objects.get_or_create(
+                user=instance,
+                defaults={
+                    "tenant": instance.tenant,
+                    "first_name": instance.first_name,
+                    "last_name": instance.last_name,
+                },
+            )
+            learner.current_class = current_class
+            learner.save()
 
         return instance
 

@@ -61,6 +61,8 @@ class Learner(BaseUUIDModel):
         on_delete=models.CASCADE,
         related_name="children",
         limit_choices_to={"role": "parent"},
+        null=True,
+        blank=True,
         help_text="Parent/guardian who manages this learner",
     )
     user = models.OneToOneField(

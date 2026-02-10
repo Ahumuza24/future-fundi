@@ -484,13 +484,35 @@ export default function ChildManagement() {
                                                 <GraduationCap className="h-4 w-4" />
                                                 Current Class/Grade
                                             </label>
-                                            <input
-                                                type="text"
-                                                value={formData.current_class}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, current_class: e.target.value })}
-                                                className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
-                                                placeholder="e.g., Primary 5"
-                                            />
+                                            <div className="relative">
+                                                <select
+                                                    value={formData.current_class}
+                                                    onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                                                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] appearance-none bg-white"
+                                                >
+                                                    <option value="">Select class/grade...</option>
+                                                    <optgroup label="Primary School">
+                                                        {["P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "P.7"].map(cls => (
+                                                            <option key={cls} value={cls}>{cls}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                    <optgroup label="Secondary School">
+                                                        {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map(cls => (
+                                                            <option key={cls} value={cls}>{cls}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                    <optgroup label="International / Other">
+                                                        {Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`).map(cls => (
+                                                            <option key={cls} value={cls}>{cls}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                </select>
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                                    <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                    </svg>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 

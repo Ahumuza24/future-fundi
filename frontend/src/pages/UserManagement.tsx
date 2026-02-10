@@ -34,6 +34,13 @@ import { adminApi, courseApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
+const STUDENT_CLASSES = [
+    "P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "P.7",
+    "S.1", "S.2", "S.3", "S.4", "S.5", "S.6",
+    "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
+    "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"
+];
+
 interface User {
     id: string;
     username: string;
@@ -49,6 +56,7 @@ interface User {
     date_joined: string;
     last_login: string | null;
     pathways?: string[]; // Add pathways field
+    current_class?: string;
 }
 
 interface Course {
@@ -103,6 +111,7 @@ export default function UserManagement() {
         password: '',
         is_active: true,
         pathway_ids: [] as string[], // Add pathway_ids state
+        current_class: ''
     });
 
     useEffect(() => {
@@ -278,6 +287,7 @@ export default function UserManagement() {
             password: '',
             is_active: true,
             pathway_ids: [],
+            current_class: '',
         });
         setSelectedUser(null);
     };
@@ -293,6 +303,7 @@ export default function UserManagement() {
             password: '',
             is_active: user.is_active,
             pathway_ids: user.pathways || [], // Populate existing pathways
+            current_class: user.current_class || '',
         });
         setIsEditDialogOpen(true);
     };
@@ -624,6 +635,42 @@ export default function UserManagement() {
                                     </div>
                                 </div>
 
+                                {formData.role === 'learner' && (
+                                    <div className="mt-4">
+                                        <Label htmlFor="current_class">Current Class/Grade</Label>
+                                        <div className="relative mt-1.5">
+                                            <select
+                                                id="current_class"
+                                                value={formData.current_class}
+                                                onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                            >
+                                                <option value="">Select class/grade...</option>
+                                                <optgroup label="Primary School">
+                                                    {STUDENT_CLASSES.slice(0, 7).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="Secondary School">
+                                                    {STUDENT_CLASSES.slice(7, 13).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="International / Other">
+                                                    {STUDENT_CLASSES.slice(13).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {formData.role === 'teacher' && (
                                     <div>
                                         <Label>Assigned Pathways (Courses)</Label>
@@ -762,6 +809,42 @@ export default function UserManagement() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {formData.role === 'learner' && (
+                                    <div className="mt-4">
+                                        <Label htmlFor="edit-current_class">Current Class/Grade</Label>
+                                        <div className="relative mt-1.5">
+                                            <select
+                                                id="edit-current_class"
+                                                value={formData.current_class}
+                                                onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                            >
+                                                <option value="">Select class/grade...</option>
+                                                <optgroup label="Primary School">
+                                                    {STUDENT_CLASSES.slice(0, 7).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="Secondary School">
+                                                    {STUDENT_CLASSES.slice(7, 13).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="International / Other">
+                                                    {STUDENT_CLASSES.slice(13).map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </optgroup>
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {formData.role === 'teacher' && (
                                     <div>
