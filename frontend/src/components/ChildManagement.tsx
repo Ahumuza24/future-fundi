@@ -501,8 +501,8 @@ export default function ChildManagement() {
                                                             <option key={cls} value={cls}>{cls}</option>
                                                         ))}
                                                     </optgroup>
-                                                    <optgroup label="International / Other">
-                                                        {Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`).map(cls => (
+                                                    <optgroup label="Grades">
+                                                        {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"].map(cls => (
                                                             <option key={cls} value={cls}>{cls}</option>
                                                         ))}
                                                     </optgroup>

@@ -80,9 +80,17 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
         }
 
         try {
-            await teacherApi.students.create({
+            // Prepare payload
+            const payload = {
                 ...studentForm,
-            });
+                date_of_birth: studentForm.date_of_birth || null,
+                pod_class_id: null, // Teacher view doesn't have pod_class_id logic yet but serializer expects it as optional
+            };
+
+            // Remove password_confirm from payload
+            delete (payload as any).password_confirm;
+
+            await teacherApi.students.create(payload);
 
             // Success handling
             onSuccess();
@@ -170,6 +178,11 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                                 onChange={(e) => setStudentForm({ ...studentForm, current_class: e.target.value })}
                             >
                                 <option value="">Select a Class...</option>
+                                <optgroup label="Grades">
+                                    {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"].map(cls => (
+                                        <option key={cls} value={cls}>{cls}</option>
+                                    ))}
+                                </optgroup>
                                 <optgroup label="Primary School">
                                     {["P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "P.7"].map(cls => (
                                         <option key={cls} value={cls}>{cls}</option>

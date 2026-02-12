@@ -369,6 +369,11 @@ export default function SchoolStudents() {
                                             </optgroup>
                                         )}
                                         {/* Standard Options (Fallback) */}
+                                        <optgroup label="Grades">
+                                            {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"].map(cls => (
+                                                <option key={cls} value={cls}>{cls}</option>
+                                            ))}
+                                        </optgroup>
                                         <optgroup label="Primary School">
                                             {["P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "P.7"].map(cls => (
                                                 <option key={cls} value={cls}>{cls}</option>
@@ -390,7 +395,7 @@ export default function SchoolStudents() {
                                         className={inputClass}
                                         value={studentForm.username}
                                         onChange={(e) => setStudentForm({ ...studentForm, username: e.target.value })}
-                                        placeholder="e.g. john_doe"
+                                        placeholder="e.g. john_mukasa"
                                         required
                                     />
                                 </div>

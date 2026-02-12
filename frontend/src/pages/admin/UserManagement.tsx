@@ -661,7 +661,7 @@ export default function UserManagement() {
                                                         <option key={cls} value={cls}>{cls}</option>
                                                     ))}
                                                 </optgroup>
-                                                <optgroup label="International / Other">
+                                                <optgroup label="Grades">
                                                     {STUDENT_CLASSES.slice(13).map(cls => (
                                                         <option key={cls} value={cls}>{cls}</option>
                                                     ))}
@@ -836,7 +836,7 @@ export default function UserManagement() {
                                                         <option key={cls} value={cls}>{cls}</option>
                                                     ))}
                                                 </optgroup>
-                                                <optgroup label="International / Other">
+                                                <optgroup label="Grades">
                                                     {STUDENT_CLASSES.slice(13).map(cls => (
                                                         <option key={cls} value={cls}>{cls}</option>
                                                     ))}
