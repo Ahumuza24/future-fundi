@@ -16,6 +16,7 @@ from apps.core.models import (
     LearnerLevelProgress,
     Module,
     PathwayInputs,
+    PodClass,
     School,
     Session,
     WeeklyPulse,
@@ -177,6 +178,51 @@ class LearnerSerializer(serializers.ModelSerializer):
             "parent_name",
         ]
         read_only_fields = ["id", "parent"]
+
+
+class SchoolLearnerSerializer(serializers.ModelSerializer):
+    """Extended learner serializer for school dashboard — includes username and enrolled pathways."""
+
+    full_name = serializers.ReadOnlyField()
+    age = serializers.ReadOnlyField()
+    username = serializers.SerializerMethodField()
+    pathways = serializers.SerializerMethodField()
+    parent_name = serializers.CharField(source="parent.get_full_name", read_only=True)
+
+    class Meta:
+        model = Learner
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "full_name",
+            "date_of_birth",
+            "age",
+            "current_school",
+            "current_class",
+            "consent_media",
+            "equity_flag",
+            "joined_at",
+            "parent_name",
+            "username",
+            "pathways",
+        ]
+        read_only_fields = ["id"]
+
+    def get_username(self, obj):
+        if obj.user:
+            return obj.user.username
+        return None
+
+    def get_pathways(self, obj):
+        enrollments = obj.course_enrollments.filter(is_active=True).select_related(
+            "course"
+        )
+        return [
+            {"id": str(e.course.id), "name": e.course.name}
+            for e in enrollments
+            if e.course
+        ]
 
 
 class ChildCreateSerializer(serializers.ModelSerializer):
@@ -1066,3 +1112,170 @@ class TeacherStudentSerializer(serializers.ModelSerializer):
         ).count()
 
         return round((present_sessions / total_sessions) * 100, 1)
+
+
+class PodClassSerializer(serializers.ModelSerializer):
+    """Serializer for Pod/Class details."""
+
+    class Meta:
+        model = PodClass
+        fields = ["id", "name"]
+
+
+class CareerSerializer(serializers.ModelSerializer):
+    """Serializer for Career info."""
+
+    class Meta:
+        model = Career
+        fields = ["id", "title", "description"]
+
+
+class PathwaySerializer(serializers.ModelSerializer):
+    """List serializer for Pathways (Courses)."""
+
+    careers = CareerSerializer(many=True, read_only=True)
+    levels = CourseLevelSerializer(many=True, read_only=True)
+    level_count = serializers.IntegerField(source="levels.count", read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ["id", "name", "description", "careers", "level_count", "levels"]
+
+
+class SchoolStudentCreateSerializer(serializers.ModelSerializer):
+    """Serializer for School Admins to create students."""
+
+    username = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
+    pod_class_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True
+    )
+    pathway_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, write_only=True, allow_empty=True
+    )
+    current_class = serializers.CharField(required=False, allow_blank=True)
+
+    # Optional date of birth handling to avoid strict format or handle partial?
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    school_id = serializers.UUIDField(required=False, write_only=True)
+
+    class Meta:
+        model = Learner
+        fields = [
+            "first_name",
+            "last_name",
+            "date_of_birth",
+            "current_class",
+            "username",
+            "password",
+            "email",
+            "pod_class_id",
+            "pathway_ids",
+            "consent_media",
+            "equity_flag",
+            "school_id",
+        ]
+
+    def validate_username(self, value):
+        from apps.users.models import User
+
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def create(self, validated_data):
+        from datetime import date
+
+        from apps.core.models import Course, LearnerCourseEnrollment, PodClass, School
+        from apps.users.models import User
+        from django.db.models import Q
+
+        school_admin = self.context["request"].user
+        # Robustly get school_id - handle case where field might be stripped
+        school_id = validated_data.pop("school_id", None)
+        if not school_id and "school_id" in self.context["request"].data:
+            school_id = self.context["request"].data.get("school_id")
+
+        if school_id:
+            try:
+                # Handle potential UUID string or object
+                sid = str(school_id)
+                tenant = School.objects.get(id=sid)
+            except (School.DoesNotExist, ValueError):
+                raise serializers.ValidationError({"school_id": "Invalid school ID"})
+        else:
+            tenant = school_admin.tenant
+
+        # Validate that the user has a school/tenant assigned or selected one
+        if not tenant:
+            raise serializers.ValidationError(
+                {
+                    "error": "You must select a school or be assigned to one before you can add students."
+                }
+            )
+
+        username = validated_data.pop("username")
+        password = validated_data.pop("password")
+        email = validated_data.pop("email", "")
+
+        pathway_ids = validated_data.pop("pathway_ids", [])
+        pod_class_id = validated_data.pop("pod_class_id", None)
+
+        # Handle class assignment:
+        # If pod_class_id is provided, look up the PodClass name
+        # Otherwise, keep whatever current_class string was sent (e.g. "P.1")
+        if pod_class_id:
+            try:
+                pod = PodClass.objects.get(id=pod_class_id)
+                validated_data["current_class"] = pod.name
+            except PodClass.DoesNotExist:
+                pass  # Keep current_class as-is
+
+        # Auto-set school info
+        if tenant:
+            validated_data["current_school"] = tenant.name
+
+        # Auto-set joined_at to today if not provided
+        if not validated_data.get("joined_at"):
+            validated_data["joined_at"] = date.today()
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            role="learner",
+            tenant=tenant,
+            is_active=True,
+        )
+
+        # Ensure no conflict in validated_data
+        validated_data.pop("tenant", None)
+        learner = Learner.objects.create(tenant=tenant, user=user, **validated_data)
+
+        # Enroll in pathways
+        for pid in pathway_ids:
+            try:
+                # Find course (Global, Student's Tenant, or Teacher's Tenant)
+                q_filter = Q(tenant=None)
+                if tenant:
+                    q_filter |= Q(tenant=tenant)
+                if school_admin.tenant:
+                    q_filter |= Q(tenant=school_admin.tenant)
+
+                course = Course.objects.filter(q_filter, id=pid).first()
+
+                if course:
+                    first_level = course.levels.order_by("level_number").first()
+                    LearnerCourseEnrollment.objects.create(
+                        learner=learner,
+                        course=course,
+                        current_level=first_level,
+                        is_active=True,
+                    )
+            except Exception:
+                pass
+
+        return learner

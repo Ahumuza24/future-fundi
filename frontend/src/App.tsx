@@ -4,37 +4,37 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
-import StudentDashboard from "@/pages/StudentDashboard";
-import PathwayLearning from "@/pages/PathwayLearning";
-import ParentPortal from "@/pages/ParentPortal";
-import ParentMyChildren from "@/pages/ParentMyChildren";
-import ParentWeeklyUpdates from "@/pages/ParentWeeklyUpdates";
-import TeacherDashboard from "@/pages/TeacherDashboard";
-import TeacherAttendance from "@/pages/TeacherAttendance";
-import TeacherArtifactCapture from "@/pages/TeacherArtifactCapture";
-import TeacherClasses from "@/pages/TeacherClasses";
-import TeacherStudents from "@/pages/TeacherStudents";
-import TeacherPathways from "@/pages/TeacherPathways";
-import AddStudent from "@/pages/AddStudent";
-import MarkAttendance from "@/pages/MarkAttendance";
-import StudentDetail from "@/pages/StudentDetail";
-import TeacherAssessments from "@/pages/TeacherAssessments";
-import TeacherLearnerPortfolio from "@/pages/TeacherLearnerPortfolio";
-import TeacherCommunication from "@/pages/TeacherCommunication";
-import LeaderDashboard from "@/pages/LeaderDashboard";
-import SchoolDashboard from "@/pages/SchoolDashboard";
-import SchoolStudents from "@/pages/SchoolStudents";
-import SchoolTeachers from "@/pages/SchoolTeachers";
-import SchoolPathways from "@/pages/SchoolPathways";
-import SchoolProgress from "@/pages/SchoolProgress";
-import SchoolBadges from "@/pages/SchoolBadges";
-import SchoolAnalytics from "@/pages/SchoolAnalytics";
-import AdminDashboard from "@/pages/AdminDashboard";
-import AdminCourseManagement from "@/pages/AdminCourseManagement";
-import UserManagement from "@/pages/UserManagement";
-import SchoolManagement from "@/pages/SchoolManagement";
-import CurriculumDataEntry from "@/pages/CurriculumDataEntry";
-import ActivityManagement from "@/pages/ActivityManagement";
+import StudentDashboard from "@/pages/student/StudentDashboard";
+import PathwayLearning from "@/pages/student/PathwayLearning";
+import ParentPortal from "@/pages/parent/ParentPortal";
+import ParentMyChildren from "@/pages/parent/ParentMyChildren";
+import ParentWeeklyUpdates from "@/pages/parent/ParentWeeklyUpdates";
+import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
+import TeacherAttendance from "@/pages/teacher/TeacherAttendance";
+import TeacherArtifactCapture from "@/pages/teacher/TeacherArtifactCapture";
+import TeacherClasses from "@/pages/teacher/TeacherClasses";
+import TeacherStudents from "@/pages/teacher/TeacherStudents";
+import TeacherPathways from "@/pages/teacher/TeacherPathways";
+
+import MarkAttendance from "@/pages/teacher/MarkAttendance";
+import StudentDetail from "@/pages/teacher/StudentDetail";
+import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
+import TeacherLearnerPortfolio from "@/pages/teacher/TeacherLearnerPortfolio";
+import TeacherCommunication from "@/pages/teacher/TeacherCommunication";
+import LeaderDashboard from "@/pages/school/LeaderDashboard";
+import SchoolDashboard from "@/pages/school/SchoolDashboard";
+import SchoolStudents from "@/pages/school/SchoolStudents";
+import SchoolTeachers from "@/pages/school/SchoolTeachers";
+import SchoolPathways from "@/pages/school/SchoolPathways";
+import SchoolProgress from "@/pages/school/SchoolProgress";
+import SchoolBadges from "@/pages/school/SchoolBadges";
+import SchoolAnalytics from "@/pages/school/SchoolAnalytics";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminCourseManagement from "@/pages/admin/AdminCourseManagement";
+import UserManagement from "@/pages/admin/UserManagement";
+import SchoolManagement from "@/pages/admin/SchoolManagement";
+import CurriculumDataEntry from "@/pages/admin/CurriculumDataEntry";
+import ActivityManagement from "@/pages/admin/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
@@ -133,14 +133,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "teacher/add-student",
-        element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <AddStudent />
-          </ProtectedRoute>
-        ),
-      },
+
       {
         path: "teacher/mark-attendance",
         element: (

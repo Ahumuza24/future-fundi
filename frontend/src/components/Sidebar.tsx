@@ -163,15 +163,15 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-cyan)",
     roles: ["school"],
   },
-  {
+/*   {
     title: "Teachers",
     path: "/school/teachers",
     icon: GraduationCap,
     color: "var(--fundi-lime)",
     roles: ["school"],
-  },
+  }, */
   {
-    title: "Microcredentials",
+    title: "Pathways",
     path: "/school/pathways",
     icon: BookOpen,
     color: "var(--fundi-orange)",

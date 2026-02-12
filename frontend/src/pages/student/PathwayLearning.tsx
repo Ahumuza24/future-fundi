@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { studentApi } from "@/lib/api";
+import { studentApi, MEDIA_BASE_URL } from "@/lib/api";
 import {
     ChevronRight,
     CheckCircle,
@@ -327,7 +327,7 @@ const PathwayLearning = () => {
                                                             const mediaUrl = relativeUrl?.startsWith('http')
                                                                 ? relativeUrl
                                                                 : relativeUrl?.startsWith('/')
-                                                                    ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'}${relativeUrl}`
+                                                                    ? `${MEDIA_BASE_URL}${relativeUrl}`
                                                                     : relativeUrl;
 
                                                             const isImage = media.type?.toLowerCase().includes('image') ||

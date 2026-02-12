@@ -1,0 +1,1 @@
+web: gunicorn fundi.wsgi --log-file -

@@ -18,6 +18,7 @@ import {
     Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { AddStudentDialog } from "@/components/teacher/AddStudentDialog";
 
 interface Student {
     id: string;
@@ -50,9 +51,9 @@ export default function TeacherStudents() {
     const [selectedCourse, setSelectedCourse] = useState("");
     const [enrolling, setEnrolling] = useState(false);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Add Student State
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    // Add Student State
 
     const fetchData = async () => {
         try {
@@ -82,6 +83,12 @@ export default function TeacherStudents() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+
 
     const handleEnroll = async () => {
         if (!selectedStudent || !selectedCourse) return;
@@ -214,8 +221,8 @@ export default function TeacherStudents() {
                 {/* Search and Actions */}
                 <Card>
                     <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="flex-1 relative">
+                        <div className="flex flex-col md:flex-row gap-4 items-center">
+                            <div className="flex-1 relative w-full">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <Input
                                     placeholder="Search by name, email, or class..."
@@ -224,6 +231,14 @@ export default function TeacherStudents() {
                                     className="pl-10"
                                 />
                             </div>
+                            <Button
+                                onClick={() => setIsAddDialogOpen(true)}
+                                style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
+                                className="w-full md:w-auto flex items-center gap-2"
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                Add Student
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -314,7 +329,17 @@ export default function TeacherStudents() {
                 </Card>
             </div>
 
-            {/* Enroll Dialog */}
+            {/* Add Student Dialog */}
+            <AddStudentDialog
+                open={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+                onSuccess={() => {
+                    fetchData();
+                }}
+                courses={courses}
+            />
+
+            {/* Enroll Dialog (Existing) */}
             <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
                 <DialogContent>
                     <DialogHeader>

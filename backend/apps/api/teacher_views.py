@@ -423,6 +423,33 @@ class StudentManagementViewSet(viewsets.ViewSet):
 
     permission_classes = [IsTeacher]
 
+    def create(self, request):
+        """Create a new student."""
+        from rest_framework import status
+        from rest_framework.response import Response
+
+        # Reuse logic from school admin serializer
+        from .serializers import SchoolStudentCreateSerializer
+
+        serializer = SchoolStudentCreateSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        learner = serializer.save()
+
+        return Response(
+            {"detail": "Student created successfully", "id": learner.id},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=["get"], url_path="schools")
+    def list_schools(self, request):
+        """Get list of all schools for selection in dropdowns."""
+        from apps.core.models import School
+
+        schools = School.objects.values("id", "name").order_by("name")
+        return Response(list(schools))
+
     def list(self, request):
         """Get all students in teacher's assigned courses."""
         from apps.core.models import Course, LearnerCourseEnrollment

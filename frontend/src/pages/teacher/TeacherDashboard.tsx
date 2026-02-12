@@ -279,7 +279,7 @@ export default function TeacherDashboard() {
                     <CardContent>
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <Button
-                                onClick={() => navigate("/teacher/add-student")}
+                                onClick={() => navigate("/teacher/students")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
                                 style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
                             >
@@ -292,7 +292,7 @@ export default function TeacherDashboard() {
                                 style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
                             >
                                 <GraduationCap className="h-8 w-8" />
-                                <span className="font-semibold">My Modules</span>
+                                <span className="font-semibold">Microcredentials</span>
                             </Button>
                             <Button
                                 onClick={() => navigate("/teacher/capture-artifact")}

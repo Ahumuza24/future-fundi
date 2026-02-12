@@ -23,6 +23,8 @@ interface StudentProgress {
     status: 'on_track' | 'needs_attention' | 'completed';
 }
 
+import { schoolApi } from "@/lib/api";
+
 export default function SchoolProgress() {
     const navigate = useNavigate();
     const [progressData, setProgressData] = useState<StudentProgress[]>([]);
@@ -37,55 +39,9 @@ export default function SchoolProgress() {
     const fetchProgressData = async () => {
         try {
             setLoading(true);
-            // TODO: Replace with actual API call
-            // const response = await schoolApi.progress.getAll();
-            // setProgressData(response.data);
-
-            // Mock data
-            setTimeout(() => {
-                setProgressData([
-                    {
-                        id: "1",
-                        student_name: "John Doe",
-                        student_email: "john.doe@school.com",
-                        course_name: "Digital Literacy Fundamentals",
-                        current_level: "Level 3",
-                        completion_percentage: 65,
-                        modules_completed: 8,
-                        total_modules: 12,
-                        artifacts_submitted: 5,
-                        assessment_score: 78,
-                        status: 'on_track'
-                    },
-                    {
-                        id: "2",
-                        student_name: "Jane Smith",
-                        student_email: "jane.smith@school.com",
-                        course_name: "Creative Problem Solving",
-                        current_level: "Level 2",
-                        completion_percentage: 45,
-                        modules_completed: 4,
-                        total_modules: 10,
-                        artifacts_submitted: 2,
-                        assessment_score: 62,
-                        status: 'needs_attention'
-                    },
-                    {
-                        id: "3",
-                        student_name: "Mike Johnson",
-                        student_email: "mike.j@school.com",
-                        course_name: "Communication Excellence",
-                        current_level: "Level 4",
-                        completion_percentage: 100,
-                        modules_completed: 8,
-                        total_modules: 8,
-                        artifacts_submitted: 6,
-                        assessment_score: 95,
-                        status: 'completed'
-                    }
-                ]);
-                setLoading(false);
-            }, 500);
+            const response = await schoolApi.progress.getAll();
+            setProgressData(response.data || []);
+            setLoading(false);
         } catch (error) {
             console.error("Failed to fetch progress data:", error);
             setLoading(false);

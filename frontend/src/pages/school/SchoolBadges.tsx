@@ -28,6 +28,10 @@ interface Artifact {
     file_type: string;
 }
 
+import { schoolApi } from "@/lib/api";
+
+// ... existing imports
+
 export default function SchoolBadges() {
     const navigate = useNavigate();
     const [badges, setBadges] = useState<Badge[]>([]);
@@ -42,70 +46,14 @@ export default function SchoolBadges() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            // TODO: Replace with actual API calls
-            // const badgesResponse = await schoolApi.badges.getAll();
-            // const artifactsResponse = await schoolApi.artifacts.getAll();
+            const [badgesRes, artifactsRes] = await Promise.all([
+                schoolApi.badges.getAll(),
+                schoolApi.artifacts.getAll()
+            ]);
 
-            // Mock data
-            setTimeout(() => {
-                setBadges([
-                    {
-                        id: "1",
-                        student_name: "John Doe",
-                        badge_name: "Quick Learner",
-                        description: "Completed module ahead of schedule",
-                        awarded_date: "2024-02-05",
-                        awarded_by: "Sarah Johnson"
-                    },
-                    {
-                        id: "2",
-                        student_name: "Jane Smith",
-                        badge_name: "Perfect Attendance",
-                        description: "100% attendance for the month",
-                        awarded_date: "2024-02-01",
-                        awarded_by: "Michael Brown"
-                    },
-                    {
-                        id: "3",
-                        student_name: "Mike Johnson",
-                        badge_name: "Excellence Award",
-                        description: "Outstanding performance in assessments",
-                        awarded_date: "2024-01-28",
-                        awarded_by: "Sarah Johnson"
-                    }
-                ]);
-
-                setArtifacts([
-                    {
-                        id: "1",
-                        student_name: "John Doe",
-                        title: "Digital Portfolio Website",
-                        description: "Personal portfolio showcasing web development skills",
-                        course_name: "Digital Literacy Fundamentals",
-                        submitted_date: "2024-02-08",
-                        file_type: "URL"
-                    },
-                    {
-                        id: "2",
-                        student_name: "Jane Smith",
-                        title: "Problem Solving Case Study",
-                        description: "Analysis of real-world problem solving scenarios",
-                        course_name: "Creative Problem Solving",
-                        submitted_date: "2024-02-06",
-                        file_type: "PDF"
-                    },
-                    {
-                        id: "3",
-                        student_name: "Mike Johnson",
-                        title: "Presentation Skills Video",
-                        description: "Recorded presentation demonstrating communication skills",
-                        course_name: "Communication Excellence",
-                        submitted_date: "2024-02-03",
-                        file_type: "VIDEO"
-                    }
-                ]);
-                setLoading(false);
-            }, 500);
+            setBadges(badgesRes.data || []);
+            setArtifacts(artifactsRes.data || []);
+            setLoading(false);
         } catch (error) {
             console.error("Failed to fetch data:", error);
             setLoading(false);

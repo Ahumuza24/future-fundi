@@ -48,7 +48,7 @@ const TopBar = () => {
             Welcome back, {user.first_name || user.username}!
           </h2>
           <p className="text-sm text-gray-500">
-            {getRoleDisplayName(user.role as any)} Dashboard
+            {user.tenant_name ? `${user.tenant_name} Dashboard` : `${getRoleDisplayName(user.role as any)} Dashboard`}
           </p>
         </div>
 

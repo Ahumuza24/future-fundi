@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { activityApi, courseApi } from "@/lib/api";
+import { activityApi, courseApi, MEDIA_BASE_URL } from "@/lib/api";
 import {
     Plus, Edit, Trash2, Calendar, MapPin, Clock, Image, Video,
     Save, X, ChevronDown, ChevronUp, CheckCircle, AlertCircle, BookOpen
@@ -552,7 +552,7 @@ function ActivityForm({
                                 <p className="text-xs text-gray-500 mb-2">Existing media ({mediaFiles.length})</p>
                                 <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                                     {mediaFiles.map((media) => {
-                                        const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
+                                        const url = media.url.startsWith('http') ? media.url : `${MEDIA_BASE_URL}${media.url}`;
                                         return (
                                             <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border bg-gray-100 group">
                                                 {media.type === 'image' ? (
@@ -803,7 +803,7 @@ function ActivityDetailPanel({
                     ) : (
                         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
                             {mediaFiles.map((media) => {
-                                const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
+                                const url = media.url.startsWith('http') ? media.url : `${MEDIA_BASE_URL}${media.url}`;
                                 return (
                                     <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border bg-gray-100 group">
                                         {media.type === 'image' ? (

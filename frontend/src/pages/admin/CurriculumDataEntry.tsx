@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { courseApi, moduleApi, careerApi } from "@/lib/api";
+import { courseApi, moduleApi, careerApi, MEDIA_BASE_URL } from "@/lib/api";
 import {
     Plus, Edit, Trash2, ChevronDown, ChevronUp,
     Briefcase, BookOpen, Save, X, Image, Video,
@@ -716,7 +716,7 @@ function ModuleCard({ module, courseId, colors, isEditing, onEdit, onClose, onUp
                                     <Label className="text-xs text-gray-500 uppercase tracking-wide">Media Files</Label>
                                     <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
                                         {mediaFiles.map((media) => {
-                                            const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
+                                            const url = media.url.startsWith('http') ? media.url : `${MEDIA_BASE_URL}${media.url}`;
                                             return (
                                                 <div key={media.id} className="aspect-square rounded-lg overflow-hidden border bg-gray-100">
                                                     {media.type === 'image' ? (
@@ -895,7 +895,7 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
                         <Label className="text-sm font-medium">Media Files</Label>
                         <div className="mt-2 grid grid-cols-4 gap-2">
                             {mediaFiles.map((media) => {
-                                const url = media.url.startsWith('http') ? media.url : `http://localhost:8000${media.url}`;
+                                const url = media.url.startsWith('http') ? media.url : `${MEDIA_BASE_URL}${media.url}`;
                                 return (
                                     <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border group">
                                         {media.type === 'image' ? (

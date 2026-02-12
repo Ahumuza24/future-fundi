@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { schoolApi } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,43 +50,9 @@ export default function SchoolAnalytics() {
     const fetchAnalytics = async () => {
         try {
             setLoading(true);
-            // TODO: Replace with actual API call
-            // const response = await schoolApi.analytics.get();
-            // setAnalytics(response.data);
-
-            // Mock data
-            setTimeout(() => {
-                setAnalytics({
-                    overview: {
-                        total_students: 156,
-                        active_students: 142,
-                        total_teachers: 12,
-                        total_courses: 8
-                    },
-                    performance: {
-                        average_completion_rate: 68,
-                        average_assessment_score: 78,
-                        total_badges_awarded: 342,
-                        total_artifacts_submitted: 489
-                    },
-                    trends: {
-                        enrollments_this_month: 24,
-                        badges_this_month: 45,
-                        completion_this_month: 18
-                    },
-                    topPerformers: [
-                        { student_name: "Mike Johnson", completion_rate: 100, badges_count: 15 },
-                        { student_name: "Sarah Williams", completion_rate: 95, badges_count: 12 },
-                        { student_name: "David Brown", completion_rate: 92, badges_count: 11 }
-                    ],
-                    courseStats: [
-                        { course_name: "Digital Literacy Fundamentals", enrolled_students: 45, completion_rate: 78 },
-                        { course_name: "Creative Problem Solving", enrolled_students: 38, completion_rate: 85 },
-                        { course_name: "Communication Excellence", enrolled_students: 52, completion_rate: 92 }
-                    ]
-                });
-                setLoading(false);
-            }, 500);
+            const response = await schoolApi.analytics.get();
+            setAnalytics(response.data);
+            setLoading(false);
         } catch (error) {
             console.error("Failed to fetch analytics:", error);
             setLoading(false);

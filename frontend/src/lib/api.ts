@@ -1,7 +1,11 @@
 import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Helper to get the root URL (removing /api if present, for media files)
+export const MEDIA_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: API_BASE_URL,
 });
 
 // Request interceptor to add auth token
@@ -32,7 +36,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
           const response = await axios.post(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`,
+            `${API_BASE_URL}/auth/token/refresh/`,
             { refresh: refreshToken }
           );
 
@@ -204,6 +208,8 @@ export const teacherApi = {
     getAll: (params?: { search?: string; course_id?: string }) =>
       api.get('/api/teacher/students/', { params }),
     getById: (id: string) => api.get(`/api/teacher/students/${id}/`),
+    create: (data: any) => api.post('/api/teacher/students/', data),
+    getSchools: () => api.get('/api/teacher/students/schools/'),
     enroll: (data: {
       learner_id: string;
       course_id: string;
@@ -227,7 +233,7 @@ export const teacherApi = {
 
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>
-    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/`, credentials),
+    axios.post(`${API_BASE_URL}/auth/token/`, credentials),
   register: (data: {
     username: string;
     email: string;
@@ -237,26 +243,26 @@ export const authApi = {
     last_name: string;
     school_code?: string;
   }) =>
-    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/register/`, data),
+    axios.post(`${API_BASE_URL}/auth/register/`, data),
   logout: (refreshToken: string) =>
-    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/logout/`, { refresh: refreshToken }),
+    axios.post(`${API_BASE_URL}/auth/logout/`, { refresh: refreshToken }),
   refreshToken: (refresh: string) => 
-    axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/token/refresh/`, { refresh }),
+    axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh }),
   getProfile: () => 
-    api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`),
+    api.get(`${API_BASE_URL}/user/profile/`),
   updateProfile: (data: { first_name?: string; last_name?: string; email?: string }) =>
-    api.patch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/profile/`, data),
+    api.patch(`${API_BASE_URL}/user/profile/`, data),
   getDashboard: () =>
-    api.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/dashboard/`),
+    api.get(`${API_BASE_URL}/user/dashboard/`),
   
   // Avatar management
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`, formData);
+    return api.post(`${API_BASE_URL}/user/avatar/`, formData);
   },
   deleteAvatar: () =>
-    api.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/user/avatar/`),
+    api.delete(`${API_BASE_URL}/user/avatar/`),
 };
 
 // Course API
@@ -462,6 +468,21 @@ export const adminApi = {
 
 export const schoolApi = {
   stats: () => api.get('/api/school/dashboard/stats/'),
+  analytics: {
+      get: () => api.get('/api/school/dashboard/analytics/'),
+  },
+
+  badges: {
+      getAll: () => api.get('/api/school/dashboard/badges/'),
+  },
+
+  artifacts: {
+      getAll: () => api.get('/api/school/dashboard/artifacts/'),
+  },
+
+  progress: {
+      getAll: () => api.get('/api/school/dashboard/progress/'),
+  },
 
   students: {
     getAll: (params?: any) => api.get('/api/school/students/', { params }),
@@ -482,5 +503,9 @@ export const schoolApi = {
   pathways: {
     getAll: (params?: any) => api.get('/api/school/pathways/', { params }),
     getById: (id: string) => api.get(`/api/school/pathways/${id}/`),
+  },
+
+  classes: {
+    getAll: (params?: any) => api.get('/api/school/classes/', { params }),
   },
 };

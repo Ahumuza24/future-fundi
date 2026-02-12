@@ -11,6 +11,7 @@ import {
     Medal, GraduationCap, TrendingUp, AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AddStudentDialog } from "@/components/teacher/AddStudentDialog";
 
 interface Student {
     id: string;
@@ -40,6 +41,7 @@ export default function TeacherClasses() {
     const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
     const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
     const [isCredentialDialogOpen, setIsCredentialDialogOpen] = useState(false);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -233,16 +235,26 @@ export default function TeacherClasses() {
                             className="pl-10"
                         />
                     </div>
-                    <select
-                        value={selectedCourse}
-                        onChange={(e) => setSelectedCourse(e.target.value)}
-                        className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-cyan)]"
-                    >
-                        <option value="">All Courses</option>
-                        {courses.map(course => (
-                            <option key={course.id} value={course.id}>{course.name}</option>
-                        ))}
-                    </select>
+                    <div className="flex gap-2">
+                        <select
+                            value={selectedCourse}
+                            onChange={(e) => setSelectedCourse(e.target.value)}
+                            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-cyan)]"
+                        >
+                            <option value="">All Courses</option>
+                            {courses.map(course => (
+                                <option key={course.id} value={course.id}>{course.name}</option>
+                            ))}
+                        </select>
+                        <Button
+                            onClick={() => setIsAddDialogOpen(true)}
+                            style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
+                            className="flex items-center gap-2"
+                        >
+                            <UserPlus className="h-4 w-4" />
+                            <span className="hidden md:inline">Add Student</span>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Student List */}
@@ -433,6 +445,16 @@ export default function TeacherClasses() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AddStudentDialog
+                open={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+                onSuccess={() => {
+                    fetchData();
+                    showMessage('success', 'Student added successfully');
+                }}
+                courses={courses}
+            />
         </div>
     );
 }
