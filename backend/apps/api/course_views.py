@@ -454,12 +454,48 @@ class LearnerProgressViewSet(viewsets.ModelViewSet):
         progress = self.get_object()
 
         modules = request.data.get("modules_completed")
+        completed_module_ids = request.data.get("completed_module_ids")
         artifacts = request.data.get("artifacts_submitted")
         score = request.data.get("assessment_score")
         confirmed = request.data.get("teacher_confirmed")
 
-        if modules is not None:
+        if completed_module_ids is not None:
+            if not isinstance(completed_module_ids, list):
+                return Response(
+                    {"error": "completed_module_ids must be a list."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            level_modules = progress.level.required_modules.all()
+            if not level_modules.exists():
+                level_modules = Module.objects.filter(course=progress.level.course)
+
+            allowed_ids = {str(mid) for mid in level_modules.values_list("id", flat=True)}
+            normalized_ids: list[str] = []
+            invalid_ids: list[str] = []
+
+            for module_id in completed_module_ids:
+                sid = str(module_id)
+                if sid in allowed_ids:
+                    if sid not in normalized_ids:
+                        normalized_ids.append(sid)
+                else:
+                    invalid_ids.append(sid)
+
+            if invalid_ids:
+                return Response(
+                    {
+                        "error": "Some modules are not valid for this level/course.",
+                        "invalid_module_ids": invalid_ids,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            progress.completed_module_ids = normalized_ids
+            progress.modules_completed = len(normalized_ids)
+        elif modules is not None:
             progress.modules_completed = int(modules)
+            progress.completed_module_ids = []
         if artifacts is not None:
             progress.artifacts_submitted = int(artifacts)
         if score is not None:

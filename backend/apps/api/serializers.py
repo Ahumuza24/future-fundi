@@ -850,6 +850,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
     level_number = serializers.IntegerField(source="level.level_number", read_only=True)
     completion_percentage = serializers.ReadOnlyField()
     requirements = serializers.SerializerMethodField()
+    available_modules = serializers.SerializerMethodField()
 
     class Meta:
         model = LearnerLevelProgress
@@ -859,6 +860,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
             "level_name",
             "level_number",
             "modules_completed",
+            "completed_module_ids",
             "artifacts_submitted",
             "assessment_score",
             "teacher_confirmed",
@@ -866,6 +868,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
             "completed_at",
             "completion_percentage",
             "requirements",
+            "available_modules",
             "started_at",
             "updated_at",
         ]
@@ -891,6 +894,24 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
                 "met": obj.assessment_score >= obj.level.required_assessment_score,
             },
         }
+
+    def get_available_modules(self, obj):
+        if not obj.level:
+            return []
+
+        modules_qs = obj.level.required_modules.all().order_by("name")
+        if not modules_qs.exists():
+            modules_qs = obj.level.course.modules.all().order_by("name")
+
+        return [
+            {
+                "id": str(module.id),
+                "name": module.name,
+                "badge_name": module.badge_name,
+                "description": module.description or "",
+            }
+            for module in modules_qs
+        ]
 
 
 class LearnerCourseEnrollmentSerializer(serializers.ModelSerializer):
@@ -1192,7 +1213,7 @@ class TeacherStudentSerializer(serializers.ModelSerializer):
 
         total_sessions = Attendance.objects.filter(learner=obj).count()
         if total_sessions == 0:
-            return 100  # No sessions yet, default to 100%
+            return 0  # No attendance records yet.
 
         present_sessions = Attendance.objects.filter(
             learner=obj, status__in=["present", "late"]

@@ -76,8 +76,22 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                     current_progress_obj.completion_percentage or 0
                 )
 
-            # Determine status based on progress
-            if overall_progress >= 70:
+            # Determine status based on progress.
+            # New or untouched enrollments should have a dedicated "not_started" state.
+            has_started_level_work = enrollment.level_progress.filter(
+                Q(modules_completed__gt=0)
+                | Q(artifacts_submitted__gt=0)
+                | Q(assessment_score__gt=0)
+                | Q(completed=True)
+            ).exists()
+
+            is_not_started = (
+                overall_progress == 0 and completed_levels == 0 and not has_started_level_work
+            )
+
+            if is_not_started:
+                status = "not_started"
+            elif overall_progress >= 70:
                 status = "good"
             elif overall_progress >= 40:
                 status = "warning"

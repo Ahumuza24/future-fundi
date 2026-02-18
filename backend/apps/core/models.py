@@ -667,6 +667,11 @@ class LearnerLevelProgress(BaseUUIDModel):
 
     # Progress tracking
     modules_completed = models.PositiveIntegerField(default=0)
+    completed_module_ids = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of completed module IDs for this learner at this level.",
+    )
     artifacts_submitted = models.PositiveIntegerField(default=0)
     assessment_score = models.PositiveIntegerField(
         default=0, help_text="Best assessment score"

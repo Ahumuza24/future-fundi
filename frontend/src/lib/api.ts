@@ -366,6 +366,7 @@ export const progressApi = {
   // Update progress (modules, artifacts, score)
   updateProgress: (id: string, data: {
     modules_completed?: number;
+    completed_module_ids?: string[];
     artifacts_submitted?: number;
     assessment_score?: number;
     teacher_confirmed?: boolean;
