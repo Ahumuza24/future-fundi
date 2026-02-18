@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import BrandToasts from "./BrandToasts";
 
 import { useUIStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const PageLayout = () => {
           <Outlet />
         </main>
       </div>
+      <BrandToasts />
     </div>
   );
 };

@@ -85,7 +85,7 @@ const allNavItems: NavItem[] = [
     roles: ["teacher"],
   },
   {
-    title: "Microcredentials",
+    title: "Pathways",
     path: "/teacher/pathways",
     icon: BookOpen,
     color: "var(--fundi-lime)",

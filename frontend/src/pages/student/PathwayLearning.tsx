@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { studentApi, MEDIA_BASE_URL } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
     ChevronRight,
-    CheckCircle,
     Play,
     FileText,
     Award,
     BookOpen,
-    Target,
-    Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +19,6 @@ interface Module {
     name: string;
     description: string;
     content: string;
-    suggestedActivities: any[];
-    materials: any[];
-    competences: any[];
     mediaFiles: any[];
     badgeName: string;
 }
@@ -302,10 +297,9 @@ const PathwayLearning = () => {
                                                             <FileText className="h-5 w-5 text-gray-500" />
                                                             <h3 className="text-lg font-semibold">Learning Content</h3>
                                                         </div>
-                                                        <div
-                                                            className="text-gray-700 leading-relaxed"
-                                                            dangerouslySetInnerHTML={{ __html: selectedModule.content }}
-                                                        />
+                                                        <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                                            {selectedModule.content}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -352,7 +346,7 @@ const PathwayLearning = () => {
                                                                             });
                                                                         } else {
                                                                             console.error('No URL found in media object:', media);
-                                                                            alert('This media file has no URL');
+                                                                            toast.error("This media file has no URL.", "Unavailable Media");
                                                                         }
                                                                     }}
                                                                 >
@@ -402,59 +396,6 @@ const PathwayLearning = () => {
                                                             );
                                                         })}
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* Competencies */}
-                                            {selectedModule.competences && selectedModule.competences.length > 0 && (
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <Target className="h-5 w-5 text-gray-500" />
-                                                        <h3 className="text-lg font-semibold">Competencies</h3>
-                                                    </div>
-                                                    <ul className="space-y-2">
-                                                        {selectedModule.competences.map((competence: string, idx: number) => (
-                                                            <li key={idx} className="flex items-start gap-2">
-                                                                <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                                                <span className="text-gray-700">{competence}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-
-                                            {/* Suggested Activities */}
-                                            {selectedModule.suggestedActivities && selectedModule.suggestedActivities.length > 0 && (
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <Clock className="h-5 w-5 text-gray-500" />
-                                                        <h3 className="text-lg font-semibold">Suggested Activities</h3>
-                                                    </div>
-                                                    <div className="space-y-3">
-                                                        {selectedModule.suggestedActivities.map((activity: any, idx: number) => (
-                                                            <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                                <p className="font-medium text-blue-900">{activity.title || activity}</p>
-                                                                {activity.description && (
-                                                                    <p className="text-sm text-blue-700 mt-1">{activity.description}</p>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Materials */}
-                                            {selectedModule.materials && selectedModule.materials.length > 0 && (
-                                                <div>
-                                                    <h3 className="text-lg font-semibold mb-3">Required Materials</h3>
-                                                    <ul className="grid grid-cols-2 gap-2">
-                                                        {selectedModule.materials.map((material: string, idx: number) => (
-                                                            <li key={idx} className="flex items-center gap-2 text-gray-700">
-                                                                <div className="h-2 w-2 rounded-full bg-[var(--fundi-orange)]" />
-                                                                {material}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
                                                 </div>
                                             )}
 

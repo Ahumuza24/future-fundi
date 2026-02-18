@@ -1,6 +1,6 @@
 # Future Fundi Backend
 
-Django REST Framework backend for the Future Fundi Dashboard - a multi-tenant EdTech platform tracking 60k+ learners across East Africa.
+Django REST Framework backend for the Future Fundi Dashboard.
 
 ## 🏗️ Architecture
 
@@ -8,7 +8,7 @@ Django REST Framework backend for the Future Fundi Dashboard - a multi-tenant Ed
 - **Database**: PostgreSQL (with SQLite fallback for development)
 - **Cache**: Redis (with LocMem fallback)
 - **Authentication**: JWT (Simple JWT)
-- **Multi-tenancy**: Row-level security with tenant_id filtering
+- **School Scoping**: Explicit school-based queryset filtering (`tenant_id` legacy field)
 
 ## 📁 Project Structure
 
@@ -22,8 +22,10 @@ backend/
 │   │   └── urls.py     # Auth routes
 │   ├── core/           # Core business models
 │   │   ├── models.py   # School, Learner, Artifact, etc.
-│   │   ├── managers.py # TenantManager for automatic filtering
-│   │   ├── middleware.py  # TenantMiddleware
+│   │   ├── roles.py    # Central role constants/enums
+│   │   ├── scope.py    # School scoping helpers
+│   │   ├── managers.py # Explicit school-scoping manager helpers
+│   │   ├── middleware.py  # SchoolContextMiddleware
 │   │   └── services/   # Business logic (pathway scoring)
 │   └── api/            # API endpoints
 │       ├── views.py    # ViewSets for learners, artifacts, dashboard
@@ -58,6 +60,7 @@ DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Database (PostgreSQL)
 USE_SQLITE=false
+USE_READ_REPLICA=false
 POSTGRES_DB=fundi
 POSTGRES_USER=fundi
 POSTGRES_PASSWORD=your-password
@@ -116,13 +119,15 @@ The API will be available at `http://localhost:8000`
 
 ### User Roles
 
-The system supports 5 user roles with different permissions:
+The system supports 6 core user roles (plus legacy `leader`):
 
 1. **learner** - Students using the platform
 2. **teacher** - L1/L2 teachers who capture artifacts and assessments
 3. **parent** - Parents/guardians viewing their child's progress
-4. **leader** - School leaders with dashboard access
-5. **admin** - System administrators with full access
+4. **school** - School admin account
+5. **admin** - Platform administrators with global access
+6. **data_entry** - Curriculum/data operations
+7. **leader** - Legacy role still supported
 
 ### Authentication Flow
 
@@ -169,10 +174,10 @@ The system supports 5 user roles with different permissions:
 Each endpoint has role-based permissions:
 
 - **Learners**: Can only view/edit their own profile and artifacts
-- **Teachers**: Can view all learners in their tenant, create artifacts
+- **Teachers**: Can view learners in their school, create artifacts
 - **Parents**: Can view their child's profile and artifacts
-- **Leaders**: Full access to all learners and dashboard KPIs in their tenant
-- **Admins**: Full system access
+- **School/Leaders**: Full access to school data and school dashboards
+- **Admins**: Global access (or school-scoped if assigned to one school)
 
 ## 📡 API Endpoints
 
@@ -213,22 +218,13 @@ coverage run --source='.' manage.py test
 coverage report
 ```
 
-## 🔧 Multi-Tenancy
+## 🔧 School Scoping
 
-The system uses row-level security with `tenant_id` on all models:
+The backend uses explicit school scoping in each queryset/action.
 
-1. **TenantMiddleware**: Automatically sets current tenant from user
-2. **TenantManager**: Filters querysets by tenant_id
-3. **TenantModel**: Base model for all tenant-scoped entities
-
-Example:
-```python
-# Automatically filtered by tenant
-learners = Learner.objects.all()  # Only returns learners in current tenant
-
-# Bypass tenant filtering (use with caution)
-all_learners = Learner._base_manager.all()
-```
+- Database field name remains `tenant` for backward compatibility.
+- In practice, `tenant == school`.
+- New code should use school-oriented naming and helpers (`apps/core/scope.py`).
 
 ## 📊 Pathway Score Engine
 
@@ -256,7 +252,7 @@ score = 0.4 * interest + 0.3 * skill + 0.2 * enjoyment + 0.1 * demand
 - CORS configuration
 - HTTPS enforcement in production
 - Secure password hashing
-- Row-level security with tenant isolation
+- School-scoped authorization boundaries
 
 ## 📦 Deployment
 

@@ -13,6 +13,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     tenant_name = serializers.CharField(source="tenant.name", read_only=True)
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
+    school_name = serializers.CharField(source="tenant.name", read_only=True)
+    school_code = serializers.CharField(source="tenant.code", read_only=True)
+    school_id = serializers.UUIDField(source="tenant_id", read_only=True)
+    teacher_school_ids = serializers.SerializerMethodField()
+    teacher_schools = serializers.SerializerMethodField()
     dashboard_url = serializers.CharField(read_only=True)
     avatar_url = serializers.SerializerMethodField()
 
@@ -28,6 +33,11 @@ class UserSerializer(serializers.ModelSerializer):
             "tenant",
             "tenant_name",
             "tenant_code",
+            "school_id",
+            "school_name",
+            "school_code",
+            "teacher_school_ids",
+            "teacher_schools",
             "dashboard_url",
             "date_joined",
             "is_active",
@@ -44,6 +54,24 @@ class UserSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.avatar.url)
             return obj.avatar.url
         return None
+
+    def get_teacher_school_ids(self, obj):
+        if not obj.is_teacher:
+            return []
+        return sorted(obj.get_accessible_school_ids())
+
+    def get_teacher_schools(self, obj):
+        if not obj.is_teacher:
+            return []
+
+        schools = list(
+            obj.teacher_schools.all().values("id", "name", "code").order_by("name")
+        )
+        if obj.tenant_id and not any(str(s["id"]) == str(obj.tenant_id) for s in schools):
+            schools.append(
+                {"id": obj.tenant.id, "name": obj.tenant.name, "code": obj.tenant.code}
+            )
+        return [{"id": str(s["id"]), "name": s["name"], "code": s["code"]} for s in schools]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -134,6 +162,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         refresh = self.get_token(self.user)
         refresh["role"] = self.user.role
         refresh["tenant_id"] = str(self.user.tenant_id) if self.user.tenant_id else None
+        refresh["school_id"] = str(self.user.tenant_id) if self.user.tenant_id else None
 
         data["refresh"] = str(refresh)
         data["access"] = str(refresh.access_token)
@@ -147,6 +176,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token["role"] = user.role
         token["tenant_id"] = str(user.tenant_id) if user.tenant_id else None
+        token["school_id"] = str(user.tenant_id) if user.tenant_id else None
         token["username"] = user.username
         token["email"] = user.email
 

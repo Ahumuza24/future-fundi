@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { courseApi, moduleApi, careerApi, MEDIA_BASE_URL } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
     Plus, Edit, Trash2, ChevronDown, ChevronUp,
     Briefcase, BookOpen, Save, X, Image, Video,
@@ -780,7 +781,7 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!module?.id) {
-            alert('Please save the module first before uploading media.');
+            toast.info('Please save the module first before uploading media.', 'Save Module First');
             return;
         }
         const files = e.target.files;
@@ -794,7 +795,7 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
             }
         } catch (err: any) {
             console.error(err);
-            alert(err.response?.data?.error || 'Upload failed');
+            toast.error(err.response?.data?.error || 'Upload failed', 'Upload Failed');
         } finally {
             setUploading(false);
             e.target.value = '';

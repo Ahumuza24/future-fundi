@@ -48,7 +48,9 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
 
         # Basic Stats
         total_students = Learner.objects.filter(tenant=school).count()
-        total_teachers = User.objects.filter(tenant=school, role="teacher").count()
+        total_teachers = User.objects.filter(
+            Q(tenant=school) | Q(teacher_schools=school), role="teacher"
+        ).distinct().count()
 
         # Active Enrollments
         active_enrollments = LearnerCourseEnrollment.objects.filter(
@@ -99,7 +101,9 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
             .distinct()
             .count()
         )
-        total_teachers = User.objects.filter(tenant=school, role="teacher").count()
+        total_teachers = User.objects.filter(
+            Q(tenant=school) | Q(teacher_schools=school), role="teacher"
+        ).distinct().count()
         total_courses = Course.objects.filter(Q(tenant=None) | Q(tenant=school)).count()
 
         # Performance
@@ -132,7 +136,7 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
         completion_month = LearnerLevelProgress.objects.filter(
             enrollment__learner__tenant=school,
             updated_at__gte=start_of_month,
-            is_completed=True,
+            completed=True,
         ).count()
 
         # Top Performers Query
@@ -168,7 +172,7 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
                 completed_levels = LearnerLevelProgress.objects.filter(
                     enrollment__learner__tenant=school,
                     enrollment__course=course,
-                    is_completed=True,
+                    completed=True,
                 ).count()
                 # Rough estimate: completed levels / (enrolled students * total levels)
                 # For now just using completed_levels / enrolled * 10 or similar logic
@@ -362,10 +366,13 @@ class SchoolTeacherViewSet(viewsets.ModelViewSet):
         tenant = self.request.user.tenant
         if not tenant:
             return User.objects.none()
-        return User.objects.filter(tenant=tenant, role="teacher")
+        return User.objects.filter(
+            Q(tenant=tenant) | Q(teacher_schools=tenant), role="teacher"
+        ).distinct()
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user.tenant, role="teacher")
+        teacher = serializer.save(tenant=self.request.user.tenant, role="teacher")
+        teacher.teacher_schools.add(self.request.user.tenant)
 
 
 class SchoolPathwayViewSet(viewsets.ReadOnlyModelViewSet):

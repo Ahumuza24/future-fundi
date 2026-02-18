@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/lib/toast";
 import {
     GraduationCap, Search, UserPlus, Eye, Edit, Trash2, ArrowLeft, Mail, Users, BookOpen
 } from "lucide-react";
@@ -31,6 +32,7 @@ export default function SchoolTeachers() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [teacherForm, setTeacherForm] = useState({
         first_name: "",
         last_name: "",
@@ -89,7 +91,9 @@ export default function SchoolTeachers() {
     };
 
     const handleAddTeacher = async () => {
+        if (isSubmitting) return;
         try {
+            setIsSubmitting(true);
             // TODO: API call to add teacher
             // await schoolApi.teachers.create(teacherForm);
             console.log("Adding teacher:", teacherForm);
@@ -103,17 +107,20 @@ export default function SchoolTeachers() {
                 phone_number: ""
             });
             fetchTeachers();
-            alert("Teacher added successfully!");
+            toast.success("Teacher added successfully!", "Saved");
         } catch (error) {
             console.error("Failed to add teacher:", error);
-            alert("Failed to add teacher. Please try again.");
+            toast.error("Failed to add teacher. Please try again.", "Save Failed");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleEditTeacher = async () => {
-        if (!selectedTeacher) return;
+        if (!selectedTeacher || isSubmitting) return;
 
         try {
+            setIsSubmitting(true);
             // TODO: API call to update teacher
             // await schoolApi.teachers.update(selectedTeacher.id, teacherForm);
             console.log("Updating teacher:", selectedTeacher.id, teacherForm);
@@ -128,26 +135,32 @@ export default function SchoolTeachers() {
                 phone_number: ""
             });
             fetchTeachers();
-            alert("Teacher updated successfully!");
+            toast.success("Teacher updated successfully!", "Saved");
         } catch (error) {
             console.error("Failed to update teacher:", error);
-            alert("Failed to update teacher. Please try again.");
+            toast.error("Failed to update teacher. Please try again.", "Update Failed");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleDeleteTeacher = async (teacherId: string) => {
         if (!confirm("Are you sure you want to delete this teacher?")) return;
+        if (isSubmitting) return;
 
         try {
+            setIsSubmitting(true);
             // TODO: API call to delete teacher
             // await schoolApi.teachers.delete(teacherId);
             console.log("Deleting teacher:", teacherId);
 
             fetchTeachers();
-            alert("Teacher deleted successfully!");
+            toast.success("Teacher deleted successfully!", "Deleted");
         } catch (error) {
             console.error("Failed to delete teacher:", error);
-            alert("Failed to delete teacher. Please try again.");
+            toast.error("Failed to delete teacher. Please try again.", "Delete Failed");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -297,6 +310,7 @@ export default function SchoolTeachers() {
                                                             size="sm"
                                                             onClick={() => handleDeleteTeacher(teacher.id)}
                                                             className="text-red-600 hover:bg-red-50"
+                                                            disabled={isSubmitting}
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-1" />
                                                             Delete
@@ -375,8 +389,8 @@ export default function SchoolTeachers() {
                             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={handleAddTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}>
-                                Add Teacher
+                            <Button onClick={handleAddTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }} disabled={isSubmitting}>
+                                {isSubmitting ? "Saving..." : "Add Teacher"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -440,8 +454,8 @@ export default function SchoolTeachers() {
                             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={handleEditTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}>
-                                Save Changes
+                            <Button onClick={handleEditTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }} disabled={isSubmitting}>
+                                {isSubmitting ? "Saving..." : "Save Changes"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

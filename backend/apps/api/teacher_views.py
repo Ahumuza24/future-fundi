@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from apps.core.models import Artifact, Attendance, Learner, Session
+from apps.core.models import Artifact, Attendance, Learner, School, Session
+from apps.core.scope import get_user_allowed_school_ids
 from django.db.models import Count, Prefetch, Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -22,7 +23,76 @@ class IsTeacher(permissions.BasePermission):
         return request.user.is_authenticated and request.user.role == "teacher"
 
 
-class TeacherSessionViewSet(viewsets.ModelViewSet):
+class TeacherSchoolContextMixin:
+    """Resolve teacher school context after DRF auth (JWT-safe)."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        self._resolve_school_context(request)
+
+    def _requested_school_id(self, request) -> str | None:
+        school_id = request.headers.get("X-School-ID") or request.query_params.get(
+            "school_id"
+        )
+        if not school_id and request.method in {"POST", "PUT", "PATCH"}:
+            school_id = request.data.get("school_id")
+        if school_id is None:
+            return None
+        value = str(school_id).strip()
+        return value or None
+
+    def _set_request_school(self, request, school, allowed_school_ids: list[str]) -> None:
+        school_id = str(school.id) if school else None
+        request.school = school
+        request.school_id = school_id
+        request.allowed_school_ids = allowed_school_ids
+
+        raw_request = getattr(request, "_request", None)
+        if raw_request is not None:
+            raw_request.school = school
+            raw_request.school_id = school_id
+            raw_request.allowed_school_ids = allowed_school_ids
+
+    def _resolve_school_context(self, request):
+        if getattr(request, "_school_context_resolved", False):
+            return getattr(request, "school", None)
+
+        user = getattr(request, "user", None)
+        existing_school = getattr(request, "school", None)
+        existing_allowed = list(getattr(request, "allowed_school_ids", []) or [])
+
+        if not getattr(user, "is_authenticated", False):
+            self._set_request_school(request, None, [])
+        elif getattr(user, "role", None) != "teacher":
+            school = existing_school or getattr(user, "tenant", None)
+            allowed_school_ids = existing_allowed or ([str(school.id)] if school else [])
+            self._set_request_school(request, school, allowed_school_ids)
+        else:
+            allowed_school_ids = sorted(get_user_allowed_school_ids(user))
+            selected_school_id = self._requested_school_id(request)
+            if not selected_school_id and existing_school is not None:
+                selected_school_id = str(existing_school.id)
+
+            resolved_school_id = None
+            if selected_school_id and selected_school_id in allowed_school_ids:
+                resolved_school_id = selected_school_id
+            elif len(allowed_school_ids) == 1:
+                resolved_school_id = allowed_school_ids[0]
+
+            school = None
+            if resolved_school_id:
+                if str(getattr(user, "tenant_id", "")) == resolved_school_id:
+                    school = getattr(user, "tenant", None)
+                if school is None:
+                    school = School.objects.filter(id=resolved_school_id).first()
+
+            self._set_request_school(request, school, allowed_school_ids)
+
+        request._school_context_resolved = True
+        return getattr(request, "school", None)
+
+
+class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     """ViewSet for teachers to manage their sessions.
 
     Teachers can:
@@ -42,8 +112,15 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only sessions for the authenticated teacher."""
+        qs = Session.objects.filter(teacher=self.request.user)
+        school = self._resolve_school_context(self.request)
+        if school is not None:
+            qs = qs.filter(tenant=school)
+        else:
+            qs = qs.none()
+
         return (
-            Session.objects.filter(teacher=self.request.user)
+            qs
             .select_related("tenant", "teacher", "module")
             .prefetch_related(
                 Prefetch(
@@ -153,6 +230,8 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
 
             try:
                 learner = Learner.objects.get(id=learner_id)
+                if session.tenant_id and learner.tenant_id != session.tenant_id:
+                    continue
                 attendance, created = Attendance.objects.update_or_create(
                     session=session,
                     learner=learner,
@@ -189,19 +268,14 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
         - Pending tasks (sessions without attendance, artifacts needed)
         - Quick stats
         """
-        teacher = request.user
         today = date.today()
+        scoped_sessions = self.get_queryset()
 
         # Today's sessions
-        today_sessions = (
-            Session.objects.filter(teacher=teacher, date=today)
-            .select_related("module")
-            .prefetch_related("attendance_records")
-        )
+        today_sessions = scoped_sessions.filter(date=today)
 
         # Pending tasks
-        sessions_without_attendance = Session.objects.filter(
-            teacher=teacher,
+        sessions_without_attendance = scoped_sessions.filter(
             date__lte=today,
             attendance_marked=False,
             status__in=["in_progress", "completed"],
@@ -209,10 +283,8 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
 
         # Sessions needing artifacts (completed but no artifacts)
         sessions_needing_artifacts = (
-            Session.objects.filter(
-                teacher=teacher,
-                status="completed",
-                date__gte=date.today().replace(day=1),  # This month
+            scoped_sessions.filter(
+                status="completed", date__gte=date.today().replace(day=1)  # This month
             )
             .annotate(
                 artifact_count=Count(
@@ -225,8 +297,8 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
         )
 
         # Quick stats
-        total_sessions_this_week = Session.objects.filter(
-            teacher=teacher, date__gte=today, date__lte=today
+        total_sessions_this_week = scoped_sessions.filter(
+            date__gte=today, date__lte=today
         ).count()
 
         return Response(
@@ -249,7 +321,7 @@ class TeacherSessionViewSet(viewsets.ModelViewSet):
         )
 
 
-class QuickArtifactViewSet(viewsets.ModelViewSet):
+class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     """Quick artifact capture for teachers."""
 
     permission_classes = [IsTeacher]
@@ -257,15 +329,24 @@ class QuickArtifactViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return artifacts created by this teacher."""
+        qs = Artifact.objects.filter(created_by=self.request.user)
+        school = self._resolve_school_context(self.request)
+        if school is not None:
+            qs = qs.filter(tenant=school)
+        else:
+            qs = qs.none()
+
         return (
-            Artifact.objects.filter(created_by=self.request.user)
+            qs
             .select_related("learner", "tenant")
             .order_by("-submitted_at")
         )
 
     def perform_create(self, serializer):
         """Set the teacher as the creator."""
-        serializer.save(created_by=self.request.user)
+        learner = serializer.validated_data.get("learner")
+        tenant = self._resolve_school_context(self.request) or getattr(learner, "tenant", None)
+        serializer.save(created_by=self.request.user, tenant=tenant)
 
     @action(detail=False, methods=["get"], url_path="pending")
     def pending(self, request):
@@ -279,6 +360,11 @@ class QuickArtifactViewSet(viewsets.ModelViewSet):
             .select_related("module")
             .prefetch_related("learners")
         )
+        school = self._resolve_school_context(request)
+        if school is not None:
+            sessions = sessions.filter(tenant=school)
+        else:
+            sessions = sessions.none()
 
         pending_sessions = []
         for session in sessions:
@@ -304,7 +390,7 @@ class QuickArtifactViewSet(viewsets.ModelViewSet):
         )
 
 
-class BadgeManagementViewSet(viewsets.ModelViewSet):
+class BadgeManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     """ViewSet for teachers to manage badges.
 
     Teachers can:
@@ -320,23 +406,21 @@ class BadgeManagementViewSet(viewsets.ModelViewSet):
 
         return BadgeSerializer
 
+    def _teacher_learners_queryset(self):
+        """Learners in the selected school context."""
+        from apps.core.models import Learner
+
+        school = self._resolve_school_context(self.request)
+        if school is None:
+            return Learner.objects.none()
+        return Learner.objects.filter(tenant=school)
+
     def get_queryset(self):
-        """Return badges awarded by this teacher or in their courses."""
-        from apps.core.models import Badge, Course
-
-        teacher = self.request.user
-        # Get courses taught by this teacher
-        teacher_courses = Course.objects.filter(teachers=teacher)
-
-        # Return badges for learners in teacher's courses
-        from apps.core.models import LearnerCourseEnrollment
-
-        enrolled_learners = LearnerCourseEnrollment.objects.filter(
-            course__in=teacher_courses, is_active=True
-        ).values_list("learner_id", flat=True)
+        """Return badges for learners in the selected school."""
+        from apps.core.models import Badge
 
         return (
-            Badge.objects.filter(learner_id__in=enrolled_learners)
+            Badge.objects.filter(learner__in=self._teacher_learners_queryset())
             .select_related("learner", "module", "awarded_by")
             .order_by("-awarded_at")
         )
@@ -357,6 +441,14 @@ class BadgeManagementViewSet(viewsets.ModelViewSet):
 
         serializer = BadgeSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
+
+        learner = serializer.validated_data.get("learner")
+        if not self._teacher_learners_queryset().filter(id=learner.id).exists():
+            return Response(
+                {"detail": "You can only award badges to your own students."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         badge = serializer.save()
 
         return Response(
@@ -373,6 +465,11 @@ class BadgeManagementViewSet(viewsets.ModelViewSet):
         from apps.core.models import Badge
 
         from .serializers import BadgeSerializer
+
+        if not self._teacher_learners_queryset().filter(id=learner_id).exists():
+            return Response(
+                {"detail": "Student not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         badges = (
             Badge.objects.filter(learner_id=learner_id)
@@ -394,12 +491,11 @@ class BadgeManagementViewSet(viewsets.ModelViewSet):
         """Get list of available badge names from modules."""
         from apps.core.models import Course, Module
 
-        teacher = request.user
-        teacher_courses = Course.objects.filter(teachers=teacher)
+        courses = Course.objects.filter(is_active=True)
 
-        # Get modules with badge names from teacher's courses
+        # Get modules with badge names from school-available courses
         modules_with_badges = (
-            Module.objects.filter(pathway__in=teacher_courses)
+            Module.objects.filter(course__in=courses)
             .exclude(badge_name="")
             .values("id", "name", "badge_name")
         )
@@ -412,16 +508,29 @@ class BadgeManagementViewSet(viewsets.ModelViewSet):
         )
 
 
-class StudentManagementViewSet(viewsets.ViewSet):
+class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
     """ViewSet for teachers to manage their students.
 
     Teachers can:
-    - View all students in their assigned pathways/courses
+    - View all students in their selected school
     - Enroll students in courses
     - View detailed student information
     """
 
     permission_classes = [IsTeacher]
+
+    def _teacher_courses_queryset(self):
+        from apps.core.models import Course
+
+        return Course.objects.filter(is_active=True)
+
+    def _teacher_learners_queryset(self):
+        from apps.core.models import Learner
+
+        school = self._resolve_school_context(self.request)
+        if school is None:
+            return Learner.objects.none()
+        return Learner.objects.filter(tenant=school).select_related("user")
 
     def create(self, request):
         """Create a new student."""
@@ -444,47 +553,52 @@ class StudentManagementViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="schools")
     def list_schools(self, request):
-        """Get list of all schools for selection in dropdowns."""
-        from apps.core.models import School
+        """Get school options for teacher context selection."""
+        schools_qs = request.user.teacher_schools.all().order_by("name")
+        schools = [{"id": str(s.id), "name": s.name} for s in schools_qs]
 
-        schools = School.objects.values("id", "name").order_by("name")
-        return Response(list(schools))
+        # Keep compatibility with older single-school assignments.
+        tenant = getattr(request.user, "tenant", None)
+        if tenant and not any(s["id"] == str(tenant.id) for s in schools):
+            schools.append({"id": str(tenant.id), "name": tenant.name})
 
-    def list(self, request):
-        """Get all students in teacher's assigned courses."""
-        from apps.core.models import Course, LearnerCourseEnrollment
+        selected_school = self._resolve_school_context(request)
+        selected_school_id = str(selected_school.id) if selected_school else None
 
-        from .serializers import TeacherStudentSerializer
-
-        teacher = request.user
-
-        # Get courses taught by this teacher
-        teacher_courses = Course.objects.filter(teachers=teacher)
-
-        # Get enrolled learners
-        enrollments = (
-            LearnerCourseEnrollment.objects.filter(
-                course__in=teacher_courses, is_active=True
-            )
-            .select_related("learner", "learner__user")
-            .distinct()
+        return Response(
+            {
+                "schools": schools,
+                "selected_school_id": selected_school_id,
+            }
         )
 
-        # Extract unique learners
-        learners = [enrollment.learner for enrollment in enrollments]
+    def list(self, request):
+        """Get all students in teacher's selected school."""
+        from .serializers import TeacherStudentSerializer
+
+        selected_school = self._resolve_school_context(request)
+        teacher_courses = self._teacher_courses_queryset()
+        learners_qs = self._teacher_learners_queryset()
 
         # Filter by search query if provided
         search = request.query_params.get("search", "")
         if search:
-            learners = [l for l in learners if search.lower() in l.full_name.lower()]
+            learners_qs = learners_qs.filter(
+                Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            )
 
         # Filter by course if provided
         course_id = request.query_params.get("course_id", "")
         if course_id:
-            course_learners = LearnerCourseEnrollment.objects.filter(
-                course_id=course_id, is_active=True
-            ).values_list("learner_id", flat=True)
-            learners = [l for l in learners if str(l.id) in course_learners]
+            if teacher_courses.filter(id=course_id).exists():
+                learners_qs = learners_qs.filter(
+                    course_enrollments__course_id=course_id,
+                    course_enrollments__is_active=True,
+                )
+            else:
+                learners_qs = learners_qs.none()
+
+        learners = list(learners_qs.distinct())
 
         serializer = TeacherStudentSerializer(learners, many=True)
 
@@ -493,6 +607,7 @@ class StudentManagementViewSet(viewsets.ViewSet):
                 "students": serializer.data,
                 "total": len(learners),
                 "courses": [{"id": str(c.id), "name": c.name} for c in teacher_courses],
+                "selected_school_id": (str(selected_school.id) if selected_school else None),
             }
         )
 
@@ -507,7 +622,7 @@ class StudentManagementViewSet(viewsets.ViewSet):
         )
 
         try:
-            learner = Learner.objects.select_related("user").get(id=pk)
+            learner = self._teacher_learners_queryset().get(id=pk)
         except Learner.DoesNotExist:
             return Response(
                 {"detail": "Student not found"}, status=status.HTTP_404_NOT_FOUND
@@ -572,15 +687,15 @@ class StudentManagementViewSet(viewsets.ViewSet):
             )
 
         try:
-            learner = Learner.objects.get(id=learner_id)
-            course = Course.objects.get(id=course_id)
-
-            # Verify teacher teaches this course
-            if request.user not in course.teachers.all():
+            school = self._resolve_school_context(request)
+            if school is None:
                 return Response(
-                    {"detail": "You are not assigned to this course"},
+                    {"detail": "Select a school before enrolling students."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+
+            learner = Learner.objects.get(id=learner_id, tenant=school)
+            course = Course.objects.get(id=course_id)
 
             # Get or create enrollment
             enrollment, created = LearnerCourseEnrollment.objects.get_or_create(
@@ -589,7 +704,7 @@ class StudentManagementViewSet(viewsets.ViewSet):
                 defaults={
                     "is_active": True,
                     "current_level": (
-                        CourseLevel.objects.get(id=level_id)
+                        CourseLevel.objects.get(id=level_id, course=course)
                         if level_id
                         else course.levels.order_by("level_number").first()
                     ),
@@ -635,7 +750,7 @@ class StudentManagementViewSet(viewsets.ViewSet):
             )
 
 
-class CredentialManagementViewSet(viewsets.ModelViewSet):
+class CredentialManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     """ViewSet for teachers to manage microcredentials."""
 
     permission_classes = [IsTeacher]
@@ -645,19 +760,25 @@ class CredentialManagementViewSet(viewsets.ModelViewSet):
 
         return CredentialSerializer
 
+    def _teacher_courses_queryset(self):
+        from apps.core.models import Course
+
+        return Course.objects.filter(is_active=True)
+
+    def _teacher_learners_queryset(self):
+        from apps.core.models import Learner
+
+        school = self._resolve_school_context(self.request)
+        if school is None:
+            return Learner.objects.none()
+        return Learner.objects.filter(tenant=school)
+
     def get_queryset(self):
-        """Return credentials for students in teacher's courses."""
-        from apps.core.models import Course, Credential, LearnerCourseEnrollment
-
-        teacher = self.request.user
-        teacher_courses = Course.objects.filter(teachers=teacher)
-
-        enrolled_learners = LearnerCourseEnrollment.objects.filter(
-            course__in=teacher_courses, is_active=True
-        ).values_list("learner_id", flat=True)
+        """Return credentials for students in the selected school."""
+        from apps.core.models import Credential
 
         return (
-            Credential.objects.filter(learner_id__in=enrolled_learners)
+            Credential.objects.filter(learner__in=self._teacher_learners_queryset())
             .select_related("learner")
             .order_by("-issued_at")
         )
@@ -676,17 +797,29 @@ class CredentialManagementViewSet(viewsets.ModelViewSet):
         """
         from datetime import date
 
-        from apps.core.models import Credential
-
         from .serializers import CredentialSerializer
 
         data = request.data.copy()
         if "issued_at" not in data:
             data["issued_at"] = date.today()
 
-        serializer = CredentialSerializer(data=data)
+        serializer = CredentialSerializer(data=data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        credential = serializer.save()
+        learner = serializer.validated_data.get("learner")
+        if not self._teacher_learners_queryset().filter(id=learner.id).exists():
+            return Response(
+                {"detail": "You can only award credentials to your own students."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        tenant = self._resolve_school_context(request) or learner.tenant
+        if tenant is None:
+            return Response(
+                {"detail": "Unable to determine tenant for credential award."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credential = serializer.save(tenant=tenant)
 
         return Response(
             {
@@ -699,13 +832,14 @@ class CredentialManagementViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="learner/(?P<learner_id>[^/.]+)")
     def learner_credentials(self, request, learner_id=None):
         """Get all credentials for a specific learner."""
-        from apps.core.models import Credential
-
         from .serializers import CredentialSerializer
 
-        credentials = Credential.objects.filter(learner_id=learner_id).order_by(
-            "-issued_at"
-        )
+        if not self._teacher_learners_queryset().filter(id=learner_id).exists():
+            return Response(
+                {"detail": "Student not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        credentials = self.get_queryset().filter(learner_id=learner_id)
 
         serializer = CredentialSerializer(credentials, many=True)
         return Response(

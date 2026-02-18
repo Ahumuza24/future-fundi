@@ -1,5 +1,10 @@
 import { Bell, ChevronDown, Settings, LogOut } from "lucide-react";
-import { getCurrentUser, getRoleDisplayName } from "@/lib/auth";
+import {
+  getCurrentUser,
+  getRoleDisplayName,
+  getSelectedTeacherSchoolId,
+  getSelectedTeacherSchoolName,
+} from "@/lib/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/avatar";
@@ -21,6 +26,7 @@ interface UserData {
   email?: string;
   role: string;
   tenant_name?: string;
+  teacher_schools?: Array<{ id: string; name: string }>;
   avatar_url?: string | null;
 }
 
@@ -33,6 +39,14 @@ const TopBar = () => {
   if (!user) return null;
 
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'User';
+  const selectedTeacherSchoolId = user.role === "teacher" ? getSelectedTeacherSchoolId() : null;
+  const selectedTeacherSchoolName = user.role === "teacher"
+    ? (
+      getSelectedTeacherSchoolName()
+      || user.teacher_schools?.find((school) => school.id === selectedTeacherSchoolId)?.name
+      || null
+    )
+    : null;
 
   const handleLogout = () => {
     logout();
@@ -48,12 +62,25 @@ const TopBar = () => {
             Welcome back, {user.first_name || user.username}!
           </h2>
           <p className="text-sm text-gray-500">
-            {user.tenant_name ? `${user.tenant_name} Dashboard` : `${getRoleDisplayName(user.role as any)} Dashboard`}
+            {selectedTeacherSchoolName
+              ? `${selectedTeacherSchoolName} Dashboard`
+              : user.tenant_name
+                ? `${user.tenant_name} Dashboard`
+                : `${getRoleDisplayName(user.role as any)} Dashboard`}
           </p>
         </div>
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
+          {user.role === "teacher" && (user.teacher_schools?.length || 0) > 1 && (
+            <button
+              onClick={() => navigate("/teacher/select-school")}
+              className="text-xs px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+            >
+              Switch School
+            </button>
+          )}
+
           {/* Notifications */}
           <button
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"

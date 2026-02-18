@@ -79,6 +79,7 @@ router.register(
 # Admin endpoints
 router.register(r"admin/users", AdminUserViewSet, basename="admin-users")
 router.register(r"admin/tenants", AdminTenantViewSet, basename="admin-tenants")
+router.register(r"admin/schools", AdminTenantViewSet, basename="admin-schools")
 router.register(r"admin/analytics", AdminAnalyticsViewSet, basename="admin-analytics")
 
 # Course & Progress endpoints

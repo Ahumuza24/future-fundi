@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import type { ReactElement } from "react";
 import { Progress } from "@/components/ui/progress";
 import { ChevronRight, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,23 +9,32 @@ export interface PathwayProps {
     title: string;
     icon: React.ElementType; // Changed from React.ReactNode
     progress: number;
-    status: "good" | "warning" | "critical";
+    status: "not_started" | "good" | "warning" | "critical";
     microCredentialsEarned: number;
     totalMicroCredentials: number;
     currentModule: string;
     color: string;
 }
 
-const statusColors = {
+const statusColors: Record<PathwayProps["status"], string> = {
+    not_started: "bg-slate-100 text-slate-700 border-slate-200",
     good: "bg-green-100 text-green-700 border-green-200",
     warning: "bg-yellow-100 text-yellow-700 border-yellow-200",
     critical: "bg-red-100 text-red-700 border-red-200",
 };
 
-const statusIcon = {
+const statusIcon: Record<PathwayProps["status"], ReactElement> = {
+    not_started: <Clock className="h-4 w-4" />,
     good: <CheckCircle className="h-4 w-4" />,
     warning: <Clock className="h-4 w-4" />,
     critical: <AlertCircle className="h-4 w-4" />,
+};
+
+const statusLabel: Record<PathwayProps["status"], string> = {
+    not_started: "Not Started",
+    good: "On Track",
+    warning: "Needs Focus",
+    critical: "Behind",
 };
 
 export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onClick?: () => void }) => {
@@ -51,7 +61,7 @@ export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onCli
                 </div>
                 <div className={cn("px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border", statusColors[pathway.status])}>
                     {statusIcon[pathway.status]}
-                    <span className="capitalize">{pathway.status === 'good' ? 'On Track' : pathway.status === 'warning' ? 'Needs Focus' : 'Behind'}</span>
+                    <span>{statusLabel[pathway.status]}</span>
                 </div>
             </div>
 

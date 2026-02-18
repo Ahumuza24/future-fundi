@@ -8,8 +8,11 @@ interface User {
   last_name: string;
   role: string;
   tenant: string | null;
+  school_id?: string | null;
   tenant_name?: string;
   tenant_code?: string;
+  teacher_school_ids?: string[];
+  teacher_schools?: Array<{ id: string; name: string; code?: string }>;
   dashboard_url?: string;
   date_joined: string;
   is_active: boolean;
@@ -47,6 +50,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('selected_school_id');
+    localStorage.removeItem('selected_school_name');
     set({ 
       user: null, 
       accessToken: null, 

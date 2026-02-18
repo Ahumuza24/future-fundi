@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { teacherApi, enrollmentApi, progressApi } from "@/lib/api";
+import { teacherApi, enrollmentApi, progressApi, courseApi } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
     ArrowLeft, Award, GraduationCap, BookOpen, TrendingUp,
-    Calendar, School, Medal, CheckCircle, Trophy, Target, FileText
+    Calendar, School, Medal, CheckCircle, Trophy, Target
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -43,10 +44,18 @@ interface CredentialItem {
 
 interface Enrollment {
     id: string;
+    course: string;
     course_name: string;
     current_level_name: string;
     enrolled_at: string;
     is_active: boolean;
+}
+
+interface ModuleOption {
+    id: string;
+    name: string;
+    badge_name?: string;
+    description?: string;
 }
 
 interface ProgressData {
@@ -55,11 +64,13 @@ interface ProgressData {
     level_name: string;
     level_number: number;
     modules_completed: number;
+    completed_module_ids: string[];
     artifacts_submitted: number;
     assessment_score: number;
     teacher_confirmed: boolean;
     completed: boolean;
     completion_percentage: number;
+    available_modules?: ModuleOption[];
     requirements: {
         modules: { required: number; completed: number; met: boolean };
         artifacts: { required: number; submitted: number; met: boolean };
@@ -81,7 +92,10 @@ export default function StudentDetail() {
     const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null);
     const [currentProgress, setCurrentProgress] = useState<ProgressData | null>(null);
     const [loadingProgress, setLoadingProgress] = useState(false);
+    const [updatingProgress, setUpdatingProgress] = useState(false);
+    const [confirmingCompletion, setConfirmingCompletion] = useState(false);
     const [progressForm, setProgressForm] = useState({
+        completed_module_ids: [] as string[],
         artifacts: 0,
         score: 0
     });
@@ -112,6 +126,30 @@ export default function StudentDetail() {
         }
     };
 
+    const normalizeModuleOptions = (modules: any[] = []): ModuleOption[] =>
+        modules
+            .filter((module) => module && module.id)
+            .map((module) => ({
+                id: String(module.id),
+                name: module.name || "Untitled Module",
+                badge_name: module.badge_name || "",
+                description: module.description || "",
+            }));
+
+    const fetchCourseModules = async (courseId?: string): Promise<ModuleOption[]> => {
+        if (!courseId) {
+            return [];
+        }
+
+        try {
+            const response = await courseApi.getById(courseId);
+            return normalizeModuleOptions(response.data?.modules || []);
+        } catch (error) {
+            console.error("Failed to fetch course modules:", error);
+            return [];
+        }
+    };
+
     const handleOpenProgress = async (enrollment: Enrollment) => {
         setSelectedEnrollment(enrollment);
         setIsProgressDialogOpen(true);
@@ -119,45 +157,56 @@ export default function StudentDetail() {
         setCurrentProgress(null);
 
         try {
-            console.log("Fetching progress for enrollment:", enrollment.id);
             const response = await enrollmentApi.getProgress(enrollment.id);
-            console.log("Progress API response:", response.data);
+            const fallbackModules = await fetchCourseModules(enrollment.course);
 
-            // Get the last progress record (current level)
             const allProgress = Array.isArray(response.data) ? response.data : [];
-            console.log("All progress records:", allProgress);
-
             const active = allProgress.length > 0 ? allProgress[allProgress.length - 1] : null;
-            console.log("Active progress:", active);
 
             if (active) {
-                setCurrentProgress(active);
+                const availableModules = normalizeModuleOptions(
+                    active.available_modules?.length ? active.available_modules : fallbackModules
+                );
+                const allowedIds = new Set(availableModules.map((module) => module.id));
+                const completedModuleIds = Array.isArray(active.completed_module_ids)
+                    ? active.completed_module_ids.map((moduleId: string) => String(moduleId)).filter((moduleId: string) => allowedIds.has(moduleId))
+                    : [];
+
+                const hydratedProgress: ProgressData = {
+                    ...active,
+                    available_modules: availableModules,
+                    completed_module_ids: completedModuleIds,
+                };
+
+                setCurrentProgress(hydratedProgress);
                 setProgressForm({
+                    completed_module_ids: completedModuleIds,
                     artifacts: active.artifacts_submitted || 0,
                     score: active.assessment_score || 0
                 });
             } else {
-                // No progress exists - create initial progress data
-                console.log("No progress found, creating initial progress");
                 const initialProgress: ProgressData = {
                     id: `temp-${enrollment.id}`,
                     level: enrollment.id,
                     level_name: enrollment.current_level_name || "Level 1",
                     level_number: 1,
                     modules_completed: 0,
+                    completed_module_ids: [],
                     artifacts_submitted: 0,
                     assessment_score: 0,
                     completion_percentage: 0,
                     teacher_confirmed: false,
                     completed: false,
+                    available_modules: fallbackModules,
                     requirements: {
-                        modules: { required: 5, completed: 0, met: false },
+                        modules: { required: fallbackModules.length || 1, completed: 0, met: false },
                         artifacts: { required: 3, submitted: 0, met: false },
                         assessment: { required: 70, score: 0, met: false }
                     }
                 };
                 setCurrentProgress(initialProgress);
                 setProgressForm({
+                    completed_module_ids: [],
                     artifacts: 0,
                     score: 0
                 });
@@ -165,6 +214,7 @@ export default function StudentDetail() {
         } catch (error: any) {
             console.error("Failed to fetch progress:", error);
             console.error("Error details:", error.response?.data || error.message);
+            const fallbackModules = await fetchCourseModules(enrollment.course);
 
             // Even on error, create initial progress so user can still update
             const initialProgress: ProgressData = {
@@ -173,19 +223,22 @@ export default function StudentDetail() {
                 level_name: enrollment.current_level_name || "Level 1",
                 level_number: 1,
                 modules_completed: 0,
+                completed_module_ids: [],
                 artifacts_submitted: 0,
                 assessment_score: 0,
                 completion_percentage: 0,
                 teacher_confirmed: false,
                 completed: false,
+                available_modules: fallbackModules,
                 requirements: {
-                    modules: { required: 5, completed: 0, met: false },
+                    modules: { required: fallbackModules.length || 1, completed: 0, met: false },
                     artifacts: { required: 3, submitted: 0, met: false },
                     assessment: { required: 70, score: 0, met: false }
                 }
             };
             setCurrentProgress(initialProgress);
             setProgressForm({
+                completed_module_ids: [],
                 artifacts: 0,
                 score: 0
             });
@@ -194,47 +247,73 @@ export default function StudentDetail() {
         }
     };
 
+    const handleToggleModuleCompletion = (moduleId: string) => {
+        setProgressForm((prev) => {
+            const exists = prev.completed_module_ids.includes(moduleId);
+            return {
+                ...prev,
+                completed_module_ids: exists
+                    ? prev.completed_module_ids.filter((id) => id !== moduleId)
+                    : [...prev.completed_module_ids, moduleId],
+            };
+        });
+    };
+
     const handleUpdateProgress = async () => {
-        if (!currentProgress) return;
+        if (!currentProgress || updatingProgress) return;
 
         try {
+            setUpdatingProgress(true);
             // Check if this is a temporary ID (no real progress exists yet)
             if (currentProgress.id.startsWith('temp-')) {
                 console.log("Cannot update progress - no progress record exists yet");
                 console.log("Progress needs to be created on the backend first");
-                alert("Note: Progress tracking will be created when the student starts this level. You can view and update it then.");
+                toast.info("Progress tracking will be created when the student starts this level. You can update it then.", "Not Yet Available");
                 setIsProgressDialogOpen(false);
                 return;
             }
 
-            console.log("Updating progress:", currentProgress.id, progressForm);
-
             // Update progress
             await progressApi.updateProgress(currentProgress.id, {
+                completed_module_ids: progressForm.completed_module_ids,
                 artifacts_submitted: progressForm.artifacts,
                 assessment_score: progressForm.score
             });
 
-            console.log("Progress updated successfully");
-
             // Award badge if provided
             if (badgeForm.badge_name.trim()) {
-                console.log("Awarding badge:", badgeForm);
                 await teacherApi.badges.award({
                     learner: student!.id,
                     badge_name: badgeForm.badge_name,
                     description: badgeForm.description || `Awarded for progress in ${selectedEnrollment?.course_name}`
                 });
-                console.log("Badge awarded successfully");
             }
 
             // Refresh progress data
             const response = await enrollmentApi.getProgress(selectedEnrollment!.id);
+            const fallbackModules = await fetchCourseModules(selectedEnrollment!.course);
             const allProgress = Array.isArray(response.data) ? response.data : [];
             const active = allProgress.length > 0 ? allProgress[allProgress.length - 1] : null;
 
             if (active) {
-                setCurrentProgress(active);
+                const availableModules = normalizeModuleOptions(
+                    active.available_modules?.length ? active.available_modules : fallbackModules
+                );
+                const allowedIds = new Set(availableModules.map((module) => module.id));
+                const completedModuleIds = Array.isArray(active.completed_module_ids)
+                    ? active.completed_module_ids.map((moduleId: string) => String(moduleId)).filter((moduleId: string) => allowedIds.has(moduleId))
+                    : [];
+
+                setCurrentProgress({
+                    ...active,
+                    available_modules: availableModules,
+                    completed_module_ids: completedModuleIds,
+                });
+                setProgressForm({
+                    completed_module_ids: completedModuleIds,
+                    artifacts: active.artifacts_submitted || 0,
+                    score: active.assessment_score || 0,
+                });
             }
 
             // Refresh main data in case level changed
@@ -247,24 +326,31 @@ export default function StudentDetail() {
             const message = badgeForm.badge_name.trim()
                 ? "Progress updated and badge awarded successfully!"
                 : "Progress updated successfully!";
-            alert(message);
+            toast.success(message, "Saved");
             setIsProgressDialogOpen(false);
         } catch (error: any) {
             console.error("Failed to update progress:", error);
             console.error("Error details:", error.response?.data || error.message);
-            alert("Failed to update progress. Please try again.");
+            toast.error("Failed to update progress. Please try again.", "Update Failed");
+        } finally {
+            setUpdatingProgress(false);
         }
     };
 
     const handleConfirmCompletion = async () => {
-        if (!currentProgress) return;
+        if (!currentProgress || confirmingCompletion) return;
 
         try {
+            setConfirmingCompletion(true);
             await progressApi.confirmCompletion(currentProgress.id);
             setIsProgressDialogOpen(false);
             fetchStudentData();
+            toast.success("Level completion confirmed.", "Confirmed");
         } catch (error) {
             console.error("Failed to confirm completion:", error);
+            toast.error("Failed to confirm completion.", "Confirmation Failed");
+        } finally {
+            setConfirmingCompletion(false);
         }
     };
 
@@ -460,11 +546,18 @@ export default function StudentDetail() {
                         ) : currentProgress ? (
                             <div className="space-y-6">
                                 {/* Current Status */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="p-4 bg-blue-50 rounded-lg text-center border border-blue-100">
                                         <Target className="h-6 w-6 mx-auto mb-2 text-blue-600" />
                                         <p className="text-sm text-gray-600">Completion</p>
                                         <p className="text-xl font-bold text-blue-700">{Math.round(currentProgress.completion_percentage)}%</p>
+                                    </div>
+                                    <div className="p-4 bg-cyan-50 rounded-lg text-center border border-cyan-100">
+                                        <BookOpen className="h-6 w-6 mx-auto mb-2 text-cyan-600" />
+                                        <p className="text-sm text-gray-600">Microcredentials</p>
+                                        <p className="text-xl font-bold text-cyan-700">
+                                            {progressForm.completed_module_ids.length} / {currentProgress.requirements.modules.required}
+                                        </p>
                                     </div>
                                     <div className="p-4 bg-orange-50 rounded-lg text-center border border-orange-100">
                                         <Trophy className="h-6 w-6 mx-auto mb-2 text-orange-600" />
@@ -477,6 +570,53 @@ export default function StudentDetail() {
 
                                 {/* Inputs */}
                                 <div className="grid gap-6">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Label>Microcredential Progress</Label>
+                                            <p className="text-xs text-gray-500">
+                                                Select completed modules for this pathway
+                                            </p>
+                                        </div>
+                                        {currentProgress.available_modules && currentProgress.available_modules.length > 0 ? (
+                                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                                                {currentProgress.available_modules.map((module) => {
+                                                    const completed = progressForm.completed_module_ids.includes(module.id);
+                                                    return (
+                                                        <button
+                                                            key={module.id}
+                                                            type="button"
+                                                            onClick={() => handleToggleModuleCompletion(module.id)}
+                                                            className={`w-full text-left border rounded-lg p-3 transition ${
+                                                                completed
+                                                                    ? "border-[var(--fundi-cyan)] bg-cyan-50"
+                                                                    : "border-gray-200 hover:border-gray-300 bg-white"
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <p className="font-medium truncate">{module.name}</p>
+                                                                    {module.badge_name ? (
+                                                                        <p className="text-xs text-gray-500 truncate">Badge: {module.badge_name}</p>
+                                                                    ) : null}
+                                                                </div>
+                                                                {completed ? (
+                                                                    <CheckCircle className="h-5 w-5 text-[var(--fundi-cyan)] flex-shrink-0" />
+                                                                ) : (
+                                                                    <div className="h-5 w-5 rounded-full border border-gray-300 flex-shrink-0" />
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-500">No microcredentials available for this pathway level.</p>
+                                        )}
+                                        <p className="text-xs text-gray-500">
+                                            Required for completion: {currentProgress.requirements.modules.required}
+                                        </p>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="artifacts">Artifacts Submitted</Label>
@@ -565,13 +705,15 @@ export default function StudentDetail() {
                                         <Button
                                             onClick={handleConfirmCompletion}
                                             disabled={
+                                                confirmingCompletion ||
+                                                progressForm.completed_module_ids.length < currentProgress.requirements.modules.required ||
                                                 progressForm.artifacts < currentProgress.requirements.artifacts.required ||
                                                 progressForm.score < currentProgress.requirements.assessment.required
                                             }
                                             variant={currentProgress.teacher_confirmed ? "outline" : "default"}
                                             className={currentProgress.teacher_confirmed ? "border-green-500 text-green-600" : ""}
                                         >
-                                            {currentProgress.teacher_confirmed ? "Confirmed" : "Mark Complete"}
+                                            {currentProgress.teacher_confirmed ? "Confirmed" : confirmingCompletion ? "Confirming..." : "Mark Complete"}
                                         </Button>
                                     </div>
                                 )}
@@ -586,8 +728,8 @@ export default function StudentDetail() {
                             <Button variant="outline" onClick={() => setIsProgressDialogOpen(false)}>
                                 Close
                             </Button>
-                            <Button onClick={handleUpdateProgress} disabled={!currentProgress}>
-                                Save Changes
+                            <Button onClick={handleUpdateProgress} disabled={!currentProgress || updatingProgress}>
+                                {updatingProgress ? "Saving..." : "Save Changes"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

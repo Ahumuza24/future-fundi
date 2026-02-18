@@ -21,6 +21,7 @@ from apps.core.models import (
     Session,
     WeeklyPulse,
 )
+from apps.core.roles import UserRole
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -36,7 +37,10 @@ User = get_user_model()
 
 # User and Tenant Serializers for Admin
 class TenantSerializer(serializers.ModelSerializer):
-    """Serializer for Tenant (School) model."""
+    """Serializer for School model.
+
+    Kept as `TenantSerializer` for backward compatibility with existing imports.
+    """
 
     class Meta:
         model = School
@@ -48,12 +52,24 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
 
     tenant = TenantSerializer(read_only=True)
+    school = TenantSerializer(source="tenant", read_only=True)
+    schools = TenantSerializer(source="teacher_schools", many=True, read_only=True)
     tenant_id = serializers.PrimaryKeyRelatedField(
         queryset=School.objects.all(),
         source="tenant",
         write_only=True,
         required=False,
         allow_null=True,
+    )
+    school_id = serializers.PrimaryKeyRelatedField(
+        queryset=School.objects.all(),
+        source="tenant",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    school_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, write_only=True
     )
 
     pathways = serializers.PrimaryKeyRelatedField(
@@ -81,6 +97,10 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "tenant",
             "tenant_id",
+            "school",
+            "school_id",
+            "schools",
+            "school_ids",
             "date_joined",
             "last_login",
             "password",
@@ -88,11 +108,73 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "date_joined", "last_login"]
         extra_kwargs = {"password": {"write_only": True}}
 
+    def validate_school_ids(self, value):
+        if not value:
+            return value
+
+        existing_ids = {
+            str(sid) for sid in School.objects.filter(id__in=value).values_list("id", flat=True)
+        }
+        missing_ids = [str(sid) for sid in value if str(sid) not in existing_ids]
+        if missing_ids:
+            raise serializers.ValidationError(
+                f"Invalid school ids: {', '.join(missing_ids)}"
+            )
+        return value
+
+    def validate(self, attrs):
+        role = attrs.get("role", getattr(self.instance, "role", None))
+        if role != UserRole.TEACHER:
+            return attrs
+
+        tenant = attrs.get("tenant", getattr(self.instance, "tenant", None))
+        school_ids = attrs.get("school_ids")
+
+        effective_school_ids = set()
+        if school_ids is None and self.instance is not None:
+            effective_school_ids.update(self.instance.get_accessible_school_ids())
+        elif school_ids is not None:
+            effective_school_ids.update(str(sid) for sid in school_ids)
+
+        if tenant is not None:
+            effective_school_ids.add(str(tenant.id))
+
+        if not effective_school_ids:
+            raise serializers.ValidationError(
+                {"school_ids": "Teacher accounts must be assigned to at least one school."}
+            )
+
+        return attrs
+
+    def _sync_teacher_schools(self, user, school_ids):
+        """Apply teacher school mappings and keep a primary school for compatibility."""
+        if user.role != UserRole.TEACHER:
+            if school_ids is not None:
+                user.teacher_schools.clear()
+            return
+
+        if school_ids is None:
+            # Keep existing mappings, but make sure primary school is represented.
+            if user.tenant_id and not user.teacher_schools.filter(id=user.tenant_id).exists():
+                user.teacher_schools.add(user.tenant_id)
+            return
+
+        schools = list(School.objects.filter(id__in=school_ids).order_by("name"))
+        user.teacher_schools.set(schools)
+
+        if schools:
+            if not user.tenant_id or user.tenant_id not in {s.id for s in schools}:
+                user.tenant = schools[0]
+                user.save(update_fields=["tenant"])
+        elif user.tenant_id:
+            user.teacher_schools.add(user.tenant_id)
+
     def create(self, validated_data):
         """Create user with hashed password."""
         from apps.core.models import Learner
 
         password = validated_data.pop("password", None)
+        school_ids = validated_data.pop("school_ids", None)
         pathway_ids = validated_data.pop("pathway_ids", [])
         current_class = validated_data.pop("current_class", "")
 
@@ -104,11 +186,13 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
 
         # Assign pathways if applicable
-        if pathway_ids and user.role == "teacher":
+        if pathway_ids and user.role == UserRole.TEACHER:
             user.courses_taught.set(pathway_ids)
 
+        self._sync_teacher_schools(user, school_ids)
+
         # Create Learner profile if role is learner
-        if user.role == "learner":
+        if user.role == UserRole.LEARNER:
             Learner.objects.create(
                 user=user,
                 tenant=user.tenant,
@@ -124,6 +208,7 @@ class UserSerializer(serializers.ModelSerializer):
         from apps.core.models import Learner
 
         password = validated_data.pop("password", None)
+        school_ids = validated_data.pop("school_ids", None)
         pathway_ids = validated_data.pop("pathway_ids", None)
         current_class = validated_data.pop("current_class", None)
 
@@ -134,11 +219,13 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
 
         # Update pathways if provided
-        if pathway_ids is not None and instance.role == "teacher":
+        if pathway_ids is not None and instance.role == UserRole.TEACHER:
             instance.courses_taught.set(pathway_ids)
 
+        self._sync_teacher_schools(instance, school_ids)
+
         # Update Learner profile if applicable
-        if instance.role == "learner" and current_class is not None:
+        if instance.role == UserRole.LEARNER and current_class is not None:
             learner, created = Learner.objects.get_or_create(
                 user=instance,
                 defaults={
@@ -763,6 +850,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
     level_number = serializers.IntegerField(source="level.level_number", read_only=True)
     completion_percentage = serializers.ReadOnlyField()
     requirements = serializers.SerializerMethodField()
+    available_modules = serializers.SerializerMethodField()
 
     class Meta:
         model = LearnerLevelProgress
@@ -772,6 +860,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
             "level_name",
             "level_number",
             "modules_completed",
+            "completed_module_ids",
             "artifacts_submitted",
             "assessment_score",
             "teacher_confirmed",
@@ -779,6 +868,7 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
             "completed_at",
             "completion_percentage",
             "requirements",
+            "available_modules",
             "started_at",
             "updated_at",
         ]
@@ -804,6 +894,24 @@ class LearnerLevelProgressSerializer(serializers.ModelSerializer):
                 "met": obj.assessment_score >= obj.level.required_assessment_score,
             },
         }
+
+    def get_available_modules(self, obj):
+        if not obj.level:
+            return []
+
+        modules_qs = obj.level.required_modules.all().order_by("name")
+        if not modules_qs.exists():
+            modules_qs = obj.level.course.modules.all().order_by("name")
+
+        return [
+            {
+                "id": str(module.id),
+                "name": module.name,
+                "badge_name": module.badge_name,
+                "description": module.description or "",
+            }
+            for module in modules_qs
+        ]
 
 
 class LearnerCourseEnrollmentSerializer(serializers.ModelSerializer):
@@ -1017,8 +1125,8 @@ class BadgeSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and hasattr(request, "user"):
             validated_data["awarded_by"] = request.user
-            # Set tenant from teacher's tenant
-            validated_data["tenant"] = request.user.tenant
+            # Scope badge to selected school context.
+            validated_data["tenant"] = getattr(request, "school", None) or request.user.tenant
         return super().create(validated_data)
 
 
@@ -1105,7 +1213,7 @@ class TeacherStudentSerializer(serializers.ModelSerializer):
 
         total_sessions = Attendance.objects.filter(learner=obj).count()
         if total_sessions == 0:
-            return 100  # No sessions yet, default to 100%
+            return 0  # No attendance records yet.
 
         present_sessions = Attendance.objects.filter(
             learner=obj, status__in=["present", "late"]
@@ -1184,28 +1292,92 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This username is already taken.")
         return value
 
+    def validate(self, attrs):
+        """Enforce password strength and school scoping rules."""
+        password = attrs.get("password", "")
+        validate_password_strength(password)
+
+        request = self.context.get("request")
+        if not request:
+            return attrs
+
+        from apps.core.scope import get_user_allowed_school_ids
+
+        actor = request.user
+        school_id = attrs.get("school_id") or request.data.get("school_id")
+        allowed_school_ids = get_user_allowed_school_ids(actor)
+        context_school = getattr(request, "school", None)
+
+        # Only platform admins can create learners for arbitrary schools.
+        if actor.role != "admin" and not actor.is_superuser:
+            if actor.role == "teacher" and not context_school:
+                raise serializers.ValidationError(
+                    {"school_id": "Select a school context before adding students."}
+                )
+
+            if school_id and str(school_id) not in allowed_school_ids:
+                raise serializers.ValidationError(
+                    {"school_id": "You can only create students in your assigned schools."}
+                )
+            if (
+                actor.role == "teacher"
+                and school_id
+                and context_school
+                and str(school_id) != str(context_school.id)
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "school_id": (
+                            "Selected school does not match your active school context. "
+                            "Switch school first."
+                        )
+                    }
+                )
+            if not school_id and not context_school and not allowed_school_ids:
+                raise serializers.ValidationError(
+                    {"school_id": "Select a school before creating a student."}
+                )
+
+        return attrs
+
     def create(self, validated_data):
         from datetime import date
 
         from apps.core.models import Course, LearnerCourseEnrollment, PodClass, School
+        from apps.core.scope import get_user_allowed_school_ids
         from apps.users.models import User
         from django.db.models import Q
 
-        school_admin = self.context["request"].user
+        request = self.context["request"]
+        school_admin = request.user
+        request_school = getattr(request, "school", None)
+        allowed_school_ids = get_user_allowed_school_ids(school_admin)
         # Robustly get school_id - handle case where field might be stripped
         school_id = validated_data.pop("school_id", None)
-        if not school_id and "school_id" in self.context["request"].data:
-            school_id = self.context["request"].data.get("school_id")
+        if not school_id and "school_id" in request.data:
+            school_id = request.data.get("school_id")
 
-        if school_id:
+        if school_admin.role == "teacher" and request_school:
+            tenant = request_school
+        elif school_id:
             try:
                 # Handle potential UUID string or object
                 sid = str(school_id)
+                if (
+                    school_admin.role != "admin"
+                    and not school_admin.is_superuser
+                    and sid not in allowed_school_ids
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "school_id": "You can only create students in your assigned schools."
+                        }
+                    )
                 tenant = School.objects.get(id=sid)
             except (School.DoesNotExist, ValueError):
                 raise serializers.ValidationError({"school_id": "Invalid school ID"})
         else:
-            tenant = school_admin.tenant
+            tenant = request_school or school_admin.tenant
 
         # Validate that the user has a school/tenant assigned or selected one
         if not tenant:
@@ -1227,10 +1399,12 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
         # Otherwise, keep whatever current_class string was sent (e.g. "P.1")
         if pod_class_id:
             try:
-                pod = PodClass.objects.get(id=pod_class_id)
+                pod = PodClass.objects.get(id=pod_class_id, tenant=tenant)
                 validated_data["current_class"] = pod.name
             except PodClass.DoesNotExist:
-                pass  # Keep current_class as-is
+                raise serializers.ValidationError(
+                    {"pod_class_id": "Invalid class for the selected school."}
+                )
 
         # Auto-set school info
         if tenant:
@@ -1258,14 +1432,16 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
         # Enroll in pathways
         for pid in pathway_ids:
             try:
-                # Find course (Global, Student's Tenant, or Teacher's Tenant)
-                q_filter = Q(tenant=None)
-                if tenant:
-                    q_filter |= Q(tenant=tenant)
-                if school_admin.tenant:
-                    q_filter |= Q(tenant=school_admin.tenant)
-
-                course = Course.objects.filter(q_filter, id=pid).first()
+                if school_admin.role == "teacher":
+                    course = Course.objects.filter(id=pid).first()
+                else:
+                    # Find course (Global, Student's Tenant, or Admin Tenant)
+                    q_filter = Q(tenant=None)
+                    if tenant:
+                        q_filter |= Q(tenant=tenant)
+                    if school_admin.role == "admin" and school_admin.tenant:
+                        q_filter |= Q(tenant=school_admin.tenant)
+                    course = Course.objects.filter(q_filter, id=pid).first()
 
                 if course:
                     first_level = course.levels.order_by("level_number").first()
@@ -1275,7 +1451,7 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
                         current_level=first_level,
                         is_active=True,
                     )
-            except Exception:
-                pass
+            except Course.DoesNotExist:
+                continue
 
         return learner

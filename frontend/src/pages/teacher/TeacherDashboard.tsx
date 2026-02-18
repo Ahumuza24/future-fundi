@@ -292,7 +292,7 @@ export default function TeacherDashboard() {
                                 style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
                             >
                                 <GraduationCap className="h-8 w-8" />
-                                <span className="font-semibold">Microcredentials</span>
+                                <span className="font-semibold">Pathways</span>
                             </Button>
                             <Button
                                 onClick={() => navigate("/teacher/capture-artifact")}

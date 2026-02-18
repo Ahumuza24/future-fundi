@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { schoolApi } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ export default function SchoolStudents() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State (Aligned with ChildManagement logic)
     const [studentForm, setStudentForm] = useState({
@@ -85,19 +87,21 @@ export default function SchoolStudents() {
     }, []);
 
     const handleAddStudent = async () => {
+        if (isSubmitting) return;
+
         // Validation (Parent Logic)
         if (!studentForm.first_name || !studentForm.last_name || !studentForm.username || !studentForm.password) {
-            alert("Please fill in all required fields (Name, Username, Password).");
+            toast.error("Please fill in all required fields (Name, Username, Password).", "Missing Fields");
             return;
         }
 
         if (studentForm.password !== studentForm.password_confirm) {
-            alert("Passwords do not match.");
+            toast.error("Passwords do not match.", "Password Error");
             return;
         }
 
         if (studentForm.password.length < 8) {
-            alert("Password must be at least 8 characters long.");
+            toast.error("Password must be at least 8 characters long.", "Weak Password");
             return;
         }
 
@@ -112,12 +116,13 @@ export default function SchoolStudents() {
             }
             if (age < 6 || age > 18) {
                 // Optional: Ask for confirmation instead of blocking? Parent form blocks. I'll block to match logic.
-                alert("Student must be between 6 and 18 years old.");
+                toast.error("Student must be between 6 and 18 years old.", "Age Validation");
                 return;
             }
         }
 
         try {
+            setIsSubmitting(true);
             const payload: any = {
                 first_name: studentForm.first_name,
                 last_name: studentForm.last_name,
@@ -147,7 +152,7 @@ export default function SchoolStudents() {
                 first_name: "", last_name: "", date_of_birth: "", current_class: "", pod_class_id: "",
                 username: "", password: "", password_confirm: "", consent_media: true, equity_flag: false, pathway_ids: []
             });
-            alert("Student added successfully! They can now log in with the username and password you set.");
+            toast.success("Student added successfully. Login credentials are ready.", "Student Created");
         } catch (error: any) {
             console.error("Failed to add student:", error);
             // Show backend validation errors
@@ -156,10 +161,12 @@ export default function SchoolStudents() {
                 const messages = Object.entries(data)
                     .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
                     .join('\n');
-                alert(`Failed to add student:\n${messages}`);
+                toast.error(messages, "Add Student Failed");
             } else {
-                alert("Failed to add student. Please check input.");
+                toast.error("Failed to add student. Please check input.", "Add Student Failed");
             }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -170,7 +177,7 @@ export default function SchoolStudents() {
                 return { ...prev, pathway_ids: current.filter(cid => cid !== id) };
             } else {
                 if (current.length >= 2) {
-                    alert("Max 2 pathways allowed");
+                    toast.error("You can select a maximum of 2 pathways.", "Selection Limit");
                     return prev;
                 }
                 return { ...prev, pathway_ids: [...current, id] };
@@ -199,6 +206,7 @@ export default function SchoolStudents() {
                     <Button
                         onClick={() => setIsAddOpen(true)}
                         className="bg-[var(--fundi-purple)] hover:opacity-90 text-white gap-2"
+                        disabled={isSubmitting}
                     >
                         <Plus className="h-5 w-5" />
                         Add Student
@@ -370,7 +378,7 @@ export default function SchoolStudents() {
                                         )}
                                         {/* Standard Options (Fallback) */}
                                         <optgroup label="Grades">
-                                            {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"].map(cls => (
+                                            {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12","Grade 13"].map(cls => (
                                                 <option key={cls} value={cls}>{cls}</option>
                                             ))}
                                         </optgroup>
@@ -492,9 +500,9 @@ export default function SchoolStudents() {
                         </div>
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                            <Button onClick={handleAddStudent} className="bg-[var(--fundi-purple)] text-white hover:opacity-90">
-                                Add Student
+                            <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={isSubmitting}>Cancel</Button>
+                            <Button onClick={handleAddStudent} className="bg-[var(--fundi-purple)] text-white hover:opacity-90" disabled={isSubmitting}>
+                                {isSubmitting ? "Saving..." : "Add Student"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

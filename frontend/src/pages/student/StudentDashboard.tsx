@@ -65,7 +65,7 @@ interface DashboardData {
     currentLevelProgress: number;
     color: string;
     icon: string;
-    status: "good" | "warning" | "critical";
+    status: "not_started" | "good" | "warning" | "critical";
     microCredentialsEarned: number;
     totalMicroCredentials: number;
   }>;

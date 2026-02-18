@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from apps.core.models import (
     Activity,
@@ -172,14 +172,24 @@ class ChildViewSet(viewsets.ModelViewSet):
         today = date.today()
 
         # A. Sessions (Classes)
+        session_filters = Q(learners=child)
+        if enrolled_course_ids:
+            session_filters |= Q(module__course__in=enrolled_course_ids)
+
         upcoming_sessions = Session.objects.filter(
-            learners=child, date__gte=today, status="scheduled"
-        ).order_by("date", "start_time")
+            session_filters, date__gte=today, status="scheduled"
+        )
+        if child.tenant_id:
+            upcoming_sessions = upcoming_sessions.filter(tenant_id=child.tenant_id)
+        upcoming_sessions = (
+            upcoming_sessions
+            .select_related("module", "module__course")
+            .distinct()
+            .order_by("date", "start_time")
+        )
 
         # B. General Activities (Events)
-        # Filter: Global activities OR activities for courses the child is enrolled in
         upcoming_events = Activity.objects.filter(
-            Q(course__isnull=True) | Q(course__in=enrolled_course_ids),
             date__gte=today,
             status__in=["upcoming", "ongoing"],
         ).order_by("date", "start_time")
@@ -193,12 +203,12 @@ class ChildViewSet(viewsets.ModelViewSet):
                     "id": str(s.id),
                     "title": s.module.name,
                     "date": s.date,
-                    "time": s.start_time,
-                    "end_time": s.end_time,
+                    "time": s.start_time.strftime("%H:%M:%S") if s.start_time else "",
+                    "end_time": s.end_time.strftime("%H:%M:%S") if s.end_time else "",
                     "type": "Class",
                     "description": s.module.description,
                     "location": "Classroom",
-                    "datetime": f"{s.date}T{s.start_time or '00:00:00'}",
+                    "sort_key": datetime.combine(s.date, s.start_time or time.min),
                 }
             )
 
@@ -208,23 +218,23 @@ class ChildViewSet(viewsets.ModelViewSet):
                     "id": str(a.id),
                     "title": a.name,
                     "date": a.date,
-                    "time": a.start_time,
-                    "end_time": a.end_time,
+                    "time": a.start_time.strftime("%H:%M:%S") if a.start_time else "",
+                    "end_time": a.end_time.strftime("%H:%M:%S") if a.end_time else "",
                     "type": "Event",
                     "description": a.description,
                     "location": a.location,
-                    "datetime": f"{a.date}T{a.start_time or '00:00:00'}",
+                    "sort_key": datetime.combine(a.date, a.start_time or time.min),
                 }
             )
 
         # Sort combined list by datetime
-        combined_activities.sort(key=lambda x: x["datetime"])
+        combined_activities.sort(key=lambda x: x["sort_key"])
 
         # Take top 5 and remove helper field
         upcoming_activities = []
         for item in combined_activities[:5]:
             item_copy = item.copy()
-            del item_copy["datetime"]
+            del item_copy["sort_key"]
             upcoming_activities.append(item_copy)
 
         # 6. Micro Lessons (Placeholders)

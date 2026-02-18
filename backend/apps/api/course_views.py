@@ -88,10 +88,21 @@ class CourseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Course.objects.filter(is_active=True)
 
-        # Filter by tenant (school-specific or global)
+        # Teachers can view all pathways in the system.
         user = self.request.user
-        if user.is_authenticated and user.tenant:
-            queryset = queryset.filter(Q(tenant__isnull=True) | Q(tenant=user.tenant))
+        if user.is_authenticated and user.role == "teacher":
+            return queryset.prefetch_related("levels")
+
+        # Filter by school context (school-specific or global).
+        request_school = getattr(self.request, "school", None)
+
+        # Platform admins without school scoping can view all active courses.
+        if user.is_authenticated and user.role == "admin" and not user.tenant_id and request_school is None:
+            return queryset.prefetch_related("levels")
+
+        school = request_school or getattr(user, "tenant", None)
+        if school:
+            queryset = queryset.filter(Q(tenant__isnull=True) | Q(tenant=school))
         else:
             queryset = queryset.filter(tenant__isnull=True)
 
@@ -388,8 +399,43 @@ class LearnerProgressViewSet(viewsets.ModelViewSet):
     queryset = LearnerLevelProgress.objects.all()
     serializer_class = LearnerLevelProgressSerializer
 
+    def get_queryset(self):
+        """Restrict progress visibility by role."""
+        user = self.request.user
+        queryset = LearnerLevelProgress.objects.select_related(
+            "enrollment", "enrollment__learner", "level"
+        )
+
+        # Admins can see all progress
+        if user.role == "admin":
+            return queryset
+
+        # Teachers can only access learners enrolled in their assigned courses
+        if user.role == "teacher":
+            learner_ids = LearnerCourseEnrollment.objects.filter(
+                course__teachers=user, is_active=True
+            ).values_list("learner_id", flat=True)
+            return queryset.filter(enrollment__learner_id__in=learner_ids)
+
+        # Parents can only access their children's progress
+        if user.role == "parent":
+            return queryset.filter(enrollment__learner__parent=user)
+
+        # Learners can only access their own progress
+        if user.role == "learner" and hasattr(user, "learner_profile"):
+            return queryset.filter(enrollment__learner=user.learner_profile)
+
+        return queryset.none()
+
     def get_permissions(self):
-        if self.action in ["update", "partial_update"]:
+        if self.action in [
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "update_progress",
+            "confirm_completion",
+        ]:
             return [IsTeacher()]
         return [permissions.IsAuthenticated()]
 
@@ -408,12 +454,48 @@ class LearnerProgressViewSet(viewsets.ModelViewSet):
         progress = self.get_object()
 
         modules = request.data.get("modules_completed")
+        completed_module_ids = request.data.get("completed_module_ids")
         artifacts = request.data.get("artifacts_submitted")
         score = request.data.get("assessment_score")
         confirmed = request.data.get("teacher_confirmed")
 
-        if modules is not None:
+        if completed_module_ids is not None:
+            if not isinstance(completed_module_ids, list):
+                return Response(
+                    {"error": "completed_module_ids must be a list."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            level_modules = progress.level.required_modules.all()
+            if not level_modules.exists():
+                level_modules = Module.objects.filter(course=progress.level.course)
+
+            allowed_ids = {str(mid) for mid in level_modules.values_list("id", flat=True)}
+            normalized_ids: list[str] = []
+            invalid_ids: list[str] = []
+
+            for module_id in completed_module_ids:
+                sid = str(module_id)
+                if sid in allowed_ids:
+                    if sid not in normalized_ids:
+                        normalized_ids.append(sid)
+                else:
+                    invalid_ids.append(sid)
+
+            if invalid_ids:
+                return Response(
+                    {
+                        "error": "Some modules are not valid for this level/course.",
+                        "invalid_module_ids": invalid_ids,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            progress.completed_module_ids = normalized_ids
+            progress.modules_completed = len(normalized_ids)
+        elif modules is not None:
             progress.modules_completed = int(modules)
+            progress.completed_module_ids = []
         if artifacts is not None:
             progress.artifacts_submitted = int(artifacts)
         if score is not None:
@@ -484,17 +566,27 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Achievement.objects.none()
 
+    def _accessible_learners_queryset(self):
+        """Learner set the current user is allowed to access."""
+        user = self.request.user
+
+        if user.role == "admin":
+            return Learner.objects.all()
+        if user.role == "parent":
+            return Learner.objects.filter(parent=user)
+        if user.role == "learner" and hasattr(user, "learner_profile"):
+            return Learner.objects.filter(id=user.learner_profile.id)
+        return Learner.objects.none()
+
     @action(
         detail=False, methods=["get"], url_path="for-learner/(?P<learner_id>[^/.]+)"
     )
     def for_learner(self, request, learner_id=None):
         """Get achievements for a specific learner."""
-        try:
-            learner = Learner.objects.get(id=learner_id)
-        except Learner.DoesNotExist:
+        if not self._accessible_learners_queryset().filter(id=learner_id).exists():
             return Response({"error": "Learner not found"}, status=404)
 
-        achievements = Achievement.objects.filter(learner=learner)
+        achievements = self.get_queryset().filter(learner_id=learner_id)
         serializer = AchievementSerializer(achievements, many=True)
         return Response(serializer.data)
 

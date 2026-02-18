@@ -1,7 +1,7 @@
 """Django settings for Future Fundi Dashboard.
 
 Security-first, scale-ready configuration: DRF, JWT, CORS,
-PostgreSQL, Redis cache, and multi-tenant groundwork.
+PostgreSQL, Redis cache, and school-based access control.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "replace-this-in-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -50,7 +51,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.core.middleware.TenantMiddleware",
+    "apps.core.middleware.SchoolContextMiddleware",
 ]
 
 ROOT_URLCONF = "fundi.urls"
@@ -74,21 +75,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "fundi.wsgi.application"
 ASGI_APPLICATION = "fundi.asgi.application"
 
-# Database (write + optional read replica placeholders)
-# Database (write + optional read replica placeholders)
+# Database
 if os.getenv("USE_SQLITE", "false").lower() == "true":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
-        },
-        "read_replica": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-            "TEST": {
-                "MIRROR": "default",
-            },
-        },
+        }
     }
 else:
     DATABASES = {
@@ -100,8 +93,13 @@ else:
             "HOST": os.getenv("POSTGRES_HOST", "localhost"),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
             "CONN_MAX_AGE": 600,
-        },
-        "read_replica": {
+        }
+    }
+
+# Optional read-replica mode. Disabled by default to keep local/dev setup simple.
+USE_READ_REPLICA = os.getenv("USE_READ_REPLICA", "false").lower() == "true"
+if USE_READ_REPLICA:
+    DATABASES["read_replica"] = {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.getenv("POSTGRES_REPLICA_DB", os.getenv("POSTGRES_DB", "fundi")),
             "USER": os.getenv(
@@ -117,7 +115,9 @@ else:
                 "POSTGRES_REPLICA_PORT", os.getenv("POSTGRES_PORT", "5432")
             ),
             "CONN_MAX_AGE": 600,
-        },
+            "TEST": {
+                "MIRROR": "default",
+            },
     }
 
 AUTH_USER_MODEL = "users.User"
@@ -185,6 +185,9 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"
     ","
 )
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-school-id",
+]
 
 # CSRF Trusted Origins (Required for Django admin in production with HTTPS)
 # This prevents "Bad Request (400)" errors when accessing /admin/
@@ -230,5 +233,7 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# DB router for read/write split (optional usage; can be enabled in DATABASE_ROUTERS)
-DATABASE_ROUTERS = ["apps.core.db_router.PrimaryReplicaRouter"]
+# Read/write split routing (enabled only when read-replica mode is enabled).
+DATABASE_ROUTERS = (
+    ["apps.core.db_router.PrimaryReplicaRouter"] if USE_READ_REPLICA else []
+)

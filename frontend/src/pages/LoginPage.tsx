@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api";
+import { setSelectedTeacherSchool } from "@/lib/auth";
 import { useAuthStore } from "@/lib/store";
 import { Loader2, AlertCircle } from "lucide-react";
 
@@ -28,17 +29,36 @@ const LoginPage = () => {
         throw new Error("User data not received");
       }
 
-      login(access, refresh, user);
+      const resolvedUser = user.user || user;
+      login(access, refresh, resolvedUser);
 
       // Redirect based on role
-      // Redirect based on role
-      const role = user.user?.role || user.role || "learner";
+      const role = resolvedUser.role || "learner";
       if (role === "learner") {
         navigate("/student");
       } else if (role === "parent") {
         navigate("/parent");
       } else if (role === "teacher") {
-        navigate("/teacher");
+        const teacherSchools = Array.isArray(resolvedUser.teacher_schools)
+          ? resolvedUser.teacher_schools
+          : [];
+
+        if (teacherSchools.length > 1) {
+          localStorage.removeItem("selected_school_id");
+          localStorage.removeItem("selected_school_name");
+          navigate("/teacher/select-school");
+        } else if (teacherSchools.length === 1) {
+          setSelectedTeacherSchool(teacherSchools[0].id, teacherSchools[0].name);
+          navigate("/teacher");
+        } else if (resolvedUser.school_id) {
+          setSelectedTeacherSchool(
+            resolvedUser.school_id,
+            resolvedUser.school_name || resolvedUser.tenant_name
+          );
+          navigate("/teacher");
+        } else {
+          navigate("/teacher/select-school");
+        }
       } else if (role === "leader") {
         navigate("/leader");
       } else if (role === "admin") {
@@ -184,4 +204,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

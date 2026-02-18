@@ -215,6 +215,21 @@ const ParentPortal = () => {
     "var(--fundi-yellow)"
   ];
 
+  const formatActivityDate = (value: string, pattern: string, fallback: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return fallback;
+    }
+    return format(parsed, pattern);
+  };
+
+  const formatActivityTime = (value?: string | null) => {
+    if (!value) {
+      return "TBD";
+    }
+    return value.substring(0, 5);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gray-50/30">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -481,16 +496,20 @@ const ParentPortal = () => {
                             className="p-4 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group"
                           >
                             <div className="flex flex-col items-center justify-center w-12 h-12 bg-[var(--fundi-orange)]/10 text-[var(--fundi-orange)] rounded-lg flex-shrink-0 group-hover:bg-[var(--fundi-orange)] group-hover:text-white transition-colors">
-                              <span className="text-xs font-bold uppercase">{format(new Date(activity.date), 'MMM')}</span>
-                              <span className="text-lg font-bold">{format(new Date(activity.date), 'd')}</span>
+                              <span className="text-xs font-bold uppercase">
+                                {formatActivityDate(activity.date, 'MMM', '--')}
+                              </span>
+                              <span className="text-lg font-bold">
+                                {formatActivityDate(activity.date, 'd', '--')}
+                              </span>
                             </div>
                             <div className="flex-1">
                               <h5 className="font-bold text-gray-900 group-hover:text-[var(--fundi-orange)] transition-colors">{activity.title}</h5>
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {activity.time.substring(0, 5)}
-                                  {activity.end_time && ` - ${activity.end_time.substring(0, 5)}`}
+                                  {formatActivityTime(activity.time)}
+                                  {activity.end_time && ` - ${formatActivityTime(activity.end_time)}`}
                                 </span>
                                 <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
                                   {activity.type}
@@ -682,11 +701,11 @@ const ParentPortal = () => {
                 <div>
                   <span className="font-semibold block text-gray-700">Date & Time</span>
                   <p className="text-gray-600">
-                    {selectedActivity && format(new Date(selectedActivity.date), 'EEEE, MMMM do, yyyy')}
+                    {selectedActivity && formatActivityDate(selectedActivity.date, 'EEEE, MMMM do, yyyy', 'Date not set')}
                   </p>
                   <p className="text-gray-600">
-                    {selectedActivity?.time.substring(0, 5)}
-                    {selectedActivity?.end_time && ` - ${selectedActivity?.end_time.substring(0, 5)}`}
+                    {formatActivityTime(selectedActivity?.time)}
+                    {selectedActivity?.end_time && ` - ${formatActivityTime(selectedActivity?.end_time)}`}
                   </p>
                 </div>
               </div>
