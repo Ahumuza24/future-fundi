@@ -30,7 +30,7 @@ import {
     Users, UserPlus, Search, Filter, Download, Upload,
     Edit, Trash2, CheckCircle, XCircle, RefreshCw, AlertCircle
 } from "lucide-react";
-import { adminApi, courseApi } from "@/lib/api";
+import { adminApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
@@ -53,13 +53,16 @@ interface User {
         id: string;
         name: string;
     };
+    schools?: Array<{
+        id: string;
+        name: string;
+    }>;
     date_joined: string;
     last_login: string | null;
-    pathways?: string[]; // Add pathways field
     current_class?: string;
 }
 
-interface Course {
+interface School {
     id: string;
     name: string;
 }
@@ -99,7 +102,7 @@ export default function UserManagement() {
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-    const [availablePathways, setAvailablePathways] = useState<Course[]>([]); // Store available pathways
+    const [availableSchools, setAvailableSchools] = useState<School[]>([]);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -110,22 +113,22 @@ export default function UserManagement() {
         role: 'learner' as User['role'],
         password: '',
         is_active: true,
-        pathway_ids: [] as string[], // Add pathway_ids state
+        school_ids: [] as string[],
         current_class: ''
     });
 
     useEffect(() => {
         fetchUsers();
         fetchStats();
-        fetchPathways(); // Fetch pathways on load
+        fetchSchools();
     }, [roleFilter, statusFilter]);
 
-    const fetchPathways = async () => {
+    const fetchSchools = async () => {
         try {
-            const response = await courseApi.getAll();
-            setAvailablePathways(Array.isArray(response.data) ? response.data : response.data.results || []);
+            const response = await adminApi.tenants.getAll();
+            setAvailableSchools(Array.isArray(response.data) ? response.data : response.data.results || []);
         } catch (error) {
-            console.error('Failed to fetch pathways:', error);
+            console.error('Failed to fetch schools:', error);
         }
     };
 
@@ -183,10 +186,28 @@ export default function UserManagement() {
         setTimeout(() => setMessage(null), 3000);
     };
 
+    const buildPayload = () => {
+        if (formData.role === 'teacher' && formData.school_ids.length === 0) {
+            showMessage('error', 'Please assign at least one school to this teacher');
+            return null;
+        }
+
+        const payload: any = { ...formData };
+        if (payload.role !== 'teacher') {
+            delete payload.school_ids;
+        }
+        if (!payload.password) {
+            delete payload.password;
+        }
+        return payload;
+    };
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await adminApi.users.create(formData);
+            const payload = buildPayload();
+            if (!payload) return;
+            await adminApi.users.create(payload);
             showMessage('success', 'User created successfully');
             setIsCreateDialogOpen(false);
             resetForm();
@@ -203,7 +224,9 @@ export default function UserManagement() {
         if (!selectedUser) return;
 
         try {
-            await adminApi.users.update(selectedUser.id, formData);
+            const payload = buildPayload();
+            if (!payload) return;
+            await adminApi.users.update(selectedUser.id, payload);
             showMessage('success', 'User updated successfully');
             setIsEditDialogOpen(false);
             resetForm();
@@ -290,7 +313,7 @@ export default function UserManagement() {
             role: 'learner',
             password: '',
             is_active: true,
-            pathway_ids: [],
+            school_ids: [],
             current_class: '',
         });
         setSelectedUser(null);
@@ -306,7 +329,7 @@ export default function UserManagement() {
             role: user.role,
             password: '',
             is_active: user.is_active,
-            pathway_ids: user.pathways || [], // Populate existing pathways
+            school_ids: (user.schools || []).map((school) => school.id),
             current_class: user.current_class || '',
         });
         setIsEditDialogOpen(true);
@@ -678,36 +701,36 @@ export default function UserManagement() {
 
                                 {formData.role === 'teacher' && (
                                     <div>
-                                        <Label>Assigned Pathways (Courses)</Label>
+                                        <Label>Assigned Schools</Label>
                                         <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 mt-1.5 bg-white">
-                                            {availablePathways.length === 0 ? (
-                                                <p className="text-sm text-gray-500">No pathways available.</p>
+                                            {availableSchools.length === 0 ? (
+                                                <p className="text-sm text-gray-500">No schools available.</p>
                                             ) : (
-                                                availablePathways.map(pathway => (
-                                                    <div key={pathway.id} className="flex items-center space-x-2">
+                                                availableSchools.map((school) => (
+                                                    <div key={school.id} className="flex items-center space-x-2">
                                                         <input
                                                             type="checkbox"
-                                                            id={`pathway-${pathway.id}`}
-                                                            checked={formData.pathway_ids.includes(pathway.id)}
+                                                            id={`school-${school.id}`}
+                                                            checked={formData.school_ids.includes(school.id)}
                                                             onChange={(e) => {
                                                                 const checked = e.target.checked;
                                                                 setFormData(prev => ({
                                                                     ...prev,
-                                                                    pathway_ids: checked
-                                                                        ? [...(prev.pathway_ids || []), pathway.id]
-                                                                        : (prev.pathway_ids || []).filter(id => id !== pathway.id)
+                                                                    school_ids: checked
+                                                                        ? [...(prev.school_ids || []), school.id]
+                                                                        : (prev.school_ids || []).filter(id => id !== school.id)
                                                                 }));
                                                             }}
                                                             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <label htmlFor={`pathway-${pathway.id}`} className="text-sm cursor-pointer select-none">
-                                                            {pathway.name}
+                                                        <label htmlFor={`school-${school.id}`} className="text-sm cursor-pointer select-none">
+                                                            {school.name}
                                                         </label>
                                                     </div>
                                                 ))
                                             )}
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Select the pathways this teacher is qualified to teach.</p>
+                                        <p className="text-xs text-gray-500 mt-1">Select one or more schools for this teacher.</p>
                                     </div>
                                 )}
 
@@ -853,30 +876,30 @@ export default function UserManagement() {
 
                                 {formData.role === 'teacher' && (
                                     <div>
-                                        <Label>Assigned Pathways (Courses)</Label>
+                                        <Label>Assigned Schools</Label>
                                         <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 mt-1.5 bg-white">
-                                            {availablePathways.length === 0 ? (
-                                                <p className="text-sm text-gray-500">No pathways available.</p>
+                                            {availableSchools.length === 0 ? (
+                                                <p className="text-sm text-gray-500">No schools available.</p>
                                             ) : (
-                                                availablePathways.map(pathway => (
-                                                    <div key={pathway.id} className="flex items-center space-x-2">
+                                                availableSchools.map((school) => (
+                                                    <div key={school.id} className="flex items-center space-x-2">
                                                         <input
                                                             type="checkbox"
-                                                            id={`edit-pathway-${pathway.id}`}
-                                                            checked={(formData.pathway_ids || []).includes(pathway.id)}
+                                                            id={`edit-school-${school.id}`}
+                                                            checked={(formData.school_ids || []).includes(school.id)}
                                                             onChange={(e) => {
                                                                 const checked = e.target.checked;
                                                                 setFormData(prev => ({
                                                                     ...prev,
-                                                                    pathway_ids: checked
-                                                                        ? [...(prev.pathway_ids || []), pathway.id]
-                                                                        : (prev.pathway_ids || []).filter(id => id !== pathway.id)
+                                                                    school_ids: checked
+                                                                        ? [...(prev.school_ids || []), school.id]
+                                                                        : (prev.school_ids || []).filter(id => id !== school.id)
                                                                 }));
                                                             }}
                                                             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <label htmlFor={`edit-pathway-${pathway.id}`} className="text-sm cursor-pointer select-none">
-                                                            {pathway.name}
+                                                        <label htmlFor={`edit-school-${school.id}`} className="text-sm cursor-pointer select-none">
+                                                            {school.name}
                                                         </label>
                                                     </div>
                                                 ))

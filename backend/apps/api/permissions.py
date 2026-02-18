@@ -10,14 +10,28 @@ Roles:
 
 from __future__ import annotations
 
+from apps.core.roles import UserRole
+from apps.core.scope import is_global_admin
 from rest_framework import permissions
+
+
+def _same_school(user, obj, school_id=None) -> bool:
+    effective_school_id = school_id or getattr(user, "tenant_id", None)
+    if not effective_school_id:
+        return False
+
+    if hasattr(obj, "tenant"):
+        return str(obj.tenant_id) == str(effective_school_id)
+    if hasattr(obj, "learner") and hasattr(obj.learner, "tenant_id"):
+        return str(obj.learner.tenant_id) == str(effective_school_id)
+    return False
 
 
 class IsLearner(permissions.BasePermission):
     """Permission for learners to access their own data."""
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == "learner"
+        return request.user.is_authenticated and request.user.role == UserRole.LEARNER
 
     def has_object_permission(self, request, view, obj):
         # Learners can only access their own learner profile
@@ -32,23 +46,18 @@ class IsTeacher(permissions.BasePermission):
     """Permission for teachers to access learner data in their classes."""
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == "teacher"
+        return request.user.is_authenticated and request.user.role == UserRole.TEACHER
 
     def has_object_permission(self, request, view, obj):
-        # Teachers can access any learner in their tenant
-        # In the future, this can be restricted to learners in their classes
-        if hasattr(obj, "tenant"):
-            return obj.tenant == request.user.tenant
-        if hasattr(obj, "learner") and hasattr(obj.learner, "tenant"):
-            return obj.learner.tenant == request.user.tenant
-        return False
+        school = getattr(request, "school", None)
+        return _same_school(request.user, obj, getattr(school, "id", None))
 
 
 class IsParent(permissions.BasePermission):
     """Permission for parents to access their child's data."""
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == "parent"
+        return request.user.is_authenticated and request.user.role == UserRole.PARENT
 
     def has_object_permission(self, request, view, obj):
         # Parents can only access their child's learner profile
@@ -74,20 +83,23 @@ class IsParent(permissions.BasePermission):
 
 
 class IsLeader(permissions.BasePermission):
-    """Permission for school leaders/admins to access all data in their tenant."""
+    """Permission for school leaders/admins to access all data in their school."""
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in [
-            "leader",
-            "admin",
+            UserRole.LEADER,
+            UserRole.ADMIN,
         ]
 
     def has_object_permission(self, request, view, obj):
-        # Leaders can access any data in their tenant
-        if hasattr(obj, "tenant"):
-            return obj.tenant == request.user.tenant
-        if hasattr(obj, "learner") and hasattr(obj.learner, "tenant"):
-            return obj.learner.tenant == request.user.tenant
+        # Platform admins have global access.
+        if is_global_admin(request.user):
+            return True
+        if request.user.role == UserRole.ADMIN and request.user.tenant_id:
+            return _same_school(request.user, obj, request.user.tenant_id)
+        if request.user.role == UserRole.LEADER:
+            school = getattr(request, "school", None)
+            return _same_school(request.user, obj, getattr(school, "id", None))
         return True  # Allow if no tenant check needed
 
 
@@ -96,18 +108,16 @@ class IsTeacherOrLeader(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in [
-            "teacher",
-            "leader",
-            "admin",
+            UserRole.TEACHER,
+            UserRole.LEADER,
+            UserRole.ADMIN,
         ]
 
     def has_object_permission(self, request, view, obj):
-        if request.user.role in ["leader", "admin"]:
+        if is_global_admin(request.user):
             return True
-        # Teacher permission check
-        if hasattr(obj, "tenant"):
-            return obj.tenant == request.user.tenant
-        return False
+        school = getattr(request, "school", None)
+        return _same_school(request.user, obj, getattr(school, "id", None))
 
 
 class IsLearnerOrParent(permissions.BasePermission):
@@ -115,12 +125,12 @@ class IsLearnerOrParent(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in [
-            "learner",
-            "parent",
+            UserRole.LEARNER,
+            UserRole.PARENT,
         ]
 
     def has_object_permission(self, request, view, obj):
-        if request.user.role == "learner":
+        if request.user.role == UserRole.LEARNER:
             # Learner can access their own data
             if hasattr(obj, "user"):
                 return obj.user == request.user
@@ -128,7 +138,7 @@ class IsLearnerOrParent(permissions.BasePermission):
                 return obj.learner.user == request.user
 
         # Parent permission check
-        if request.user.role == "parent":
+        if request.user.role == UserRole.PARENT:
             from apps.core.models import ParentContact
 
             if hasattr(obj, "learner"):
@@ -151,11 +161,11 @@ class IsLearnerOrParent(permissions.BasePermission):
 
 
 class IsSchoolAdmin(permissions.BasePermission):
-    """Permission for school admins to access all data in their tenant."""
+    """Permission for school admins to access all data in their school."""
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
-            request.user.role == "school" or request.user.is_superuser
+            request.user.role == UserRole.SCHOOL or request.user.is_superuser
         )
 
     def has_object_permission(self, request, view, obj):
@@ -163,8 +173,5 @@ class IsSchoolAdmin(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
-        if hasattr(obj, "tenant"):
-            return obj.tenant == request.user.tenant
-        if hasattr(obj, "learner") and hasattr(obj.learner, "tenant"):
-            return obj.learner.tenant == request.user.tenant
-        return False
+        school = getattr(request, "school", None)
+        return _same_school(request.user, obj, getattr(school, "id", None))

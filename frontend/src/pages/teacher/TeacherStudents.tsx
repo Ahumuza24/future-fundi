@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { teacherApi, courseApi } from "@/lib/api";
+import { courseApi, teacherApi } from "@/lib/api";
+import { getSelectedTeacherSchoolId } from "@/lib/auth";
+import { toast } from "@/lib/toast";
 import {
     Users,
     Search,
@@ -58,19 +60,29 @@ export default function TeacherStudents() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [studentsRes, coursesRes] = await Promise.all([
+            const [studentsRes, pathwaysRes] = await Promise.all([
                 teacherApi.students.getAll(),
                 courseApi.getAll(),
             ]);
 
-            // Ensure we always have an array for students
+            const selectedSchoolIdFromApi = studentsRes.data?.selected_school_id;
+            if (!selectedSchoolIdFromApi && !getSelectedTeacherSchoolId()) {
+                toast.info("Select a school to view students.", "School Context Required");
+                navigate("/teacher/select-school");
+                return;
+            }
+
+            // Ensure we always have an array for students/courses.
             const studentsData = Array.isArray(studentsRes.data)
                 ? studentsRes.data
-                : (studentsRes.data?.results || []);
+                : (studentsRes.data?.students || []);
+            const fallbackCourses = Array.isArray(pathwaysRes.data)
+                ? pathwaysRes.data
+                : (pathwaysRes.data?.results || []);
 
-            const coursesData = Array.isArray(coursesRes.data)
-                ? coursesRes.data
-                : (coursesRes.data?.results || []);
+            const coursesData = Array.isArray(studentsRes.data?.courses) && studentsRes.data.courses.length > 0
+                ? studentsRes.data.courses
+                : fallbackCourses;
 
             setStudents(studentsData);
             setCourses(coursesData);
@@ -334,6 +346,7 @@ export default function TeacherStudents() {
                 open={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
                 onSuccess={() => {
+                    setSearchQuery("");
                     fetchData();
                 }}
                 courses={courses}

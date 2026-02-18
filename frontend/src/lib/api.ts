@@ -8,14 +8,26 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+const withSelectedSchool = <T extends Record<string, any>>(payload: T = {} as T): T & { school_id?: string } => {
+  const selectedSchoolId = localStorage.getItem('selected_school_id');
+  if (!selectedSchoolId) {
+    return payload;
+  }
+  return { ...payload, school_id: selectedSchoolId };
+};
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('access_token');
+    const selectedSchoolId = localStorage.getItem('selected_school_id');
     if (token) {
       if (config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
       }
+    }
+    if (selectedSchoolId && config.headers) {
+      config.headers['X-School-ID'] = selectedSchoolId;
     }
     return config;
   },
@@ -161,16 +173,16 @@ export const childApi = {
   getSummary: () => api.get('/api/children/summary/'),
 };
 
-// Teacher API
+  // Teacher API
 export const teacherApi = {
   // Dashboard
-  getDashboard: () => api.get('/api/teacher/sessions/dashboard/'),
+  getDashboard: () => api.get('/api/teacher/sessions/dashboard/', { params: withSelectedSchool({}) }),
   
   // Sessions
-  getSessions: () => api.get('/api/teacher/sessions/'),
-  getTodaySessions: () => api.get('/api/teacher/sessions/today/'),
-  getUpcomingSessions: () => api.get('/api/teacher/sessions/upcoming/'),
-  getSession: (id: string) => api.get(`/api/teacher/sessions/${id}/`),
+  getSessions: () => api.get('/api/teacher/sessions/', { params: withSelectedSchool({}) }),
+  getTodaySessions: () => api.get('/api/teacher/sessions/today/', { params: withSelectedSchool({}) }),
+  getUpcomingSessions: () => api.get('/api/teacher/sessions/upcoming/', { params: withSelectedSchool({}) }),
+  getSession: (id: string) => api.get(`/api/teacher/sessions/${id}/`, { params: withSelectedSchool({}) }),
   startSession: (id: string) => api.post(`/api/teacher/sessions/${id}/start/`),
   completeSession: (id: string) => api.post(`/api/teacher/sessions/${id}/complete/`),
   
@@ -179,55 +191,55 @@ export const teacherApi = {
     learner_id: string;
     status: 'present' | 'absent' | 'late' | 'excused';
     notes?: string;
-  }>) => api.post(`/api/teacher/sessions/${sessionId}/mark-attendance/`, { attendance }),
+  }>) => api.post(`/api/teacher/sessions/${sessionId}/mark-attendance/`, withSelectedSchool({ attendance })),
   
   // Quick Artifacts
-  getPendingArtifacts: () => api.get('/api/teacher/quick-artifacts/pending/'),
+  getPendingArtifacts: () => api.get('/api/teacher/quick-artifacts/pending/', { params: withSelectedSchool({}) }),
   captureArtifact: (data: {
     learner: string;
     title: string;
     reflection?: string;
     media_refs?: any[];
-  }) => api.post('/api/teacher/quick-artifacts/', data),
+  }) => api.post('/api/teacher/quick-artifacts/', withSelectedSchool(data)),
 
   // Badge Management
   badges: {
-    getAll: () => api.get('/api/teacher/badges/'),
+    getAll: () => api.get('/api/teacher/badges/', { params: withSelectedSchool({}) }),
     award: (data: {
       learner: string;
       badge_name: string;
       description?: string;
       module?: string;
-    }) => api.post('/api/teacher/badges/award/', data),
-    getLearnerBadges: (learnerId: string) => api.get(`/api/teacher/badges/learner/${learnerId}/`),
-    getAvailable: () => api.get('/api/teacher/badges/available/'),
+    }) => api.post('/api/teacher/badges/award/', withSelectedSchool(data)),
+    getLearnerBadges: (learnerId: string) => api.get(`/api/teacher/badges/learner/${learnerId}/`, { params: withSelectedSchool({}) }),
+    getAvailable: () => api.get('/api/teacher/badges/available/', { params: withSelectedSchool({}) }),
   },
 
   // Student Management
   students: {
     getAll: (params?: { search?: string; course_id?: string }) =>
-      api.get('/api/teacher/students/', { params }),
-    getById: (id: string) => api.get(`/api/teacher/students/${id}/`),
-    create: (data: any) => api.post('/api/teacher/students/', data),
-    getSchools: () => api.get('/api/teacher/students/schools/'),
+      api.get('/api/teacher/students/', { params: withSelectedSchool(params || {}) }),
+    getById: (id: string) => api.get(`/api/teacher/students/${id}/`, { params: withSelectedSchool({}) }),
+    create: (data: any) => api.post('/api/teacher/students/', withSelectedSchool(data)),
+    getSchools: () => api.get('/api/teacher/students/schools/', { params: withSelectedSchool({}) }),
     enroll: (data: {
       learner_id: string;
       course_id: string;
       level_id?: string;
-    }) => api.post('/api/teacher/students/enroll/', data),
+    }) => api.post('/api/teacher/students/enroll/', withSelectedSchool(data)),
   },
 
   // Credential Management
   credentials: {
-    getAll: () => api.get('/api/teacher/credentials/'),
+    getAll: () => api.get('/api/teacher/credentials/', { params: withSelectedSchool({}) }),
     award: (data: {
       learner: string;
       name: string;
       issuer?: string;
       issued_at?: string;
-    }) => api.post('/api/teacher/credentials/award/', data),
+    }) => api.post('/api/teacher/credentials/award/', withSelectedSchool(data)),
     getLearnerCredentials: (learnerId: string) =>
-      api.get(`/api/teacher/credentials/learner/${learnerId}/`),
+      api.get(`/api/teacher/credentials/learner/${learnerId}/`, { params: withSelectedSchool({}) }),
   },
 };
 

@@ -88,10 +88,21 @@ class CourseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Course.objects.filter(is_active=True)
 
-        # Filter by tenant (school-specific or global)
+        # Teachers can view all pathways in the system.
         user = self.request.user
-        if user.is_authenticated and user.tenant:
-            queryset = queryset.filter(Q(tenant__isnull=True) | Q(tenant=user.tenant))
+        if user.is_authenticated and user.role == "teacher":
+            return queryset.prefetch_related("levels")
+
+        # Filter by school context (school-specific or global).
+        request_school = getattr(self.request, "school", None)
+
+        # Platform admins without school scoping can view all active courses.
+        if user.is_authenticated and user.role == "admin" and not user.tenant_id and request_school is None:
+            return queryset.prefetch_related("levels")
+
+        school = request_school or getattr(user, "tenant", None)
+        if school:
+            queryset = queryset.filter(Q(tenant__isnull=True) | Q(tenant=school))
         else:
             queryset = queryset.filter(tenant__isnull=True)
 
@@ -388,8 +399,43 @@ class LearnerProgressViewSet(viewsets.ModelViewSet):
     queryset = LearnerLevelProgress.objects.all()
     serializer_class = LearnerLevelProgressSerializer
 
+    def get_queryset(self):
+        """Restrict progress visibility by role."""
+        user = self.request.user
+        queryset = LearnerLevelProgress.objects.select_related(
+            "enrollment", "enrollment__learner", "level"
+        )
+
+        # Admins can see all progress
+        if user.role == "admin":
+            return queryset
+
+        # Teachers can only access learners enrolled in their assigned courses
+        if user.role == "teacher":
+            learner_ids = LearnerCourseEnrollment.objects.filter(
+                course__teachers=user, is_active=True
+            ).values_list("learner_id", flat=True)
+            return queryset.filter(enrollment__learner_id__in=learner_ids)
+
+        # Parents can only access their children's progress
+        if user.role == "parent":
+            return queryset.filter(enrollment__learner__parent=user)
+
+        # Learners can only access their own progress
+        if user.role == "learner" and hasattr(user, "learner_profile"):
+            return queryset.filter(enrollment__learner=user.learner_profile)
+
+        return queryset.none()
+
     def get_permissions(self):
-        if self.action in ["update", "partial_update"]:
+        if self.action in [
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "update_progress",
+            "confirm_completion",
+        ]:
             return [IsTeacher()]
         return [permissions.IsAuthenticated()]
 
@@ -484,17 +530,27 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Achievement.objects.none()
 
+    def _accessible_learners_queryset(self):
+        """Learner set the current user is allowed to access."""
+        user = self.request.user
+
+        if user.role == "admin":
+            return Learner.objects.all()
+        if user.role == "parent":
+            return Learner.objects.filter(parent=user)
+        if user.role == "learner" and hasattr(user, "learner_profile"):
+            return Learner.objects.filter(id=user.learner_profile.id)
+        return Learner.objects.none()
+
     @action(
         detail=False, methods=["get"], url_path="for-learner/(?P<learner_id>[^/.]+)"
     )
     def for_learner(self, request, learner_id=None):
         """Get achievements for a specific learner."""
-        try:
-            learner = Learner.objects.get(id=learner_id)
-        except Learner.DoesNotExist:
+        if not self._accessible_learners_queryset().filter(id=learner_id).exists():
             return Response({"error": "Learner not found"}, status=404)
 
-        achievements = Achievement.objects.filter(learner=learner)
+        achievements = self.get_queryset().filter(learner_id=learner_id)
         serializer = AchievementSerializer(achievements, many=True)
         return Response(serializer.data)
 

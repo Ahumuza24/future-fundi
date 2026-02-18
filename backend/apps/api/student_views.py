@@ -1,6 +1,6 @@
 """Student dashboard API endpoint."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from apps.api.serializers import (
     AchievementSerializer,
@@ -54,10 +54,7 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             .select_related("course", "current_level")
             .prefetch_related("level_progress")
         )
-
-        print(
-            f"[DEBUG] Found {enrollments.count()} enrollments for learner {learner.full_name}"
-        )
+        enrollment_course_ids = list(enrollments.values_list("course_id", flat=True))
 
         pathways = []
         for enrollment in enrollments:
@@ -125,14 +122,22 @@ class StudentDashboardViewSet(viewsets.ViewSet):
 
         # Get upcoming activities (sessions and events)
         today = datetime.now().date()
+        session_filters = Q(learners=learner)
+        if enrollment_course_ids:
+            session_filters |= Q(module__course_id__in=enrollment_course_ids)
+
+        upcoming_sessions = Session.objects.filter(
+            session_filters,
+            date__gte=today,
+            status__in=["scheduled", "in_progress"],
+        )
+        if learner.tenant_id:
+            upcoming_sessions = upcoming_sessions.filter(tenant_id=learner.tenant_id)
         upcoming_sessions = (
-            Session.objects.filter(
-                learners=learner,
-                date__gte=today,
-                status__in=["scheduled", "in_progress"],
-            )
-            .select_related("module")
-            .order_by("date", "start_time")[:5]
+            upcoming_sessions
+            .select_related("module", "module__course")
+            .distinct()
+            .order_by("date", "start_time")[:10]
         )
 
         upcoming_activities_list = (
@@ -141,15 +146,13 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 status__in=["upcoming", "ongoing"],
             )
             .select_related("course")
-            .order_by("date", "start_time")[:5]
+            .order_by("date", "start_time")[:10]
         )
-
-        print(f"[DEBUG] Found {upcoming_sessions.count()} upcoming sessions")
-        print(f"[DEBUG] Found {upcoming_activities_list.count()} upcoming activities")
 
         # Combine and sort
         upcoming = []
         for session in upcoming_sessions:
+            sort_key = datetime.combine(session.date, session.start_time or time.min)
             upcoming.append(
                 {
                     "id": str(session.id),
@@ -162,10 +165,12 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                     ),
                     "type": "session",
                     "color": "#3b82f6",  # blue
+                    "sort_key": sort_key,
                 }
             )
 
         for activity in upcoming_activities_list:
+            sort_key = datetime.combine(activity.date, activity.start_time or time.min)
             upcoming.append(
                 {
                     "id": str(activity.id),
@@ -178,12 +183,13 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                     ),
                     "type": "activity",
                     "color": "#f59e0b",  # orange
+                    "sort_key": sort_key,
                 }
             )
 
         # Sort by date and time
-        upcoming.sort(key=lambda x: (x["date"], x["time"]))
-        upcoming = upcoming[:5]  # Limit to 5
+        upcoming.sort(key=lambda x: x["sort_key"])
+        upcoming = [{k: v for k, v in item.items() if k != "sort_key"} for item in upcoming[:5]]
 
         # Get active projects (artifacts in progress)
         active_artifacts = (

@@ -12,8 +12,15 @@ export interface User {
   last_name: string;
   role: UserRole;
   tenant: string | null;
+  school_id?: string | null;
   tenant_name?: string;
   tenant_code?: string;
+  teacher_school_ids?: string[];
+  teacher_schools?: Array<{
+    id: string;
+    name: string;
+    code?: string;
+  }>;
   dashboard_url?: string;
   date_joined: string;
   is_active: boolean;
@@ -101,4 +108,21 @@ export const clearAuth = (): void => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
+  localStorage.removeItem('selected_school_id');
+  localStorage.removeItem('selected_school_name');
 };
+
+export const setSelectedTeacherSchool = (schoolId: string, schoolName?: string): void => {
+  localStorage.setItem('selected_school_id', schoolId);
+  if (schoolName) {
+    localStorage.setItem('selected_school_name', schoolName);
+  } else {
+    localStorage.removeItem('selected_school_name');
+  }
+};
+
+export const getSelectedTeacherSchoolId = (): string | null =>
+  localStorage.getItem('selected_school_id');
+
+export const getSelectedTeacherSchoolName = (): string | null =>
+  localStorage.getItem('selected_school_name');

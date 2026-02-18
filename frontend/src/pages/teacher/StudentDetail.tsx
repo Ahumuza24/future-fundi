@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { teacherApi, enrollmentApi, progressApi } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
     ArrowLeft, Award, GraduationCap, BookOpen, TrendingUp,
     Calendar, School, Medal, CheckCircle, Trophy, Target, FileText
@@ -81,6 +82,8 @@ export default function StudentDetail() {
     const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null);
     const [currentProgress, setCurrentProgress] = useState<ProgressData | null>(null);
     const [loadingProgress, setLoadingProgress] = useState(false);
+    const [updatingProgress, setUpdatingProgress] = useState(false);
+    const [confirmingCompletion, setConfirmingCompletion] = useState(false);
     const [progressForm, setProgressForm] = useState({
         artifacts: 0,
         score: 0
@@ -195,14 +198,15 @@ export default function StudentDetail() {
     };
 
     const handleUpdateProgress = async () => {
-        if (!currentProgress) return;
+        if (!currentProgress || updatingProgress) return;
 
         try {
+            setUpdatingProgress(true);
             // Check if this is a temporary ID (no real progress exists yet)
             if (currentProgress.id.startsWith('temp-')) {
                 console.log("Cannot update progress - no progress record exists yet");
                 console.log("Progress needs to be created on the backend first");
-                alert("Note: Progress tracking will be created when the student starts this level. You can view and update it then.");
+                toast.info("Progress tracking will be created when the student starts this level. You can update it then.", "Not Yet Available");
                 setIsProgressDialogOpen(false);
                 return;
             }
@@ -247,24 +251,31 @@ export default function StudentDetail() {
             const message = badgeForm.badge_name.trim()
                 ? "Progress updated and badge awarded successfully!"
                 : "Progress updated successfully!";
-            alert(message);
+            toast.success(message, "Saved");
             setIsProgressDialogOpen(false);
         } catch (error: any) {
             console.error("Failed to update progress:", error);
             console.error("Error details:", error.response?.data || error.message);
-            alert("Failed to update progress. Please try again.");
+            toast.error("Failed to update progress. Please try again.", "Update Failed");
+        } finally {
+            setUpdatingProgress(false);
         }
     };
 
     const handleConfirmCompletion = async () => {
-        if (!currentProgress) return;
+        if (!currentProgress || confirmingCompletion) return;
 
         try {
+            setConfirmingCompletion(true);
             await progressApi.confirmCompletion(currentProgress.id);
             setIsProgressDialogOpen(false);
             fetchStudentData();
+            toast.success("Level completion confirmed.", "Confirmed");
         } catch (error) {
             console.error("Failed to confirm completion:", error);
+            toast.error("Failed to confirm completion.", "Confirmation Failed");
+        } finally {
+            setConfirmingCompletion(false);
         }
     };
 
@@ -565,13 +576,14 @@ export default function StudentDetail() {
                                         <Button
                                             onClick={handleConfirmCompletion}
                                             disabled={
+                                                confirmingCompletion ||
                                                 progressForm.artifacts < currentProgress.requirements.artifacts.required ||
                                                 progressForm.score < currentProgress.requirements.assessment.required
                                             }
                                             variant={currentProgress.teacher_confirmed ? "outline" : "default"}
                                             className={currentProgress.teacher_confirmed ? "border-green-500 text-green-600" : ""}
                                         >
-                                            {currentProgress.teacher_confirmed ? "Confirmed" : "Mark Complete"}
+                                            {currentProgress.teacher_confirmed ? "Confirmed" : confirmingCompletion ? "Confirming..." : "Mark Complete"}
                                         </Button>
                                     </div>
                                 )}
@@ -586,8 +598,8 @@ export default function StudentDetail() {
                             <Button variant="outline" onClick={() => setIsProgressDialogOpen(false)}>
                                 Close
                             </Button>
-                            <Button onClick={handleUpdateProgress} disabled={!currentProgress}>
-                                Save Changes
+                            <Button onClick={handleUpdateProgress} disabled={!currentProgress || updatingProgress}>
+                                {updatingProgress ? "Saving..." : "Save Changes"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

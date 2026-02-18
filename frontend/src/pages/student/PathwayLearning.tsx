@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { studentApi, MEDIA_BASE_URL } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
     ChevronRight,
     CheckCircle,
@@ -302,10 +303,9 @@ const PathwayLearning = () => {
                                                             <FileText className="h-5 w-5 text-gray-500" />
                                                             <h3 className="text-lg font-semibold">Learning Content</h3>
                                                         </div>
-                                                        <div
-                                                            className="text-gray-700 leading-relaxed"
-                                                            dangerouslySetInnerHTML={{ __html: selectedModule.content }}
-                                                        />
+                                                        <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                                            {selectedModule.content}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -352,7 +352,7 @@ const PathwayLearning = () => {
                                                                             });
                                                                         } else {
                                                                             console.error('No URL found in media object:', media);
-                                                                            alert('This media file has no URL');
+                                                                            toast.error("This media file has no URL.", "Unavailable Media");
                                                                         }
                                                                     }}
                                                                 >

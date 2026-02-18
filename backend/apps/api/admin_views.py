@@ -63,7 +63,12 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     - GET /api/admin/users/export/ - Export users to CSV
     """
 
-    queryset = User.objects.all().select_related("tenant").order_by("-date_joined")
+    queryset = (
+        User.objects.all()
+        .select_related("tenant")
+        .prefetch_related("teacher_schools")
+        .order_by("-date_joined")
+    )
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
     filterset_fields = ["role", "is_active", "tenant"]
@@ -84,10 +89,12 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == "true")
 
-        # Filter by tenant
-        tenant_id = self.request.query_params.get("tenant")
-        if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
+        # Filter by school (legacy param name: tenant)
+        school_id = self.request.query_params.get("school") or self.request.query_params.get("tenant")
+        if school_id:
+            queryset = queryset.filter(
+                Q(tenant_id=school_id) | Q(teacher_schools__id=school_id)
+            ).distinct()
 
         # Search
         search = self.request.query_params.get("search")
@@ -131,7 +138,8 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         Bulk import users from CSV.
 
         Expected CSV format:
-        username,email,first_name,last_name,role,tenant_id,password
+        username,email,first_name,last_name,role,school_id,password
+        Legacy supported column: tenant_id
         """
         csv_file = request.FILES.get("file")
         if not csv_file:
@@ -173,13 +181,14 @@ class AdminUserViewSet(viewsets.ModelViewSet):
                             "role": row["role"],
                         }
 
-                        if row.get("tenant_id"):
+                        school_id = row.get("school_id") or row.get("tenant_id")
+                        if school_id:
                             try:
-                                tenant = School.objects.get(id=row["tenant_id"])
+                                tenant = School.objects.get(id=school_id)
                                 user_data["tenant"] = tenant
                             except School.DoesNotExist:
                                 errors.append(
-                                    f"Row {row_num}: School {row['tenant_id']} not found"
+                                    f"Row {row_num}: School {school_id} not found"
                                 )
                                 continue
 
@@ -293,7 +302,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
 class AdminTenantViewSet(viewsets.ModelViewSet):
     """
-    Admin viewset for school/tenant management.
+    Admin viewset for school management.
 
     Endpoints:
     - GET /api/admin/tenants/ - List all tenants
@@ -337,7 +346,9 @@ class AdminTenantViewSet(viewsets.ModelViewSet):
         # User counts
         total_users = User.objects.filter(tenant=tenant).count()
         learners = Learner.objects.filter(tenant=tenant).count()
-        teachers = User.objects.filter(tenant=tenant, role="teacher").count()
+        teachers = User.objects.filter(
+            Q(tenant=tenant) | Q(teacher_schools=tenant), role="teacher"
+        ).distinct().count()
         parents = User.objects.filter(tenant=tenant, role="parent").count()
 
         # Enrollment counts
@@ -515,7 +526,7 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
         current_date = thirty_days_ago.date()
         while current_date <= timezone.now().date():
             count = LearnerCourseEnrollment.objects.filter(
-                created_at__date=current_date
+                enrolled_at__date=current_date
             ).count()
             enrollments_over_time.append(
                 {"date": current_date.isoformat(), "count": count}

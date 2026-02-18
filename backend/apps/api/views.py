@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from apps.core.models import Artifact, Learner, PathwayInputs
+from apps.core.roles import SCHOOL_STAFF_ROLES, UserRole
+from apps.core.scope import is_global_admin
 from django.db import connection
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import (
@@ -22,54 +24,53 @@ from .serializers import (
 )
 
 
-class IsAuthenticatedTenant(permissions.IsAuthenticated):
-    """Authenticated users only; querysets rely on TenantManager for scoping."""
+class IsAuthenticatedUser(permissions.IsAuthenticated):
+    """Authenticated users only."""
 
-    pass
+
+# Backward-compatible alias for older imports.
+IsAuthenticatedTenant = IsAuthenticatedUser
 
 
 class LearnerViewSet(viewsets.ModelViewSet):
     """ViewSet for learners with role-based access control.
 
     - Learners: Can only view/edit their own profile
-    - Teachers: Can view all learners in their tenant
+    - Teachers: Can view learners in their school
     - Parents: Can view their child's profile
-    - Leaders: Can view/edit all learners in their tenant
+    - Leaders/School admins: Can view/edit all learners in their school
     """
 
-    permission_classes = [IsAuthenticatedTenant]
+    permission_classes = [IsAuthenticatedUser]
     serializer_class = LearnerSerializer
-    # throttle_classes defaults to settings (UserRateThrottle, etc.)
 
     def get_queryset(self):
-        # Use _base_manager to bypass TenantManager and avoid conflicts with pagination/prefetch
-        # Manually apply tenant filtering to ensure it works with sliced querysets
         from apps.core.models import ParentContact
-        from apps.core.tenant import get_current_tenant
 
-        tenant_id = get_current_tenant()
-        qs = (
-            Learner._base_manager.get_queryset()
-            .select_related("user")
-            .order_by("last_name", "first_name")
-        )
+        qs = Learner.objects.select_related("user").order_by("last_name", "first_name")
 
         # Role-based filtering
         user = self.request.user
-        if user.role == "learner":
+        if user.role == UserRole.LEARNER:
             # Learners can only see their own profile
             qs = qs.filter(user=user)
-        elif user.role == "parent":
+        elif user.role == UserRole.PARENT:
             # Parents can see their child's profile
 
             parent_contacts = ParentContact.objects.filter(
                 email=user.email
             ).values_list("learner_id", flat=True)
             qs = qs.filter(id__in=parent_contacts)
-        elif user.role in ["teacher", "leader", "admin"]:
-            # Teachers and leaders can see all learners in their tenant
-            if tenant_id:
-                qs = qs.filter(tenant_id=tenant_id)
+        elif user.role == UserRole.ADMIN:
+            # Admin can see all schools unless explicitly scoped to one
+            if user.tenant_id:
+                qs = qs.filter(tenant_id=user.tenant_id)
+        elif user.role in SCHOOL_STAFF_ROLES:
+            school = getattr(self.request, "school", None)
+            if school:
+                qs = qs.filter(tenant_id=school.id)
+            else:
+                qs = qs.none()
         else:
             # Default: only own profile
             qs = qs.filter(user=user)
@@ -77,8 +78,10 @@ class LearnerViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        # Default new learner to the request user's tenant
-        tenant = getattr(self.request.user, "tenant", None)
+        # Default new learner to the request user's school.
+        tenant = getattr(self.request, "school", None) or getattr(
+            self.request.user, "tenant", None
+        )
         serializer.save(tenant=tenant)
 
     @action(detail=True, methods=["get"], url_path="tree")
@@ -282,6 +285,11 @@ class LearnerViewSet(viewsets.ModelViewSet):
                         if learner.tenant
                         else "Future Fundi Academy"
                     ),
+                    "school_name": (
+                        learner.tenant.name
+                        if learner.tenant
+                        else "Future Fundi Academy"
+                    ),
                 },
                 "pathways": pathways_data,
                 "upcoming_activities": upcoming_activities,
@@ -292,21 +300,28 @@ class LearnerViewSet(viewsets.ModelViewSet):
 
 
 class ArtifactViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticatedTenant]
+    permission_classes = [IsAuthenticatedUser]
     serializer_class = ArtifactSerializer
 
     def get_queryset(self):
-        # Use _base_manager to bypass TenantManager and avoid conflicts with pagination/prefetch
-        from apps.core.tenant import get_current_tenant
+        user = self.request.user
 
-        tenant_id = get_current_tenant()
-        qs = (
-            Artifact._base_manager.get_queryset()
-            .select_related("learner")
-            .order_by("-submitted_at")
-        )
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
+        qs = Artifact.objects.select_related("learner").order_by("-submitted_at")
+
+        if user.role == UserRole.ADMIN:
+            if user.tenant_id:
+                qs = qs.filter(tenant_id=user.tenant_id)
+            return qs
+        if user.role == UserRole.LEARNER:
+            return qs.filter(learner__user=user)
+        if user.role == UserRole.PARENT:
+            return qs.filter(learner__parent=user)
+        if user.role in SCHOOL_STAFF_ROLES:
+            school = getattr(self.request, "school", None)
+            if school:
+                return qs.filter(tenant_id=school.id)
+            return qs.none()
+        qs = qs.none()
         return qs
 
     @action(detail=True, methods=["post"], url_path="upload-media")
@@ -325,17 +340,19 @@ class DashboardKpisView(APIView):
     permission_classes = [IsTeacherOrLeader]
 
     def get(self, request):
-        # Placeholder aggregates; later implement real queries
-        from apps.core.tenant import get_current_tenant
+        # Placeholder aggregates; later implement real queries.
+        user = request.user
+        qs_learners = Learner.objects.all()
+        qs_artifacts = Artifact.objects.all()
 
-        tenant_id = get_current_tenant()
-
-        qs_learners = Learner._base_manager.get_queryset()
-        qs_artifacts = Artifact._base_manager.get_queryset()
-
-        if tenant_id:
-            qs_learners = qs_learners.filter(tenant_id=tenant_id)
-            qs_artifacts = qs_artifacts.filter(tenant_id=tenant_id)
+        if not is_global_admin(user):
+            school = getattr(request, "school", None) or getattr(user, "tenant", None)
+            if school:
+                qs_learners = qs_learners.filter(tenant_id=school.id)
+                qs_artifacts = qs_artifacts.filter(tenant_id=school.id)
+            else:
+                qs_learners = qs_learners.none()
+                qs_artifacts = qs_artifacts.none()
 
         return Response(
             {
@@ -353,8 +370,8 @@ def health_check(request):
         # Test database connection
         connection.ensure_connection()
         db_status = "ok"
-    except Exception as e:
-        db_status = f"error: {str(e)}"
+    except Exception:
+        db_status = "error"
 
     return Response(
         {

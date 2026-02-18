@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 
 from PIL import Image
@@ -18,6 +19,8 @@ from .serializers import (
     UserSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom JWT token view that includes user data in response."""
@@ -32,7 +35,7 @@ class UserProfileView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request):
-        """Get current user profile with role and tenant info."""
+        """Get current user profile with role and school info."""
         serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
@@ -131,9 +134,10 @@ class AvatarUploadView(APIView):
                 }
             )
 
-        except Exception as e:
+        except Exception:
+            logger.exception("Avatar upload failed for user=%s", request.user.id)
             return Response(
-                {"error": f"Failed to process image: {str(e)}"},
+                {"error": "Failed to process image"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -159,6 +163,7 @@ def register_view(request):
         # Add custom claims
         refresh["role"] = user.role
         refresh["tenant_id"] = str(user.tenant_id) if user.tenant_id else None
+        refresh["school_id"] = str(user.tenant_id) if user.tenant_id else None
 
         # Get user data
         user_serializer = UserSerializer(user)
@@ -198,8 +203,12 @@ def logout_view(request):
         return Response(
             {"detail": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST
         )
-    except Exception as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception("Logout failed for user=%s", request.user.id)
+        return Response(
+            {"detail": "Logout failed. Please try again."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["GET"])

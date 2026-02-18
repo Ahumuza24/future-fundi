@@ -10,6 +10,7 @@ import ParentPortal from "@/pages/parent/ParentPortal";
 import ParentMyChildren from "@/pages/parent/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/parent/ParentWeeklyUpdates";
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
+import TeacherSchoolSelect from "@/pages/teacher/TeacherSchoolSelect";
 import TeacherAttendance from "@/pages/teacher/TeacherAttendance";
 import TeacherArtifactCapture from "@/pages/teacher/TeacherArtifactCapture";
 import TeacherClasses from "@/pages/teacher/TeacherClasses";
@@ -101,6 +102,14 @@ const router = createBrowserRouter([
         ),
       },
       // Teacher Routes
+      {
+        path: "teacher/select-school",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher']}>
+            <TeacherSchoolSelect />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: "teacher",
         element: (

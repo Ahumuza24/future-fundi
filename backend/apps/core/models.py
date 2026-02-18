@@ -28,7 +28,12 @@ class School(BaseUUIDModel):
 
 
 class TenantModel(BaseUUIDModel):
-    """Abstract model for tenant-scoped entities."""
+    """Abstract model for school-scoped entities.
+
+    Note:
+    - Database field remains `tenant` for backward compatibility.
+    - Use `.school` / `.school_id` aliases in new code.
+    """
 
     tenant = models.ForeignKey(School, on_delete=models.CASCADE)
 
@@ -36,6 +41,18 @@ class TenantModel(BaseUUIDModel):
 
     class Meta:
         abstract = True
+
+    @property
+    def school(self):
+        return self.tenant
+
+    @school.setter
+    def school(self, value):
+        self.tenant = value
+
+    @property
+    def school_id(self):
+        return self.tenant_id
 
 
 class Learner(BaseUUIDModel):
@@ -108,6 +125,19 @@ class Learner(BaseUUIDModel):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def school(self):
+        """Backward-compatible alias: school == tenant."""
+        return self.tenant
+
+    @school.setter
+    def school(self, value):
+        self.tenant = value
+
+    @property
+    def school_id(self):
+        return self.tenant_id
 
     @property
     def full_name(self) -> str:
