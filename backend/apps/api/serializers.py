@@ -224,17 +224,24 @@ class UserSerializer(serializers.ModelSerializer):
 
         self._sync_teacher_schools(instance, school_ids)
 
-        # Update Learner profile if applicable
-        if instance.role == UserRole.LEARNER and current_class is not None:
-            learner, created = Learner.objects.get_or_create(
+        # Keep learner profile in sync when learner user details change.
+        if instance.role == UserRole.LEARNER:
+            learner, _ = Learner.objects.get_or_create(
                 user=instance,
                 defaults={
                     "tenant": instance.tenant,
                     "first_name": instance.first_name,
                     "last_name": instance.last_name,
+                    "current_class": current_class or "",
                 },
             )
-            learner.current_class = current_class
+
+            learner.first_name = instance.first_name
+            learner.last_name = instance.last_name
+            learner.tenant = instance.tenant
+            if current_class is not None:
+                learner.current_class = current_class
+
             learner.save()
 
         return instance

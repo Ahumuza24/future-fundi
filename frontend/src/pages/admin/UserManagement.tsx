@@ -47,7 +47,7 @@ interface User {
     email: string;
     first_name: string;
     last_name: string;
-    role: 'learner' | 'teacher' | 'parent' | 'leader' | 'admin';
+    role: 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry';
     is_active: boolean;
     tenant?: {
         id: string;
@@ -187,13 +187,26 @@ export default function UserManagement() {
     };
 
     const buildPayload = () => {
-        if (formData.role === 'teacher' && formData.school_ids.length === 0) {
-            showMessage('error', 'Please assign at least one school to this teacher');
-            return null;
-        }
-
         const payload: any = { ...formData };
-        if (payload.role !== 'teacher') {
+        if (payload.role === 'teacher') {
+            const effectiveSchoolIds = new Set(payload.school_ids || []);
+            const legacyTenantId = selectedUser?.tenant?.id;
+
+            const isLegacyTeacherWithoutMappedSchools =
+                selectedUser?.role === 'teacher' &&
+                (selectedUser.schools?.length || 0) === 0 &&
+                !!legacyTenantId;
+
+            if (effectiveSchoolIds.size === 0 && isLegacyTeacherWithoutMappedSchools && legacyTenantId) {
+                effectiveSchoolIds.add(legacyTenantId);
+            }
+
+            payload.school_ids = Array.from(effectiveSchoolIds);
+            if (payload.school_ids.length === 0) {
+                showMessage('error', 'Please assign at least one school to this teacher');
+                return null;
+            }
+        } else {
             delete payload.school_ids;
         }
         if (!payload.password) {
@@ -320,6 +333,11 @@ export default function UserManagement() {
     };
 
     const openEditDialog = (user: User) => {
+        const schoolIds = new Set((user.schools || []).map((school) => school.id));
+        if (user.role === 'teacher' && user.tenant?.id) {
+            schoolIds.add(user.tenant.id);
+        }
+
         setSelectedUser(user);
         setFormData({
             username: user.username,
@@ -329,7 +347,7 @@ export default function UserManagement() {
             role: user.role,
             password: '',
             is_active: user.is_active,
-            school_ids: (user.schools || []).map((school) => school.id),
+            school_ids: Array.from(schoolIds),
             current_class: user.current_class || '',
         });
         setIsEditDialogOpen(true);
@@ -486,6 +504,7 @@ export default function UserManagement() {
                                     <SelectItem value="parent">Parents</SelectItem>
                                     <SelectItem value="leader">Leaders</SelectItem>
                                     <SelectItem value="admin">Admins</SelectItem>
+                                    <SelectItem value="data_entry">Data Entry</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -654,6 +673,7 @@ export default function UserManagement() {
                                             <option value="parent">Parent</option>
                                             <option value="leader">Leader</option>
                                             <option value="admin">Admin</option>
+                                            <option value="data_entry">Data Entry</option>
                                         </select>
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                             <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -829,6 +849,7 @@ export default function UserManagement() {
                                             <option value="parent">Parent</option>
                                             <option value="leader">Leader</option>
                                             <option value="admin">Admin</option>
+                                            <option value="data_entry">Data Entry</option>
                                         </select>
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                             <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
