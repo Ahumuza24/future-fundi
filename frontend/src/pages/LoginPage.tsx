@@ -84,7 +84,7 @@ const LoginPage = () => {
           <Card className="shadow-xl px-1">
             <CardHeader className="text-center pb-4 pt-8">
               <div className="flex justify-center mb-6">
-                <div className="p-3 rounded-full bg-white shadow-sm border border-gray-100">
+                <div className="p-3 rounded-full">
                   <img
                     src="/fundi_bots_logo.png"
                     alt="Fundi Bots Logo"
