@@ -344,6 +344,54 @@ class SafetyIncident(TenantModel):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
 
+class TeacherTask(BaseUUIDModel):
+    """A task/to-do item created by a teacher.
+
+    Teachers can create tasks to manage their workload, lesson plans,
+    reminders, and other duties.
+    """
+
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("urgent", "Urgent"),
+    ]
+
+    STATUS_CHOICES = [
+        ("todo", "To Do"),
+        ("in_progress", "In Progress"),
+        ("done", "Done"),
+    ]
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="tasks",
+        limit_choices_to={"role": "teacher"},
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    due_date = models.DateField(null=True, blank=True, db_index=True)
+    priority = models.CharField(
+        max_length=10, choices=PRIORITY_CHOICES, default="medium", db_index=True
+    )
+    status = models.CharField(
+        max_length=15, choices=STATUS_CHOICES, default="todo", db_index=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_teacher_task"
+        verbose_name = "Teacher Task"
+        verbose_name_plural = "Teacher Tasks"
+        ordering = ["due_date", "-priority"]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.teacher.get_full_name()})"
+
+
 class Session(TenantModel):
     """Learning session delivered by a teacher.
 

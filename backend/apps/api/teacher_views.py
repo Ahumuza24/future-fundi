@@ -41,7 +41,9 @@ class TeacherSchoolContextMixin:
         value = str(school_id).strip()
         return value or None
 
-    def _set_request_school(self, request, school, allowed_school_ids: list[str]) -> None:
+    def _set_request_school(
+        self, request, school, allowed_school_ids: list[str]
+    ) -> None:
         school_id = str(school.id) if school else None
         request.school = school
         request.school_id = school_id
@@ -65,7 +67,9 @@ class TeacherSchoolContextMixin:
             self._set_request_school(request, None, [])
         elif getattr(user, "role", None) != "teacher":
             school = existing_school or getattr(user, "tenant", None)
-            allowed_school_ids = existing_allowed or ([str(school.id)] if school else [])
+            allowed_school_ids = existing_allowed or (
+                [str(school.id)] if school else []
+            )
             self._set_request_school(request, school, allowed_school_ids)
         else:
             allowed_school_ids = sorted(get_user_allowed_school_ids(user))
@@ -106,6 +110,10 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     serializer_class = SessionSerializer
 
     def get_serializer_class(self):
+        from .serializers import SessionCreateSerializer
+
+        if self.action in ("create", "update", "partial_update"):
+            return SessionCreateSerializer
         if self.action == "retrieve":
             return SessionDetailSerializer
         return SessionSerializer
@@ -120,8 +128,7 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             qs = qs.none()
 
         return (
-            qs
-            .select_related("tenant", "teacher", "module")
+            qs.select_related("tenant", "teacher", "module")
             .prefetch_related(
                 Prefetch(
                     "attendance_records",
@@ -131,6 +138,55 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             )
             .order_by("-date", "-start_time")
         )
+
+    def perform_create(self, serializer):
+        """Attach teacher and school tenant when creating a session."""
+        school = self._resolve_school_context(self.request)
+        tenant = school or self.request.user.tenant
+        serializer.save(teacher=self.request.user, tenant=tenant)
+
+    @action(detail=False, methods=["get"], url_path="list-pathways")
+    def list_pathways(self, request):
+        """List pathways (courses) with their modules for cascade selection.
+        Returns all courses this teacher is assigned to, with their modules.
+        Falls back to ALL active courses if the teacher has no course assignments.
+        """
+        from apps.core.models import Course, Module
+
+        teacher = request.user
+        teacher_courses = Course.objects.filter(teachers=teacher, is_active=True)
+        # Fall back to all active courses if no direct assignment
+        if not teacher_courses.exists():
+            teacher_courses = Course.objects.filter(is_active=True)
+
+        result = []
+        for course in teacher_courses.prefetch_related("modules"):
+            modules = [
+                {"id": str(m.id), "name": m.name}
+                for m in course.modules.all().order_by("name")
+            ]
+            result.append(
+                {
+                    "id": str(course.id),
+                    "name": course.name,
+                    "description": course.description,
+                    "modules": modules,
+                }
+            )
+        return Response(result)
+
+    @action(detail=False, methods=["get"], url_path="list-modules")
+    def list_modules(self, request):
+        """List modules for a specific course (pathway).
+        Query param: course_id
+        """
+        from apps.core.models import Module
+
+        course_id = request.query_params.get("course_id")
+        if not course_id:
+            return Response([], status=200)
+        modules = Module.objects.filter(course_id=course_id).order_by("name")
+        return Response([{"id": str(m.id), "name": m.name} for m in modules])
 
     @action(detail=False, methods=["get"], url_path="today")
     def today(self, request):
@@ -261,30 +317,31 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="dashboard")
     def dashboard(self, request):
-        """Get teacher dashboard data.
+        """Get teacher dashboard data with real stats."""
+        from datetime import timedelta
 
-        Returns:
-        - Today's sessions
-        - Pending tasks (sessions without attendance, artifacts needed)
-        - Quick stats
-        """
         today = date.today()
+        # Calculate current week (Monday to Sunday)
+        week_start = today - timedelta(days=today.weekday())  # Monday
+        week_end = week_start + timedelta(days=6)  # Sunday
+
         scoped_sessions = self.get_queryset()
 
         # Today's sessions
         today_sessions = scoped_sessions.filter(date=today)
 
-        # Pending tasks
+        # Pending tasks — sessions with attendance not yet marked
         sessions_without_attendance = scoped_sessions.filter(
             date__lte=today,
             attendance_marked=False,
             status__in=["in_progress", "completed"],
         ).count()
 
-        # Sessions needing artifacts (completed but no artifacts)
+        # Sessions needing artifacts (completed this month, zero artifacts captured that day)
         sessions_needing_artifacts = (
             scoped_sessions.filter(
-                status="completed", date__gte=date.today().replace(day=1)  # This month
+                status="completed",
+                date__gte=date.today().replace(day=1),  # This month
             )
             .annotate(
                 artifact_count=Count(
@@ -296,10 +353,31 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             .count()
         )
 
-        # Quick stats
-        total_sessions_this_week = scoped_sessions.filter(
-            date__gte=today, date__lte=today
+        # This-week sessions (Monday – Sunday inclusive)
+        sessions_this_week = scoped_sessions.filter(
+            date__gte=week_start,
+            date__lte=week_end,
         ).count()
+
+        # This-month sessions (1st of month to last day)
+        import calendar
+
+        month_start = today.replace(day=1)
+        month_last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end = today.replace(day=month_last_day)
+        sessions_this_month = scoped_sessions.filter(
+            date__gte=month_start,
+            date__lte=month_end,
+        ).count()
+        sessions_this_month_completed = scoped_sessions.filter(
+            date__gte=month_start,
+            date__lte=month_end,
+            status="completed",
+        ).count()
+
+        # All-time stats for the teacher
+        total_sessions_all_time = scoped_sessions.count()
+        total_completed = scoped_sessions.filter(status="completed").count()
 
         return Response(
             {
@@ -308,6 +386,9 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
                     "sessions": SessionSerializer(today_sessions, many=True).data,
                     "total": today_sessions.count(),
                     "completed": today_sessions.filter(status="completed").count(),
+                    "pending": today_sessions.filter(
+                        status__in=["scheduled", "in_progress"]
+                    ).count(),
                 },
                 "pending_tasks": {
                     "attendance_needed": sessions_without_attendance,
@@ -315,7 +396,15 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
                     "total": sessions_without_attendance + sessions_needing_artifacts,
                 },
                 "quick_stats": {
-                    "sessions_this_week": total_sessions_this_week,
+                    "sessions_this_week": sessions_this_week,
+                    "sessions_this_month": sessions_this_month,
+                    "sessions_this_month_completed": sessions_this_month_completed,
+                    "total_sessions": total_sessions_all_time,
+                    "total_completed": total_completed,
+                    "week_start": week_start,
+                    "week_end": week_end,
+                    "month_start": month_start,
+                    "month_end": month_end,
                 },
             }
         )
@@ -336,16 +425,14 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         else:
             qs = qs.none()
 
-        return (
-            qs
-            .select_related("learner", "tenant")
-            .order_by("-submitted_at")
-        )
+        return qs.select_related("learner", "tenant").order_by("-submitted_at")
 
     def perform_create(self, serializer):
         """Set the teacher as the creator."""
         learner = serializer.validated_data.get("learner")
-        tenant = self._resolve_school_context(self.request) or getattr(learner, "tenant", None)
+        tenant = self._resolve_school_context(self.request) or getattr(
+            learner, "tenant", None
+        )
         serializer.save(created_by=self.request.user, tenant=tenant)
 
     @action(detail=False, methods=["get"], url_path="pending")
@@ -607,7 +694,9 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
                 "students": serializer.data,
                 "total": len(learners),
                 "courses": [{"id": str(c.id), "name": c.name} for c in teacher_courses],
-                "selected_school_id": (str(selected_school.id) if selected_school else None),
+                "selected_school_id": (
+                    str(selected_school.id) if selected_school else None
+                ),
             }
         )
 
@@ -847,5 +936,66 @@ class CredentialManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewS
                 "learner_id": learner_id,
                 "credentials": serializer.data,
                 "total": credentials.count(),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Teacher Tasks ViewSet
+# ---------------------------------------------------------------------------
+
+
+class TeacherTaskViewSet(viewsets.ModelViewSet):
+    """ViewSet for teachers to manage their personal tasks/to-do list."""
+
+    permission_classes = [IsTeacher]
+
+    def get_serializer_class(self):
+        from .serializers import TeacherTaskSerializer
+
+        return TeacherTaskSerializer
+
+    def get_queryset(self):
+        from apps.core.models import TeacherTask
+
+        qs = TeacherTask.objects.filter(teacher=self.request.user)
+        # Optional filters
+        status_filter = self.request.query_params.get("status")
+        priority_filter = self.request.query_params.get("priority")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        if priority_filter:
+            qs = qs.filter(priority=priority_filter)
+        return qs.order_by("due_date", "-priority")
+
+    def perform_create(self, serializer):
+        serializer.save(teacher=self.request.user)
+
+    @action(detail=True, methods=["post"], url_path="toggle")
+    def toggle_status(self, request, pk=None):
+        """Toggle task status: todo → in_progress → done → todo."""
+        task = self.get_object()
+        cycle = {"todo": "in_progress", "in_progress": "done", "done": "todo"}
+        task.status = cycle.get(task.status, "todo")
+        task.save()
+        from .serializers import TeacherTaskSerializer
+
+        return Response(TeacherTaskSerializer(task).data)
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        """Return task counts grouped by status."""
+        from apps.core.models import TeacherTask
+        from django.db.models import Count
+
+        qs = TeacherTask.objects.filter(teacher=request.user)
+        counts = qs.values("status").annotate(count=Count("id"))
+        result = {item["status"]: item["count"] for item in counts}
+        return Response(
+            {
+                "todo": result.get("todo", 0),
+                "in_progress": result.get("in_progress", 0),
+                "done": result.get("done", 0),
+                "total": qs.count(),
             }
         )

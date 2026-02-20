@@ -90,7 +90,9 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_active=is_active.lower() == "true")
 
         # Filter by school (legacy param name: tenant)
-        school_id = self.request.query_params.get("school") or self.request.query_params.get("tenant")
+        school_id = self.request.query_params.get(
+            "school"
+        ) or self.request.query_params.get("tenant")
         if school_id:
             queryset = queryset.filter(
                 Q(tenant_id=school_id) | Q(teacher_schools__id=school_id)
@@ -346,9 +348,13 @@ class AdminTenantViewSet(viewsets.ModelViewSet):
         # User counts
         total_users = User.objects.filter(tenant=tenant).count()
         learners = Learner.objects.filter(tenant=tenant).count()
-        teachers = User.objects.filter(
-            Q(tenant=tenant) | Q(teacher_schools=tenant), role="teacher"
-        ).distinct().count()
+        teachers = (
+            User.objects.filter(
+                Q(tenant=tenant) | Q(teacher_schools=tenant), role="teacher"
+            )
+            .distinct()
+            .count()
+        )
         parents = User.objects.filter(tenant=tenant, role="parent").count()
 
         # Enrollment counts
@@ -540,5 +546,171 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
                 "completion_rate": round(completion_rate, 2),
                 "top_courses": list(by_course),
                 "enrollments_over_time": enrollments_over_time,
+            }
+        )
+
+    @action(detail=False, methods=["get"], url_path="dashboard")
+    def dashboard(self, request):
+        """
+        Comprehensive analytics dashboard data.
+        Returns all charts + KPIs in one request.
+        Supports ?days=30|60|90 to change the time window.
+        """
+        days = int(request.query_params.get("days", 30))
+        end_dt = timezone.now()
+        start_dt = end_dt - timedelta(days=days)
+        today = end_dt.date()
+        start_date = start_dt.date()
+
+        # ── KPI snapshot ──────────────────────────────────────────────────────
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        new_users = User.objects.filter(date_joined__gte=start_dt).count()
+        total_schools = School.objects.count()
+
+        total_sessions = Session.objects.count()
+        new_sessions = Session.objects.filter(created_at__gte=start_dt).count()
+        completed_sessions = Session.objects.filter(status="completed").count()
+
+        total_enrollments = LearnerCourseEnrollment.objects.filter(
+            is_active=True
+        ).count()
+        new_enrollments = LearnerCourseEnrollment.objects.filter(
+            enrolled_at__gte=start_dt
+        ).count()
+
+        total_attendance = Attendance.objects.count()
+        present_attendance = Attendance.objects.filter(status="present").count()
+        attendance_rate = (
+            round(present_attendance / total_attendance * 100, 1)
+            if total_attendance
+            else 0
+        )
+
+        # ── User growth (day-by-day) ──────────────────────────────────────────
+        user_growth = []
+        cur = start_date
+        while cur <= today:
+            user_growth.append(
+                {
+                    "date": cur.isoformat(),
+                    "new_users": User.objects.filter(date_joined__date=cur).count(),
+                    "new_enrollments": LearnerCourseEnrollment.objects.filter(
+                        enrolled_at__date=cur
+                    ).count(),
+                }
+            )
+            cur += timedelta(days=1)
+
+        # ── Session trends (day-by-day) ───────────────────────────────────────
+        session_trend = []
+        cur = start_date
+        while cur <= today:
+            day_qs = Session.objects.filter(date=cur)
+            session_trend.append(
+                {
+                    "date": cur.isoformat(),
+                    "total": day_qs.count(),
+                    "completed": day_qs.filter(status="completed").count(),
+                    "scheduled": day_qs.filter(status="scheduled").count(),
+                }
+            )
+            cur += timedelta(days=1)
+
+        # ── Role distribution (pie) ───────────────────────────────────────────
+        role_distribution = list(
+            User.objects.values("role").annotate(count=Count("id")).order_by("-count")
+        )
+
+        # ── School performance (bar) ──────────────────────────────────────────
+        school_perf_raw = School.objects.annotate(
+            learner_count=Count("learner", distinct=True),
+            session_count=Count("session", distinct=True),
+        ).order_by("-learner_count")[:10]
+        school_performance = [
+            {
+                "school": s.name,
+                "learners": s.learner_count,
+                "sessions": s.session_count,
+            }
+            for s in school_perf_raw
+        ]
+
+        # ── Top teachers (by sessions) ────────────────────────────────────────
+        top_teachers = list(
+            Session.objects.filter(created_at__gte=start_dt)
+            .values("teacher__first_name", "teacher__last_name", "teacher__username")
+            .annotate(
+                sessions=Count("id"),
+                completed=Count("id", filter=Q(status="completed")),
+            )
+            .order_by("-sessions")[:8]
+        )
+        for t in top_teachers:
+            full = f"{t['teacher__first_name']} {t['teacher__last_name']}".strip()
+            t["name"] = full or t["teacher__username"]
+            del (
+                t["teacher__first_name"],
+                t["teacher__last_name"],
+                t["teacher__username"],
+            )
+
+        # ── Attendance breakdown for chart ────────────────────────────────────
+        att_by_day = []
+        cur = start_date
+        while cur <= today:
+            day_att = Attendance.objects.filter(session__date=cur)
+            total_d = day_att.count()
+            present_d = day_att.filter(status="present").count()
+            att_by_day.append(
+                {
+                    "date": cur.isoformat(),
+                    "rate": round(present_d / total_d * 100, 1) if total_d else 0,
+                    "present": present_d,
+                    "absent": day_att.filter(status="absent").count(),
+                    "late": day_att.filter(status="late").count(),
+                }
+            )
+            cur += timedelta(days=1)
+
+        # ── Top pathways by enrollment ────────────────────────────────────────
+        top_courses = list(
+            LearnerCourseEnrollment.objects.filter(is_active=True)
+            .values("course__name")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:8]
+        )
+
+        return Response(
+            {
+                "meta": {
+                    "days": days,
+                    "start_date": start_date.isoformat(),
+                    "end_date": today.isoformat(),
+                },
+                "kpis": {
+                    "total_users": total_users,
+                    "active_users": active_users,
+                    "new_users": new_users,
+                    "total_schools": total_schools,
+                    "total_sessions": total_sessions,
+                    "new_sessions": new_sessions,
+                    "completed_sessions": completed_sessions,
+                    "total_enrollments": total_enrollments,
+                    "new_enrollments": new_enrollments,
+                    "attendance_rate": attendance_rate,
+                    "session_completion_rate": (
+                        round(completed_sessions / total_sessions * 100, 1)
+                        if total_sessions
+                        else 0
+                    ),
+                },
+                "user_growth": user_growth,
+                "session_trend": session_trend,
+                "role_distribution": role_distribution,
+                "school_performance": school_performance,
+                "top_teachers": top_teachers,
+                "attendance_trend": att_by_day,
+                "top_courses": top_courses,
             }
         )

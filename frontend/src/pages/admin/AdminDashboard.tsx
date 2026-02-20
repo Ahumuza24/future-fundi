@@ -407,12 +407,18 @@ const AdminDashboard = () => {
             <span className="text-sm">School Management</span>
           </Button>
 
-          <Button variant="outline" className="h-20 flex flex-col gap-2">
-            <FileText className="h-6 w-6" />
-            <span className="text-sm">Export Reports</span>
+          <Button
+            variant="outline"
+            className="h-20 flex flex-col gap-2 border-[var(--fundi-cyan)] text-[var(--fundi-cyan)] hover:bg-cyan-50"
+            onClick={() => navigate('/admin/monitor')}
+          >
+            <Activity className="h-6 w-6" />
+            <span className="text-sm">Activity Monitor</span>
           </Button>
 
-          <Button variant="outline" className="h-20 flex flex-col gap-2">
+          <Button variant="outline" className="h-20 flex flex-col gap-2"
+            onClick={() => navigate('/admin/analytics')}
+          >
             <TrendingUp className="h-6 w-6" />
             <span className="text-sm">Analytics</span>
           </Button>

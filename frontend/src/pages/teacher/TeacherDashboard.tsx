@@ -14,6 +14,8 @@ import {
     Play,
     CheckCheck,
     GraduationCap,
+    ListTodo,
+    CalendarDays,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -35,6 +37,7 @@ interface DashboardData {
         sessions: Session[];
         total: number;
         completed: number;
+        pending: number;
     };
     pending_tasks: {
         attendance_needed: number;
@@ -43,6 +46,14 @@ interface DashboardData {
     };
     quick_stats: {
         sessions_this_week: number;
+        sessions_this_month: number;
+        sessions_this_month_completed: number;
+        total_sessions: number;
+        total_completed: number;
+        week_start: string;
+        week_end: string;
+        month_start: string;
+        month_end: string;
     };
 }
 
@@ -126,8 +137,9 @@ export default function TeacherDashboard() {
                     <p className="text-gray-600">Welcome back! Here's what you need to do today.</p>
                 </header>
 
-                {/* Quick Stats */}
-                <div className="grid md:grid-cols-3 gap-4">
+                {/* Quick Stats — now 4 columns */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Today's Sessions */}
                     <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-cyan)" }}>
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
@@ -136,15 +148,19 @@ export default function TeacherDashboard() {
                                     <p className="text-3xl font-bold" style={{ color: "var(--fundi-cyan)" }}>
                                         {dashboardData.today.total}
                                     </p>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {dashboardData.today.completed} completed
-                                    </p>
+                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                                        <p>{dashboardData.today.completed} completed</p>
+                                        {dashboardData.today.pending > 0 && (
+                                            <p className="text-amber-500 font-medium">{dashboardData.today.pending} still pending</p>
+                                        )}
+                                    </div>
                                 </div>
                                 <Calendar className="h-12 w-12" style={{ color: "var(--fundi-cyan)", opacity: 0.2 }} />
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* Pending Tasks */}
                     <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-orange)" }}>
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
@@ -153,15 +169,19 @@ export default function TeacherDashboard() {
                                     <p className="text-3xl font-bold" style={{ color: "var(--fundi-orange)" }}>
                                         {dashboardData.pending_tasks.total}
                                     </p>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {dashboardData.pending_tasks.attendance_needed} attendance
-                                    </p>
+                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                                        <p>{dashboardData.pending_tasks.attendance_needed} attendance needed</p>
+                                        {dashboardData.pending_tasks.artifacts_needed > 0 && (
+                                            <p>{dashboardData.pending_tasks.artifacts_needed} artifacts needed</p>
+                                        )}
+                                    </div>
                                 </div>
                                 <AlertCircle className="h-12 w-12" style={{ color: "var(--fundi-orange)", opacity: 0.2 }} />
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* This Week */}
                     <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-lime)" }}>
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
@@ -170,9 +190,34 @@ export default function TeacherDashboard() {
                                     <p className="text-3xl font-bold" style={{ color: "var(--fundi-lime)" }}>
                                         {dashboardData.quick_stats.sessions_this_week}
                                     </p>
-                                    <p className="text-sm text-gray-500 mt-1">sessions</p>
+                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                                        <p>sessions scheduled</p>
+                                    </div>
                                 </div>
                                 <CheckCircle className="h-12 w-12" style={{ color: "var(--fundi-lime)", opacity: 0.2 }} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* This Month card */}
+                    <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-purple)" }}>
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 mb-1">This Month</p>
+                                    <p className="text-3xl font-bold" style={{ color: "var(--fundi-purple)" }}>
+                                        {dashboardData.quick_stats.sessions_this_month ?? 0}
+                                    </p>
+                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                                        <p>
+                                            {dashboardData.quick_stats.sessions_this_month_completed ?? 0} completed
+                                        </p>
+                                        <p className="capitalize">
+                                            {new Date().toLocaleString("default", { month: "long" })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <CalendarDays className="h-12 w-12" style={{ color: "var(--fundi-purple)", opacity: 0.2 }} />
                             </div>
                         </CardContent>
                     </Card>
@@ -279,36 +324,36 @@ export default function TeacherDashboard() {
                     <CardContent>
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <Button
-                                onClick={() => navigate("/teacher/students")}
+                                onClick={() => navigate("/teacher/sessions")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
                                 style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
+                            >
+                                <CalendarDays className="h-8 w-8" />
+                                <span className="font-semibold">My Sessions</span>
+                            </Button>
+                            <Button
+                                onClick={() => navigate("/teacher/tasks")}
+                                className="h-24 flex flex-col items-center justify-center gap-2"
+                                style={{ backgroundColor: "var(--fundi-purple)", color: "white" }}
+                            >
+                                <ListTodo className="h-8 w-8" />
+                                <span className="font-semibold">My Tasks</span>
+                            </Button>
+                            <Button
+                                onClick={() => navigate("/teacher/students")}
+                                className="h-24 flex flex-col items-center justify-center gap-2"
+                                style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
                             >
                                 <UserPlus className="h-8 w-8" />
                                 <span className="font-semibold">Add Student</span>
                             </Button>
                             <Button
-                                onClick={() => navigate("/teacher/pathways")}
+                                onClick={() => navigate("/teacher/capture-artifact")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
                                 style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
                             >
-                                <GraduationCap className="h-8 w-8" />
-                                <span className="font-semibold">Pathways</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/capture-artifact")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
-                            >
                                 <Camera className="h-8 w-8" />
                                 <span className="font-semibold">Capture Artifact</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/mark-attendance")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-purple)", color: "white" }}
-                            >
-                                <Users className="h-8 w-8" />
-                                <span className="font-semibold">Mark Attendance</span>
                             </Button>
                         </div>
                     </CardContent>

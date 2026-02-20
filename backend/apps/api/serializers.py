@@ -19,6 +19,7 @@ from apps.core.models import (
     PodClass,
     School,
     Session,
+    TeacherTask,
     WeeklyPulse,
 )
 from apps.core.roles import UserRole
@@ -113,7 +114,8 @@ class UserSerializer(serializers.ModelSerializer):
             return value
 
         existing_ids = {
-            str(sid) for sid in School.objects.filter(id__in=value).values_list("id", flat=True)
+            str(sid)
+            for sid in School.objects.filter(id__in=value).values_list("id", flat=True)
         }
         missing_ids = [str(sid) for sid in value if str(sid) not in existing_ids]
         if missing_ids:
@@ -141,7 +143,9 @@ class UserSerializer(serializers.ModelSerializer):
 
         if not effective_school_ids:
             raise serializers.ValidationError(
-                {"school_ids": "Teacher accounts must be assigned to at least one school."}
+                {
+                    "school_ids": "Teacher accounts must be assigned to at least one school."
+                }
             )
 
         return attrs
@@ -155,7 +159,10 @@ class UserSerializer(serializers.ModelSerializer):
 
         if school_ids is None:
             # Keep existing mappings, but make sure primary school is represented.
-            if user.tenant_id and not user.teacher_schools.filter(id=user.tenant_id).exists():
+            if (
+                user.tenant_id
+                and not user.teacher_schools.filter(id=user.tenant_id).exists()
+            ):
                 user.teacher_schools.add(user.tenant_id)
             return
 
@@ -742,6 +749,57 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "submitted_at"]
 
 
+class SessionCreateSerializer(serializers.ModelSerializer):
+    """Serializer for teachers to create new sessions."""
+
+    module_name = serializers.CharField(source="module.name", read_only=True)
+    teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
+
+    class Meta:
+        model = Session
+        fields = [
+            "id",
+            "module",
+            "module_name",
+            "teacher",
+            "teacher_name",
+            "date",
+            "start_time",
+            "end_time",
+            "status",
+            "notes",
+            "attendance_marked",
+            "created_at",
+        ]
+        read_only_fields = ["id", "teacher", "attendance_marked", "created_at"]
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        teacher = request.user
+        tenant = getattr(request, "school", None) or teacher.tenant
+        validated_data["teacher"] = teacher
+        validated_data["tenant"] = tenant
+        return super().create(validated_data)
+
+
+class TeacherTaskSerializer(serializers.ModelSerializer):
+    """Serializer for teacher tasks/to-do items."""
+
+    class Meta:
+        model = TeacherTask
+        fields = [
+            "id",
+            "title",
+            "description",
+            "due_date",
+            "priority",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
 # =============================================================================
 # COURSE SERIALIZERS
 # =============================================================================
@@ -1133,7 +1191,9 @@ class BadgeSerializer(serializers.ModelSerializer):
         if request and hasattr(request, "user"):
             validated_data["awarded_by"] = request.user
             # Scope badge to selected school context.
-            validated_data["tenant"] = getattr(request, "school", None) or request.user.tenant
+            validated_data["tenant"] = (
+                getattr(request, "school", None) or request.user.tenant
+            )
         return super().create(validated_data)
 
 
@@ -1324,7 +1384,9 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
 
             if school_id and str(school_id) not in allowed_school_ids:
                 raise serializers.ValidationError(
-                    {"school_id": "You can only create students in your assigned schools."}
+                    {
+                        "school_id": "You can only create students in your assigned schools."
+                    }
                 )
             if (
                 actor.role == "teacher"

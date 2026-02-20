@@ -11,6 +11,7 @@ import {
   FileText,
   Award,
   Calendar,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Camera,
@@ -18,7 +19,9 @@ import {
   ClipboardCheck,
   Database,
   GraduationCap,
-  TrendingUp
+  TrendingUp,
+  ListTodo,
+  MonitorDot,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -85,6 +88,20 @@ const allNavItems: NavItem[] = [
     roles: ["teacher"],
   },
   {
+    title: "My Sessions",
+    path: "/teacher/sessions",
+    icon: CalendarDays,
+    color: "var(--fundi-cyan)",
+    roles: ["teacher"],
+  },
+  {
+    title: "My Tasks",
+    path: "/teacher/tasks",
+    icon: ListTodo,
+    color: "var(--fundi-purple)",
+    roles: ["teacher"],
+  },
+  {
     title: "Pathways",
     path: "/teacher/pathways",
     icon: BookOpen,
@@ -127,13 +144,6 @@ const allNavItems: NavItem[] = [
     roles: ["leader", "admin"],
   },
   {
-    title: "Analytics",
-    path: "/leader/analytics",
-    icon: BarChart3,
-    color: "var(--fundi-lime)",
-    roles: ["leader", "admin"],
-  },
-  {
     title: "School Overview",
     path: "/leader/overview",
     icon: Users,
@@ -163,13 +173,13 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-cyan)",
     roles: ["school"],
   },
-/*   {
-    title: "Teachers",
-    path: "/school/teachers",
-    icon: GraduationCap,
-    color: "var(--fundi-lime)",
-    roles: ["school"],
-  }, */
+  /*   {
+      title: "Teachers",
+      path: "/school/teachers",
+      icon: GraduationCap,
+      color: "var(--fundi-lime)",
+      roles: ["school"],
+    }, */
   {
     title: "Pathways",
     path: "/school/pathways",
@@ -232,6 +242,20 @@ const allNavItems: NavItem[] = [
     path: "/admin/courses",
     icon: BookOpen,
     color: "var(--fundi-orange)",
+    roles: ["admin"],
+  },
+  {
+    title: "Activity Monitor",
+    path: "/admin/monitor",
+    icon: MonitorDot,
+    color: "var(--fundi-cyan)",
+    roles: ["admin"],
+  },
+  {
+    title: "Analytics",
+    path: "/admin/analytics",
+    icon: BarChart3,
+    color: "var(--fundi-lime)",
     roles: ["admin"],
   },
 ];
