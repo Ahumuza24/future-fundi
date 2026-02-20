@@ -3,6 +3,7 @@ import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 // Helper to get the root URL (removing /api if present, for media files)
 export const MEDIA_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const AUTH_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -245,7 +246,7 @@ export const teacherApi = {
 
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>
-    axios.post(`${API_BASE_URL}/auth/token/`, credentials),
+    axios.post(`${AUTH_BASE_URL}/auth/token/`, credentials),
   register: (data: {
     username: string;
     email: string;
@@ -255,26 +256,26 @@ export const authApi = {
     last_name: string;
     school_code?: string;
   }) =>
-    axios.post(`${API_BASE_URL}/auth/register/`, data),
+    axios.post(`${AUTH_BASE_URL}/auth/register/`, data),
   logout: (refreshToken: string) =>
-    axios.post(`${API_BASE_URL}/auth/logout/`, { refresh: refreshToken }),
+    axios.post(`${AUTH_BASE_URL}/auth/logout/`, { refresh: refreshToken }),
   refreshToken: (refresh: string) => 
-    axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh }),
+    axios.post(`${AUTH_BASE_URL}/auth/token/refresh/`, { refresh }),
   getProfile: () => 
-    api.get(`${API_BASE_URL}/user/profile/`),
+    api.get(`${AUTH_BASE_URL}/user/profile/`),
   updateProfile: (data: { first_name?: string; last_name?: string; email?: string }) =>
-    api.patch(`${API_BASE_URL}/user/profile/`, data),
+    api.patch(`${AUTH_BASE_URL}/user/profile/`, data),
   getDashboard: () =>
-    api.get(`${API_BASE_URL}/user/dashboard/`),
+    api.get(`${AUTH_BASE_URL}/user/dashboard/`),
   
   // Avatar management
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.post(`${API_BASE_URL}/user/avatar/`, formData);
+    return api.post(`${AUTH_BASE_URL}/user/avatar/`, formData);
   },
   deleteAvatar: () =>
-    api.delete(`${API_BASE_URL}/user/avatar/`),
+    api.delete(`${AUTH_BASE_URL}/user/avatar/`),
 };
 
 // Course API

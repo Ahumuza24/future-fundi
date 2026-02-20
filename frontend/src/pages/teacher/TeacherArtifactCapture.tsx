@@ -32,7 +32,8 @@ interface Session {
     id: string;
     module_name: string;
     date: string;
-    learners: Learner[];
+    learner_count?: number;
+    learners?: Learner[];
 }
 
 interface MetricPreset {
@@ -82,40 +83,73 @@ export default function TeacherArtifactCapture() {
     const [captureMode, setCaptureMode] = useState<"camera" | "upload">("camera");
     const [showPrompts, setShowPrompts] = useState(false);
     const [currentPrompt, setCurrentPrompt] = useState(0);
+    const [allLearners, setAllLearners] = useState<Learner[]>([]);
+    const [sessionLearners, setSessionLearners] = useState<Record<string, Learner[]>>({});
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [streaming, setStreaming] = useState(false);
     const [cameraReady, setCameraReady] = useState(false);
 
-    // Demo learners for when no session is selected
-    const [allLearners] = useState<Learner[]>([
-        { id: "1", first_name: "Alex", last_name: "Kato", full_name: "Alex Kato" },
-        { id: "2", first_name: "Bella", last_name: "Nakato", full_name: "Bella Nakato" },
-        { id: "3", first_name: "Charles", last_name: "Mugisha", full_name: "Charles Mugisha" },
-        { id: "4", first_name: "Diana", last_name: "Asiimwe", full_name: "Diana Asiimwe" },
-        { id: "5", first_name: "Emmanuel", last_name: "Okello", full_name: "Emmanuel Okello" },
-        { id: "6", first_name: "Faith", last_name: "Nambi", full_name: "Faith Nambi" },
-    ]);
+    const normalizeLearner = (raw: any): Learner => ({
+        id: String(raw?.id ?? ""),
+        first_name: raw?.first_name || "",
+        last_name: raw?.last_name || "",
+        full_name:
+            raw?.full_name ||
+            `${raw?.first_name || ""} ${raw?.last_name || ""}`.trim() ||
+            "Unnamed Learner",
+    });
 
     useEffect(() => {
-        fetchTodaySessions();
+        fetchInitialData();
     }, []);
 
-    const fetchTodaySessions = async () => {
+    const fetchInitialData = async () => {
         try {
             setLoading(true);
-            const response = await teacherApi.getTodaySessions();
-            setSessions(response.data.sessions || []);
+            setError(null);
+            const [sessionsRes, learnersRes] = await Promise.all([
+                teacherApi.getTodaySessions(),
+                teacherApi.students.getAll(),
+            ]);
+
+            const sessionsData = Array.isArray(sessionsRes.data)
+                ? sessionsRes.data
+                : (sessionsRes.data?.sessions || []);
+            setSessions(sessionsData);
+
+            const rawLearners = Array.isArray(learnersRes.data)
+                ? learnersRes.data
+                : (learnersRes.data?.students || []);
+            setAllLearners(rawLearners.map(normalizeLearner));
         } catch (err: any) {
             console.error(err);
-            // Use demo data
-            setSessions([
-                { id: "1", module_name: "Robotics Foundations", date: "Today", learners: allLearners.slice(0, 4) },
-                { id: "2", module_name: "Coding Basics", date: "Today", learners: allLearners.slice(2, 6) },
-            ]);
+            setSessions([]);
+            setAllLearners([]);
+            setError("Failed to load learners");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadSessionLearners = async (sessionId: string) => {
+        if (sessionLearners[sessionId]) {
+            return;
+        }
+
+        try {
+            const response = await teacherApi.getSession(sessionId);
+            const detailedLearners = Array.isArray(response.data?.learners)
+                ? response.data.learners.map(normalizeLearner)
+                : [];
+
+            setSessionLearners((prev) => ({
+                ...prev,
+                [sessionId]: detailedLearners,
+            }));
+        } catch (err) {
+            console.error("Failed to load session learners:", err);
         }
     };
 
@@ -281,7 +315,8 @@ export default function TeacherArtifactCapture() {
         }
     };
 
-    const availableLearners = selectedSession ? selectedSession.learners : allLearners;
+    const selectedSessionLearners = selectedSession ? sessionLearners[selectedSession.id] : undefined;
+    const availableLearners = selectedSessionLearners ?? allLearners;
 
     if (loading) {
         return (
@@ -511,14 +546,19 @@ export default function TeacherArtifactCapture() {
                                             <button
                                                 key={session.id}
                                                 type="button"
-                                                onClick={() => setSelectedSession(session)}
+                                                onClick={() => {
+                                                    setSelectedSession(session);
+                                                    loadSessionLearners(session.id);
+                                                }}
                                                 className={`p-3 rounded-lg border-2 text-left transition-all ${selectedSession?.id === session.id
                                                         ? "border-purple-500 bg-purple-50"
                                                         : "border-gray-200 hover:border-gray-300"
                                                     }`}
                                             >
                                                 <p className="font-medium text-sm">{session.module_name}</p>
-                                                <p className="text-xs text-gray-500">{session.learners.length} learners</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {session.learner_count ?? session.learners?.length ?? 0} learners
+                                                </p>
                                             </button>
                                         ))}
                                     </div>

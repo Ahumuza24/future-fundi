@@ -9,8 +9,8 @@ from django.db import models
 
 def user_avatar_path(instance, filename):
     """Generate upload path for user avatars."""
-    ext = filename.split(".")[-1]
-    return f"avatars/{instance.id}.{ext}"
+    ext = filename.split(".")[-1].lower() if "." in filename else "jpg"
+    return f"avatars/{instance.id}/{uuid.uuid4().hex}.{ext}"
 
 
 class User(AbstractUser):

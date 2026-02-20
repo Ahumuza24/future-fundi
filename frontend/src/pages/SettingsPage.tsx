@@ -121,7 +121,7 @@ const SettingsPage = () => {
           last_name: formData.last_name,
           email: formData.email,
         };
-        localStorage.setItem("user_data", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
     } catch (error: any) {
