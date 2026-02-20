@@ -143,7 +143,6 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
   },
-  
   {
     title: "School Overview",
     path: "/leader/overview",
