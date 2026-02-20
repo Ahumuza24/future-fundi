@@ -192,7 +192,6 @@ export default function TeacherDashboard() {
                                     </p>
                                     <div className="text-sm text-gray-500 mt-1 space-y-0.5">
                                         <p>sessions scheduled</p>
-                                        <p>{dashboardData.quick_stats.total_completed ?? 0} completed all-time</p>
                                     </div>
                                 </div>
                                 <CheckCircle className="h-12 w-12" style={{ color: "var(--fundi-lime)", opacity: 0.2 }} />
@@ -200,7 +199,7 @@ export default function TeacherDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* This Month — new card */}
+                    {/* This Month card */}
                     <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-purple)" }}>
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">

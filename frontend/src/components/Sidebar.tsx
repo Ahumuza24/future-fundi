@@ -21,6 +21,7 @@ import {
   GraduationCap,
   TrendingUp,
   ListTodo,
+  MonitorDot,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -142,13 +143,7 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-lime)",
     roles: ["leader", "admin"],
   },
-  {
-    title: "Analytics",
-    path: "/leader/analytics",
-    icon: BarChart3,
-    color: "var(--fundi-lime)",
-    roles: ["leader", "admin"],
-  },
+  
   {
     title: "School Overview",
     path: "/leader/overview",
@@ -248,6 +243,20 @@ const allNavItems: NavItem[] = [
     path: "/admin/courses",
     icon: BookOpen,
     color: "var(--fundi-orange)",
+    roles: ["admin"],
+  },
+  {
+    title: "Activity Monitor",
+    path: "/admin/monitor",
+    icon: MonitorDot,
+    color: "var(--fundi-cyan)",
+    roles: ["admin"],
+  },
+  {
+    title: "Analytics",
+    path: "/admin/analytics",
+    icon: BarChart3,
+    color: "var(--fundi-lime)",
     roles: ["admin"],
   },
 ];

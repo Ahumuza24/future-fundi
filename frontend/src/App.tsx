@@ -34,6 +34,8 @@ import SchoolBadges from "@/pages/school/SchoolBadges";
 import SchoolAnalytics from "@/pages/school/SchoolAnalytics";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCourseManagement from "@/pages/admin/AdminCourseManagement";
+import AdminMonitor from "@/pages/admin/AdminMonitor";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import UserManagement from "@/pages/admin/UserManagement";
 import SchoolManagement from "@/pages/admin/SchoolManagement";
 import CurriculumDataEntry from "@/pages/admin/CurriculumDataEntry";
@@ -354,6 +356,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
             <SchoolManagement />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/monitor",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminMonitor />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/analytics",
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminAnalytics />
           </ProtectedRoute>
         ),
       },

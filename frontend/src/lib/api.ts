@@ -506,9 +506,26 @@ export const adminApi = {
 
   // Analytics
   analytics: {
-    overview: () => api.get('/api/admin/analytics/overview/'),
-    users: (params?: any) => api.get('/api/admin/analytics/users/', { params }),
+    overview:  () => api.get('/api/admin/analytics/overview/'),
+    users:     (params?: any) => api.get('/api/admin/analytics/users/', { params }),
     enrollments: (params?: any) => api.get('/api/admin/analytics/enrollments/', { params }),
+    dashboard: (params?: { days?: number }) => api.get('/api/admin/analytics/dashboard/', { params }),
+  },
+
+  // Monitoring
+  monitor: {
+    sessions: {
+      list:    (params?: any) => api.get('/api/admin/monitor/sessions/', { params }),
+      summary: (params?: any) => api.get('/api/admin/monitor/sessions/summary/', { params }),
+    },
+    tasks: {
+      list:    (params?: any) => api.get('/api/admin/monitor/tasks/', { params }),
+      summary: (params?: any) => api.get('/api/admin/monitor/tasks/summary/', { params }),
+    },
+    attendance: {
+      list:    (params?: any) => api.get('/api/admin/monitor/attendance/', { params }),
+      summary: (params?: any) => api.get('/api/admin/monitor/attendance/summary/', { params }),
+    },
   },
 };
 
