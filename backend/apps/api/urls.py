@@ -33,6 +33,7 @@ from .teacher_views import (
     QuickArtifactViewSet,
     StudentManagementViewSet,
     TeacherSessionViewSet,
+    TeacherTaskViewSet,
 )
 from .views import (
     ArtifactViewSet,
@@ -75,6 +76,7 @@ router.register(
 router.register(
     r"teacher/credentials", CredentialManagementViewSet, basename="teacher-credentials"
 )
+router.register(r"teacher/tasks", TeacherTaskViewSet, basename="teacher-tasks")
 
 # Admin endpoints
 router.register(r"admin/users", AdminUserViewSet, basename="admin-users")

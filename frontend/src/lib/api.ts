@@ -184,8 +184,21 @@ export const teacherApi = {
   getTodaySessions: () => api.get('/api/teacher/sessions/today/', { params: withSelectedSchool({}) }),
   getUpcomingSessions: () => api.get('/api/teacher/sessions/upcoming/', { params: withSelectedSchool({}) }),
   getSession: (id: string) => api.get(`/api/teacher/sessions/${id}/`, { params: withSelectedSchool({}) }),
-  startSession: (id: string) => api.post(`/api/teacher/sessions/${id}/start/`),
-  completeSession: (id: string) => api.post(`/api/teacher/sessions/${id}/complete/`),
+  createSession: (data: {
+    module: string;
+    date: string;
+    start_time?: string;
+    end_time?: string;
+    notes?: string;
+    status?: string;
+  }) => api.post('/api/teacher/sessions/', withSelectedSchool(data)),
+  updateSession: (id: string, data: any) => api.patch(`/api/teacher/sessions/${id}/`, withSelectedSchool(data)),
+  deleteSession: (id: string) => api.delete(`/api/teacher/sessions/${id}/`, { params: withSelectedSchool({}) }),
+  startSession: (id: string) => api.post(`/api/teacher/sessions/${id}/start/`, withSelectedSchool({})),
+  completeSession: (id: string) => api.post(`/api/teacher/sessions/${id}/complete/`, withSelectedSchool({})),
+  listModules: () => api.get('/api/teacher/sessions/list-modules/', { params: withSelectedSchool({}) }),
+  listPathways: () => api.get('/api/teacher/sessions/list-pathways/', { params: withSelectedSchool({}) }),
+
   
   // Attendance
   markAttendance: (sessionId: string, attendance: Array<{
@@ -242,7 +255,26 @@ export const teacherApi = {
     getLearnerCredentials: (learnerId: string) =>
       api.get(`/api/teacher/credentials/learner/${learnerId}/`, { params: withSelectedSchool({}) }),
   },
+
+  // Tasks
+  tasks: {
+    getAll: (params?: { status?: string; priority?: string }) =>
+      api.get('/api/teacher/tasks/', { params: params || {} }),
+    getById: (id: string) => api.get(`/api/teacher/tasks/${id}/`),
+    create: (data: {
+      title: string;
+      description?: string;
+      due_date?: string | null;
+      priority?: 'low' | 'medium' | 'high' | 'urgent';
+      status?: 'todo' | 'in_progress' | 'done';
+    }) => api.post('/api/teacher/tasks/', data),
+    update: (id: string, data: any) => api.patch(`/api/teacher/tasks/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/teacher/tasks/${id}/`),
+    toggle: (id: string) => api.post(`/api/teacher/tasks/${id}/toggle/`),
+    getSummary: () => api.get('/api/teacher/tasks/summary/'),
+  },
 };
+
 
 export const authApi = {
   login: (credentials: { username: string; password: string }) =>

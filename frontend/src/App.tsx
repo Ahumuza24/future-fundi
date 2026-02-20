@@ -16,6 +16,8 @@ import TeacherArtifactCapture from "@/pages/teacher/TeacherArtifactCapture";
 import TeacherClasses from "@/pages/teacher/TeacherClasses";
 import TeacherStudents from "@/pages/teacher/TeacherStudents";
 import TeacherPathways from "@/pages/teacher/TeacherPathways";
+import TeacherSessions from "@/pages/teacher/TeacherSessions";
+import TeacherTasks from "@/pages/teacher/TeacherTasks";
 
 import MarkAttendance from "@/pages/teacher/MarkAttendance";
 import StudentDetail from "@/pages/teacher/StudentDetail";
@@ -212,6 +214,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherCommunication />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/sessions",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherSessions />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/tasks",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherTasks />
           </ProtectedRoute>
         ),
       },
