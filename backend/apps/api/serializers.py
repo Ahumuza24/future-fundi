@@ -107,7 +107,19 @@ class UserSerializer(serializers.ModelSerializer):
             "password",
         ]
         read_only_fields = ["id", "date_joined", "last_login"]
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {
+            "password": {
+                "write_only": True,
+                "required": False,
+                "allow_blank": True,
+            }
+        }
+
+    def validate_password(self, value):
+        """Only enforce min_length when a password is actually provided."""
+        if value and len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        return value
 
     def validate_school_ids(self, value):
         if not value:
