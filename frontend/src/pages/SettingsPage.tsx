@@ -254,7 +254,7 @@ const SettingsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
-                  First Name
+                  Sir Name
                 </label>
                 <input
                   type="text"
@@ -266,7 +266,7 @@ const SettingsPage = () => {
 
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
-                  Last Name
+                  Other Name
                 </label>
                 <input
                   type="text"
