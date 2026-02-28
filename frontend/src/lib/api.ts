@@ -20,8 +20,8 @@ const withSelectedSchool = <T extends Record<string, any>>(payload: T = {} as T)
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
-    const selectedSchoolId = localStorage.getItem('selected_school_id');
+    const token = sessionStorage.getItem('access_token'); // sessionStorage — not localStorage
+    const selectedSchoolId = localStorage.getItem('selected_school_id'); // not a secret
     if (token) {
       if (config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
@@ -46,7 +46,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        const refreshToken = sessionStorage.getItem('refresh_token'); // sessionStorage
         if (refreshToken) {
           const response = await axios.post(
             `${API_BASE_URL}/auth/token/refresh/`,
@@ -54,7 +54,7 @@ api.interceptors.response.use(
           );
 
           const { access } = response.data;
-          localStorage.setItem('access_token', access);
+          sessionStorage.setItem('access_token', access); // sessionStorage
 
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${access}`;
@@ -63,8 +63,8 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }

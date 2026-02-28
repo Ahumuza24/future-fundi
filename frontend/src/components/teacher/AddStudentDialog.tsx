@@ -178,7 +178,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                     {/* Use grid for compact layout */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>First Name <span className="text-red-500">*</span></Label>
+                            <Label>Sir Name <span className="text-red-500">*</span></Label>
                             <Input
                                 value={studentForm.first_name}
                                 onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })}
@@ -186,7 +186,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                             />
                         </div>
                         <div>
-                            <Label>Last Name <span className="text-red-500">*</span></Label>
+                            <Label> First Name <span className="text-red-500">*</span></Label>
                             <Input
                                 value={studentForm.last_name}
                                 onChange={(e) => setStudentForm({ ...studentForm, last_name: e.target.value })}

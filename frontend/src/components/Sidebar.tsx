@@ -276,7 +276,7 @@ const Sidebar = () => {
   }, [user]);
 
   const handleLogout = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = sessionStorage.getItem('refresh_token'); // sessionStorage
     if (refreshToken) {
       try {
         await authApi.logout(refreshToken);

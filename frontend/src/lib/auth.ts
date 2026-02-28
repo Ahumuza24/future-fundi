@@ -83,7 +83,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
  * Check if user is authenticated
  */
 export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem('access_token');
+  const token = sessionStorage.getItem('access_token'); // tokens in sessionStorage
   return !!token;
 };
 
@@ -105,8 +105,8 @@ export const getCurrentUser = (): User | null => {
  * Clear authentication data
  */
 export const clearAuth = (): void => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
+  sessionStorage.removeItem('access_token'); // tokens in sessionStorage
+  sessionStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
   localStorage.removeItem('selected_school_id');
   localStorage.removeItem('selected_school_name');
