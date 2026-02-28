@@ -18,7 +18,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "replace-this-in-prod")
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"  # Default OFF for safety
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
@@ -100,24 +100,20 @@ else:
 USE_READ_REPLICA = os.getenv("USE_READ_REPLICA", "false").lower() == "true"
 if USE_READ_REPLICA:
     DATABASES["read_replica"] = {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_REPLICA_DB", os.getenv("POSTGRES_DB", "fundi")),
-            "USER": os.getenv(
-                "POSTGRES_REPLICA_USER", os.getenv("POSTGRES_USER", "fundi")
-            ),
-            "PASSWORD": os.getenv(
-                "POSTGRES_REPLICA_PASSWORD", os.getenv("POSTGRES_PASSWORD", "password")
-            ),
-            "HOST": os.getenv(
-                "POSTGRES_REPLICA_HOST", os.getenv("POSTGRES_HOST", "localhost")
-            ),
-            "PORT": os.getenv(
-                "POSTGRES_REPLICA_PORT", os.getenv("POSTGRES_PORT", "5432")
-            ),
-            "CONN_MAX_AGE": 600,
-            "TEST": {
-                "MIRROR": "default",
-            },
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_REPLICA_DB", os.getenv("POSTGRES_DB", "fundi")),
+        "USER": os.getenv("POSTGRES_REPLICA_USER", os.getenv("POSTGRES_USER", "fundi")),
+        "PASSWORD": os.getenv(
+            "POSTGRES_REPLICA_PASSWORD", os.getenv("POSTGRES_PASSWORD", "password")
+        ),
+        "HOST": os.getenv(
+            "POSTGRES_REPLICA_HOST", os.getenv("POSTGRES_HOST", "localhost")
+        ),
+        "PORT": os.getenv("POSTGRES_REPLICA_PORT", os.getenv("POSTGRES_PORT", "5432")),
+        "CONN_MAX_AGE": 600,
+        "TEST": {
+            "MIRROR": "default",
+        },
     }
 
 AUTH_USER_MODEL = "users.User"
@@ -211,6 +207,8 @@ REST_FRAMEWORK = {
         "burst": "60/min",
         "sustained": "1000/hour",
         "anon_burst": "20/min",
+        "login": "5/min",  # Brute-force protection on /api/token/
+        "register": "3/min",  # Spam protection on /api/register/
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "20")),

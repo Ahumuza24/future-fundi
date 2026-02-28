@@ -4,6 +4,7 @@ import io
 import logging
 import uuid
 
+from apps.api.throttles import LoginRateThrottle, RegisterRateThrottle
 from PIL import Image
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -26,6 +27,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom JWT token view that includes user data in response."""
 
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginRateThrottle]
 
 
 class UserProfileView(APIView):
@@ -83,6 +85,23 @@ class AvatarUploadView(APIView):
         try:
             # Process and resize image
             img = Image.open(avatar_file)
+
+            # ── Server-side MIME verification (spoofing defence) ──────────────
+            # Pillow reads the actual file bytes, not the Content-Type header.
+            ALLOWED_FORMATS = {"JPEG", "PNG", "GIF", "WEBP"}
+            if img.format not in ALLOWED_FORMATS:
+                return Response(
+                    {
+                        "error": "File content is not a valid image (JPEG, PNG, GIF, or WebP)."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Call verify() to confirm file integrity (catches truncated/corrupt images)
+            img.verify()
+            # Re-open after verify() since it exhausts the file pointer
+            avatar_file.seek(0)
+            img = Image.open(avatar_file)
+            # ─────────────────────────────────────────────────────────────────
 
             # Convert to RGB if necessary
             if img.mode in ("RGBA", "P"):
@@ -153,6 +172,13 @@ class AvatarUploadView(APIView):
 @permission_classes([permissions.AllowAny])
 def register_view(request):
     """User registration endpoint - creates user and returns JWT tokens."""
+    # Apply strict throttle to prevent account-creation spam
+    throttle = RegisterRateThrottle()
+    if not throttle.allow_request(request, None):
+        return Response(
+            {"detail": "Too many registration attempts. Please try again later."},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()

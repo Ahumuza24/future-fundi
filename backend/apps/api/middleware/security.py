@@ -2,6 +2,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# React SPA CSP — allows inline styles (required by shadcn/Tailwind) and Google Fonts
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "  # Vite bundles need this
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self';"
+)
+
+_PERMISSIONS_POLICY = (
+    "camera=(), microphone=(), geolocation=(), "
+    "payment=(), usb=(), interest-cohort=()"
+)
+
 
 class SecurityHeadersMiddleware:
     def __init__(self, get_response):
@@ -14,8 +32,7 @@ class SecurityHeadersMiddleware:
         response["X-Content-Type-Options"] = "nosniff"
         response["X-XSS-Protection"] = "1; mode=block"
         response["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
-        # CSP could vary, but a strict default is good
-        # response["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';"
+        response["Content-Security-Policy"] = _CSP
+        response["Permissions-Policy"] = _PERMISSIONS_POLICY
 
         return response

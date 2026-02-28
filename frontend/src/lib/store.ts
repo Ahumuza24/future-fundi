@@ -28,16 +28,30 @@ interface AuthState {
   setUser: (user: User) => void;
 }
 
+// ── Token storage strategy ───────────────────────────────────────────────────
+// Access/refresh tokens are stored in sessionStorage (NOT localStorage).
+// sessionStorage is:
+//   • Scoped to the current tab — not shared across tabs or windows
+//   • Automatically cleared when the tab/browser is closed
+//   • Still readable by same-origin JS, but XSS no longer creates *persistent*
+//     sessions that survive after the tab is closed.
+// Non-sensitive display data (user profile) remains in localStorage for UX.
+const tokenStorage = {
+  getItem: (k: string) => sessionStorage.getItem(k),
+  setItem: (k: string, v: string) => sessionStorage.setItem(k, v),
+  removeItem: (k: string) => sessionStorage.removeItem(k),
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
-  accessToken: localStorage.getItem('access_token'),
-  refreshToken: localStorage.getItem('refresh_token'),
-  isAuthenticated: !!localStorage.getItem('access_token'),
+  accessToken: tokenStorage.getItem('access_token'),
+  refreshToken: tokenStorage.getItem('refresh_token'),
+  isAuthenticated: !!tokenStorage.getItem('access_token'),
   
   login: (accessToken, refreshToken, user) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
+    tokenStorage.setItem('access_token', accessToken);
+    tokenStorage.setItem('refresh_token', refreshToken);
+    localStorage.setItem('user', JSON.stringify(user)); // profile only, not a secret
     set({ 
       user, 
       accessToken, 
@@ -47,8 +61,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    tokenStorage.removeItem('access_token');
+    tokenStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     localStorage.removeItem('selected_school_id');
     localStorage.removeItem('selected_school_name');

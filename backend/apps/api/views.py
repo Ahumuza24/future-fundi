@@ -367,16 +367,9 @@ class DashboardKpisView(APIView):
 def health_check(request):
     """Health check endpoint for deployment monitoring."""
     try:
-        # Test database connection
         connection.ensure_connection()
-        db_status = "ok"
     except Exception:
-        db_status = "error"
+        # Return 503 without leaking internal error details
+        return Response({"status": "unavailable"}, status=503)
 
-    return Response(
-        {
-            "status": "healthy",
-            "database": db_status,
-            "version": "1.0.0",
-        }
-    )
+    return Response({"status": "ok"})
