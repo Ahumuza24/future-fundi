@@ -32,7 +32,8 @@ from apps.core.models import (
 )
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, DateField, Q
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -556,13 +557,18 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
         Returns all charts + KPIs in one request.
         Supports ?days=30|60|90 to change the time window.
         """
-        days = int(request.query_params.get("days", 30))
+        try:
+            days = int(request.query_params.get("days", 30))
+            days = max(1, min(days, 365))  # clamp: 1-365
+        except (ValueError, TypeError):
+            days = 30
+
         end_dt = timezone.now()
         start_dt = end_dt - timedelta(days=days)
         today = end_dt.date()
         start_date = start_dt.date()
 
-        # ── KPI snapshot ──────────────────────────────────────────────────────
+        # ── KPI snapshot (5 queries total) ────────────────────────────────────
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
         new_users = User.objects.filter(date_joined__gte=start_dt).count()
@@ -587,42 +593,63 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
             else 0
         )
 
-        # ── User growth (day-by-day) ──────────────────────────────────────────
-        user_growth = []
+        # ── User growth — 1 query via GROUP BY date ───────────────────────────
+        _user_days = (
+            User.objects.filter(date_joined__date__gte=start_date)
+            .annotate(day=TruncDate("date_joined"))
+            .values("day")
+            .annotate(new_users=Count("id"))
+        )
+        _enroll_days = (
+            LearnerCourseEnrollment.objects.filter(enrolled_at__date__gte=start_date)
+            .annotate(day=TruncDate("enrolled_at"))
+            .values("day")
+            .annotate(new_enrollments=Count("id"))
+        )
+        user_by_day = {r["day"]: r["new_users"] for r in _user_days}
+        enroll_by_day = {r["day"]: r["new_enrollments"] for r in _enroll_days}
         cur = start_date
+        user_growth = []
         while cur <= today:
             user_growth.append(
                 {
                     "date": cur.isoformat(),
-                    "new_users": User.objects.filter(date_joined__date=cur).count(),
-                    "new_enrollments": LearnerCourseEnrollment.objects.filter(
-                        enrolled_at__date=cur
-                    ).count(),
+                    "new_users": user_by_day.get(cur, 0),
+                    "new_enrollments": enroll_by_day.get(cur, 0),
                 }
             )
             cur += timedelta(days=1)
 
-        # ── Session trends (day-by-day) ───────────────────────────────────────
-        session_trend = []
+        # ── Session trends — 2 queries (total + status breakdown) ─────────────
+        _sess_days = (
+            Session.objects.filter(date__gte=start_date)
+            .annotate(day=TruncDate("date"))
+            .values("day", "status")
+            .annotate(cnt=Count("id"))
+        )
+        sess_map: dict = {}  # day -> {total, completed, scheduled}
+        for row in _sess_days:
+            d = row["day"]
+            if d not in sess_map:
+                sess_map[d] = {"total": 0, "completed": 0, "scheduled": 0}
+            sess_map[d]["total"] += row["cnt"]
+            if row["status"] == "completed":
+                sess_map[d]["completed"] = row["cnt"]
+            elif row["status"] == "scheduled":
+                sess_map[d]["scheduled"] = row["cnt"]
         cur = start_date
+        session_trend = []
         while cur <= today:
-            day_qs = Session.objects.filter(date=cur)
-            session_trend.append(
-                {
-                    "date": cur.isoformat(),
-                    "total": day_qs.count(),
-                    "completed": day_qs.filter(status="completed").count(),
-                    "scheduled": day_qs.filter(status="scheduled").count(),
-                }
-            )
+            entry = sess_map.get(cur, {"total": 0, "completed": 0, "scheduled": 0})
+            session_trend.append({"date": cur.isoformat(), **entry})
             cur += timedelta(days=1)
 
-        # ── Role distribution (pie) ───────────────────────────────────────────
+        # ── Role distribution (pie) — 1 query ─────────────────────────────────
         role_distribution = list(
             User.objects.values("role").annotate(count=Count("id")).order_by("-count")
         )
 
-        # ── School performance (bar) ──────────────────────────────────────────
+        # ── School performance (bar) — 1 query ────────────────────────────────
         school_perf_raw = School.objects.annotate(
             learner_count=Count("learner", distinct=True),
             session_count=Count("session", distinct=True),
@@ -636,7 +663,7 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
             for s in school_perf_raw
         ]
 
-        # ── Top teachers (by sessions) ────────────────────────────────────────
+        # ── Top teachers (by sessions) — 1 query ──────────────────────────────
         top_teachers = list(
             Session.objects.filter(created_at__gte=start_dt)
             .values("teacher__first_name", "teacher__last_name", "teacher__username")
@@ -655,25 +682,38 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
                 t["teacher__username"],
             )
 
-        # ── Attendance breakdown for chart ────────────────────────────────────
-        att_by_day = []
+        # ── Attendance breakdown — 1 query via GROUP BY date+status ───────────
+        _att_rows = (
+            Attendance.objects.filter(session__date__gte=start_date)
+            .values("session__date", "status")
+            .annotate(cnt=Count("id"))
+        )
+        att_map: dict = {}
+        for row in _att_rows:
+            d = row["session__date"]
+            if d not in att_map:
+                att_map[d] = {"present": 0, "absent": 0, "late": 0, "total": 0}
+            st = row["status"]
+            att_map[d]["total"] += row["cnt"]
+            if st in ("present", "absent", "late"):
+                att_map[d][st] += row["cnt"]
         cur = start_date
+        att_by_day = []
         while cur <= today:
-            day_att = Attendance.objects.filter(session__date=cur)
-            total_d = day_att.count()
-            present_d = day_att.filter(status="present").count()
+            a = att_map.get(cur, {"present": 0, "absent": 0, "late": 0, "total": 0})
+            total_d = a["total"]
             att_by_day.append(
                 {
                     "date": cur.isoformat(),
-                    "rate": round(present_d / total_d * 100, 1) if total_d else 0,
-                    "present": present_d,
-                    "absent": day_att.filter(status="absent").count(),
-                    "late": day_att.filter(status="late").count(),
+                    "rate": round(a["present"] / total_d * 100, 1) if total_d else 0,
+                    "present": a["present"],
+                    "absent": a["absent"],
+                    "late": a["late"],
                 }
             )
             cur += timedelta(days=1)
 
-        # ── Top pathways by enrollment ────────────────────────────────────────
+        # ── Top pathways by enrollment — 1 query ──────────────────────────────
         top_courses = list(
             LearnerCourseEnrollment.objects.filter(is_active=True)
             .values("course__name")
