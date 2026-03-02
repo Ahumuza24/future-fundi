@@ -97,6 +97,7 @@ export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [schoolFilter, setSchoolFilter] = useState<string>("all");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -121,7 +122,7 @@ export default function UserManagement() {
         fetchUsers();
         fetchStats();
         fetchSchools();
-    }, [roleFilter, statusFilter]);
+    }, [roleFilter, statusFilter, schoolFilter]);
 
     const fetchSchools = async () => {
         try {
@@ -138,6 +139,7 @@ export default function UserManagement() {
             const params: any = {};
             if (roleFilter !== 'all') params.role = roleFilter;
             if (statusFilter !== 'all') params.is_active = statusFilter === 'active';
+            if (schoolFilter !== 'all') params.school = schoolFilter;
 
             const response = await adminApi.users.getAll(params);
             setUsers(Array.isArray(response.data) ? response.data : response.data.results || []);
@@ -482,7 +484,8 @@ export default function UserManagement() {
                 {/* Filters */}
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Search */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
@@ -493,6 +496,7 @@ export default function UserManagement() {
                                 />
                             </div>
 
+                            {/* Role filter */}
                             <Select value={roleFilter} onValueChange={setRoleFilter}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Filter by role" />
@@ -508,6 +512,7 @@ export default function UserManagement() {
                                 </SelectContent>
                             </Select>
 
+                            {/* Status filter */}
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Filter by status" />
@@ -516,6 +521,21 @@ export default function UserManagement() {
                                     <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* School filter */}
+                            <Select value={schoolFilter} onValueChange={setSchoolFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter by school" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Schools</SelectItem>
+                                    {availableSchools.map((school) => (
+                                        <SelectItem key={school.id} value={school.id}>
+                                            {school.name}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -539,6 +559,7 @@ export default function UserManagement() {
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
                                         <TableHead>Role</TableHead>
+                                        <TableHead>School</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Last Login</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
@@ -547,7 +568,7 @@ export default function UserManagement() {
                                 <TableBody>
                                     {filteredUsers.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                                                 No users found
                                             </TableCell>
                                         </TableRow>
@@ -561,6 +582,21 @@ export default function UserManagement() {
                                                     <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleColors(user.role).bg} ${getRoleColors(user.role).text}`}>
                                                         {user.role}
                                                     </span>
+                                                </TableCell>
+                                                {/* School column */}
+                                                <TableCell className="max-w-[160px]">
+                                                    {user.role === 'teacher' && (user.schools?.length ?? 0) > 0 ? (
+                                                        <span className="text-sm text-gray-700" title={user.schools!.map(s => s.name).join(', ')}>
+                                                            {user.schools!.length === 1
+                                                                ? user.schools![0].name
+                                                                : `${user.schools![0].name} +${user.schools!.length - 1}`
+                                                            }
+                                                        </span>
+                                                    ) : user.tenant ? (
+                                                        <span className="text-sm text-gray-700">{user.tenant.name}</span>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {user.is_active ? (
