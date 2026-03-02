@@ -336,7 +336,7 @@ export default function SchoolTeachers() {
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="first_name">Sir Name</Label>
+                                    <Label htmlFor="first_name">Sur Name</Label>
                                     <Input
                                         id="first_name"
                                         value={teacherForm.first_name}
@@ -406,7 +406,7 @@ export default function SchoolTeachers() {
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit_first_name">Sir Name</Label>
+                                    <Label htmlFor="edit_first_name">Sur Name</Label>
                                     <Input
                                         id="edit_first_name"
                                         value={teacherForm.first_name}

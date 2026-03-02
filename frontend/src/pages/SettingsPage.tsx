@@ -166,8 +166,8 @@ const SettingsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${saveMessage.type === "success"
-                ? "bg-green-50 border border-green-200 text-green-700"
-                : "bg-red-50 border border-red-200 text-red-700"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
               }`}
           >
             {saveMessage.type === "success" ? (
@@ -254,7 +254,7 @@ const SettingsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
-                  Sir Name
+                  Sur Name
                 </label>
                 <input
                   type="text"

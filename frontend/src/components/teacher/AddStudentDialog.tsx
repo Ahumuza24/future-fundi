@@ -178,7 +178,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                     {/* Use grid for compact layout */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Sir Name <span className="text-red-500">*</span></Label>
+                            <Label>Sur Name <span className="text-red-500">*</span></Label>
                             <Input
                                 value={studentForm.first_name}
                                 onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })}
@@ -228,7 +228,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                             >
                                 <option value="">Select a Class...</option>
                                 <optgroup label="Grades">
-                                    {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12","Grade 13"].map(cls => (
+                                    {["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12", "Grade 13"].map(cls => (
                                         <option key={cls} value={cls}>{cls}</option>
                                     ))}
                                 </optgroup>

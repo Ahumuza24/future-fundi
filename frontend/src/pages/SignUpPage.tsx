@@ -140,7 +140,7 @@ const SignUpPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="first_name" className="block text-sm font-semibold mb-2">
-                        Sir Name
+                        Sur Name
                       </label>
                       <input
                         id="first_name"
@@ -149,7 +149,7 @@ const SignUpPage = () => {
                         value={formData.first_name}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)] transition-all"
-                        placeholder="Sir name"
+                        placeholder="Sur Name"
                         required
                         disabled={loading}
                       />
