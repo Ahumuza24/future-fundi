@@ -434,7 +434,7 @@ export default function ChildManagement() {
                                 <form onSubmit={editingChild ? handleEditChild : handleAddChild} className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">Sir Name</label>
+                                            <label className="block text-sm font-semibold mb-2">Sur Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.first_name}

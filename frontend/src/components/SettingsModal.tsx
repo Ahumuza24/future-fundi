@@ -264,7 +264,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1">
-                                        Sir Name
+                                        Sur Name
                                     </label>
                                     <input
                                         type="text"
