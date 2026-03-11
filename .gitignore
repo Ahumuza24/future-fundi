@@ -30,4 +30,5 @@ docs
 
 # Deployment credentials
 backend/app.yaml
-.agent/skills
+# AI agent config (skills, workflows, memory — not for source control)
+.agent/
