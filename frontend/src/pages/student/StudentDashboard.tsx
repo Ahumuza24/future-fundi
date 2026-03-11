@@ -60,7 +60,10 @@ interface DashboardData {
     icon: string; status: "not_started" | "good" | "warning" | "critical";
     microCredentialsEarned: number; totalMicroCredentials: number;
   }>;
-  upcomingActivities: Array<{ id: string; title: string; date: string; time: string; type: string; color: string }>;
+  upcomingLessons: Array<{
+    id: string; title: string; date: string; time: string; type: string; color: string;
+    pathway: string; microcredential: string; fullDate: string; startTime: string; endTime: string;
+  }>;
   activeProjects: any[];
   badges: Array<{
     id: string; name: string; description: string; icon: string;
@@ -447,21 +450,33 @@ const StudentDashboard = () => {
           </div>
 
           <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
-            <p className="text-sm font-medium text-gray-500">Upcoming Activities</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto md:flex">
-              {dashboardData.upcomingActivities.slice(0, 3).map((event, i) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-white px-3 py-2 rounded-lg shadow-sm border-l-4 text-xs flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-2 md:gap-0"
-                  style={{ borderLeftColor: event.color }}
-                >
-                  <p className="font-bold">{event.date}</p>
-                  <p className="text-gray-600 line-clamp-1">{event.title}</p>
-                </motion.div>
-              ))}
+            <p className="text-sm font-medium text-gray-500">Upcoming Lessons</p>
+            <div className="flex w-full md:w-auto">
+              {dashboardData.upcomingLessons.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:flex">
+                  {dashboardData.upcomingLessons.slice(0, 3).map((event, i) => (
+                    <motion.div
+                      key={event.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="bg-white px-4 py-3 rounded-xl shadow-sm border border-l-4 text-left flex flex-col gap-1 w-full md:w-56"
+                      style={{ borderLeftColor: event.color }}
+                    >
+                      <span className="text-xs font-bold text-gray-600 line-clamp-1">{event.fullDate}</span>
+                      <p className="font-bold text-gray-900 leading-tight line-clamp-1">{event.microcredential}</p>
+                      <p className="text-xs text-gray-500 font-medium truncate">{event.pathway}</p>
+                      <p className="text-xs text-[var(--fundi-orange)] font-semibold mt-1">
+                        {event.startTime} - {event.endTime}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-dashed border-gray-200 text-xs text-gray-400 italic flex items-center justify-center w-full md:w-64">
+                  No upcoming lessons scheduled yet
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -503,9 +518,9 @@ const StudentDashboard = () => {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="heading-font text-2xl font-bold text-[var(--fundi-black)]">
-                    Artifacts
+                   My Artifacts
                   </h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Work your teacher has captured for you</p>
+                  <p className="text-sm text-gray-500 mt-0.5">Your Projects submitted in class</p>
                 </div>
                 {artifacts.length > 0 && (
                   <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1.5 rounded-full">
@@ -545,30 +560,6 @@ const StudentDashboard = () => {
           {/* Right Sidebar */}
           <div className="lg:col-span-4 space-y-8">
 
-            {/* Recommended Next Step */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-              <Card className="border-l-4 bg-gradient-to-br from-white to-blue-50/50" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Star className="h-5 w-5 fill-orange-400 text-orange-400" />
-                    Recommended Step
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-3 bg-white rounded-lg shadow-sm border">
-                    <p className="font-semibold text-gray-800">Advanced Sensors Module</p>
-                    <p className="text-sm text-gray-500">Robotics Pathway • 2 hrs remaining</p>
-                    <div className="mt-3 flex justify-between items-center">
-                      <span className="text-xs font-bold text-orange-600">Earn "Sensor Wizard" Badge</span>
-                      <Button size="sm" className="bg-[var(--fundi-orange)] hover:bg-orange-600 text-white">
-                        Start Now <ArrowRight className="ml-1 h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
             {/* Badges & Microcredentials */}
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
               <Card>
@@ -603,18 +594,33 @@ const StudentDashboard = () => {
                 <Circle className="h-3 w-3 fill-current" />
                 Timeline
               </h3>
-              <div className="border-l-2 border-gray-100 ml-1.5 space-y-6">
-                {dashboardData.upcomingActivities.map((event) => (
-                  <div key={`tl-${event.id}`} className="relative pl-6">
-                    <div
-                      className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm"
-                      style={{ backgroundColor: event.color }}
-                    />
-                    <p className="text-xs text-gray-400 mb-0.5">{event.date}</p>
-                    <p className="text-sm font-semibold text-gray-700">{event.title}</p>
-                  </div>
-                ))}
-              </div>
+              {dashboardData.upcomingLessons.length > 0 ? (
+                <div className="border-l-2 border-gray-100 ml-1.5 space-y-6">
+                  {dashboardData.upcomingLessons.map((event) => (
+                    <div key={`tl-${event.id}`} className="relative pl-6">
+                      <div
+                        className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                        style={{ backgroundColor: event.color }}
+                      />
+                      <p className="text-xs text-[var(--fundi-orange)] font-bold mb-0.5">{event.fullDate}</p>
+                      <p className="text-sm font-bold text-[var(--fundi-black)]">{event.microcredential}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                          {event.pathway}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          {event.startTime} - {event.endTime}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-white border border-dashed border-gray-200 py-10 text-center shadow-sm">
+                  <p className="text-gray-500 text-sm font-medium">Clear schedule</p>
+                  <p className="text-gray-400 text-xs mt-1">Check back later for upcoming lessons</p>
+                </div>
+              )}
             </div>
 
           </div>

@@ -165,14 +165,15 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 {
                     "id": str(session.id),
                     "title": session.module.name if session.module else "Class Session",
+                    "pathway": session.module.course.name if session.module and getattr(session.module, "course", None) else "General Pathway",
+                    "microcredential": session.module.name if session.module else "General Credential",
+                    "fullDate": session.date.strftime("%B %d, %Y"),
                     "date": session.date.strftime("%b %d"),
-                    "time": (
-                        session.start_time.strftime("%H:%M")
-                        if session.start_time
-                        else ""
-                    ),
+                    "startTime": session.start_time.strftime("%I:%M %p") if session.start_time else "TBD",
+                    "endTime": session.end_time.strftime("%I:%M %p") if session.end_time else "TBD",
+                    "time": (f"{session.start_time.strftime('%I:%M %p')} - {session.end_time.strftime('%I:%M %p')}" if session.start_time and session.end_time else session.start_time.strftime('%I:%M %p') if session.start_time else "TBD"),
                     "type": "session",
-                    "color": "#3b82f6",  # blue
+                    "color": "#f97316",  # update to fundi orange
                     "sort_key": sort_key,
                 }
             )
@@ -183,12 +184,13 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 {
                     "id": str(activity.id),
                     "title": activity.name,
+                    "pathway": activity.course.name if hasattr(activity, 'course') and activity.course else "General Pathway",
+                    "microcredential": "Activity",
+                    "fullDate": activity.date.strftime("%B %d, %Y"),
                     "date": activity.date.strftime("%b %d"),
-                    "time": (
-                        activity.start_time.strftime("%H:%M")
-                        if activity.start_time
-                        else ""
-                    ),
+                    "startTime": activity.start_time.strftime("%I:%M %p") if activity.start_time else "TBD",
+                    "endTime": activity.end_time.strftime("%I:%M %p") if getattr(activity, "end_time", None) else "TBD",
+                    "time": (f"{activity.start_time.strftime('%I:%M %p')} - {activity.end_time.strftime('%I:%M %p')}" if activity.start_time and getattr(activity, "end_time", None) else activity.start_time.strftime('%I:%M %p') if activity.start_time else "TBD"),
                     "type": "activity",
                     "color": "#f59e0b",  # orange
                     "sort_key": sort_key,
@@ -279,7 +281,7 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                     "age": learner.age,
                 },
                 "pathways": pathways,
-                "upcomingActivities": upcoming,
+                "upcomingLessons": upcoming,
                 "activeProjects": projects,
                 "badges": badges,
             }
