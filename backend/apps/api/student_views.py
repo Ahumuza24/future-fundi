@@ -329,9 +329,6 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             .order_by("-submitted_at")
         )
 
-        from django.contrib.auth import get_user_model
-        get_user_model()
-
         results = []
         for a in artifacts_qs:
             # Try to get teacher/author name via created_by field if it exists

@@ -446,6 +446,7 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     def capture(self, request):
         """Create an artifact and upload files in a single multipart request."""
         import json
+        import os
         import uuid
 
         from django.conf import settings
@@ -464,6 +465,18 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             learner = Learner.objects.get(id=learner_id)
         except (Learner.DoesNotExist, Exception):
             return Response({"detail": "Learner not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Enforce school/tenant scope (prevent cross-school writes)
+        allowed_school_ids = getattr(request, "allowed_school_ids", None)
+        if allowed_school_ids is None:
+            from apps.core.scope import get_user_allowed_school_ids
+            allowed_school_ids = get_user_allowed_school_ids(request.user)
+
+        if not allowed_school_ids or str(learner.tenant_id) not in allowed_school_ids:
+            return Response(
+                {"detail": "You can only capture artifacts for learners in your school."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         # --- 2. Create the artifact record first ---
         reflection = request.data.get("reflection", "")
@@ -506,8 +519,15 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         uploaded_files = request.FILES.getlist("files")
 
         for f in uploaded_files:
+            if f.size > settings.MAX_UPLOAD_SIZE_BYTES:
+                return Response(
+                    {"detail": f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             # Build safe path: media/artifacts/<artifact_id>/<uuid>_<filename>
-            safe_name = f"{uuid.uuid4().hex}_{f.name}"
+            safe_original_name = os.path.basename(f.name) or "upload"
+            safe_name = f"{uuid.uuid4().hex}_{safe_original_name}"
             rel_path = f"artifacts/{artifact.id}/{safe_name}"
             saved_path = default_storage.save(rel_path, f)
 

@@ -187,6 +187,7 @@ class ModuleViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
+        from django.conf import settings
         from django.core.files.storage import default_storage
 
         module = self.get_object()
@@ -209,6 +210,12 @@ class ModuleViewSet(viewsets.ModelViewSet):
         if content_type not in allowed_types:
             return Response(
                 {"error": "File type not allowed. Allowed: images and videos"},
+                status=400,
+            )
+
+        if uploaded_file.size > settings.MAX_UPLOAD_SIZE_BYTES:
+            return Response(
+                {"error": f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB"},
                 status=400,
             )
 
@@ -650,6 +657,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
         import os
         import uuid
 
+        from django.conf import settings
         from django.core.files.storage import default_storage
 
         activity = self.get_object()
@@ -669,6 +677,12 @@ class ActivityViewSet(viewsets.ModelViewSet):
         ]
         if file.content_type not in allowed_types:
             return Response({"error": "Invalid file type"}, status=400)
+
+        if file.size > settings.MAX_UPLOAD_SIZE_BYTES:
+            return Response(
+                {"error": f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB"},
+                status=400,
+            )
 
         # Generate unique filename
         ext = os.path.splitext(file.name)[1]
