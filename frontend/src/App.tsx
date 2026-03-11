@@ -20,6 +20,7 @@ import TeacherSessions from "@/pages/teacher/TeacherSessions";
 import TeacherTasks from "@/pages/teacher/TeacherTasks";
 
 import MarkAttendance from "@/pages/teacher/MarkAttendance";
+import TeacherAttendanceHub from "@/pages/teacher/TeacherAttendanceHub";
 import StudentDetail from "@/pages/teacher/StudentDetail";
 import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/teacher/TeacherLearnerPortfolio";
@@ -159,7 +160,7 @@ const router = createBrowserRouter([
         path: "teacher/attendance",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <TeacherAttendance />
+            <TeacherAttendanceHub />
           </ProtectedRoute>
         ),
       },

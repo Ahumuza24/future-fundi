@@ -102,6 +102,13 @@ const allNavItems: NavItem[] = [
     roles: ["teacher"],
   },
   {
+    title: "Attendance",
+    path: "/teacher/attendance",
+    icon: ClipboardCheck,
+    color: "var(--fundi-cyan)",
+    roles: ["teacher"],
+  },
+  {
     title: "Pathways",
     path: "/teacher/pathways",
     icon: BookOpen,

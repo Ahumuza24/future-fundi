@@ -30,3 +30,4 @@ docs
 
 # Deployment credentials
 backend/app.yaml
+.agent/skills

@@ -151,7 +151,7 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         Returns all courses this teacher is assigned to, with their modules.
         Falls back to ALL active courses if the teacher has no course assignments.
         """
-        from apps.core.models import Course, Module
+        from apps.core.models import Course
 
         teacher = request.user
         teacher_courses = Course.objects.filter(teachers=teacher, is_active=True)
@@ -434,6 +434,124 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             learner, "tenant", None
         )
         serializer.save(created_by=self.request.user, tenant=tenant)
+
+    # ------------------------------------------------------------------
+    # Combined create + upload (single multipart request)
+    # POST /api/teacher/quick-artifacts/capture/
+    # Accepts: learner, title, reflection, module (form fields)
+    #          files[] (file fields, multiple)
+    #          links[] (JSON-encoded array of {url, label})
+    # ------------------------------------------------------------------
+    @action(detail=False, methods=["post"], url_path="capture")
+    def capture(self, request):
+        """Create an artifact and upload files in a single multipart request."""
+        import json
+        import uuid
+
+        from django.conf import settings
+        from django.core.files.storage import default_storage
+
+        # --- 1. Validate required fields ---
+        learner_id = request.data.get("learner")
+        title = request.data.get("title", "").strip()
+        if not learner_id:
+            return Response({"detail": "learner is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not title:
+            return Response({"detail": "title is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from apps.core.models import Learner
+            learner = Learner.objects.get(id=learner_id)
+        except (Learner.DoesNotExist, Exception):
+            return Response({"detail": "Learner not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # --- 2. Create the artifact record first ---
+        reflection = request.data.get("reflection", "")
+        tenant = self._resolve_school_context(request) or getattr(learner, "tenant", None)
+        module_id = request.data.get("module")
+
+        from apps.core.models import Module
+        module_obj = None
+        if module_id:
+            try:
+                module_obj = Module.objects.get(id=module_id)
+            except (Module.DoesNotExist, ValueError):
+                pass
+
+        # Also store session/metrics in media_refs metadata if needed
+        session_id = request.data.get("session")
+        try:
+            metrics = json.loads(request.data.get("metrics", "[]"))
+        except Exception:
+            metrics = []
+
+        initial_metadata = {}
+        if session_id:
+            initial_metadata["session_id"] = session_id
+        if metrics:
+            initial_metadata["metrics"] = metrics
+
+        artifact = Artifact.objects.create(
+            learner=learner,
+            title=title,
+            reflection=reflection,
+            created_by=request.user,
+            tenant=tenant,
+            media_refs=[initial_metadata] if initial_metadata else [],
+            module=module_obj,
+        )
+
+        # --- 3. Save uploaded files ---
+        media_refs = [initial_metadata] if initial_metadata else []
+        uploaded_files = request.FILES.getlist("files")
+
+        for f in uploaded_files:
+            # Build safe path: media/artifacts/<artifact_id>/<uuid>_<filename>
+            safe_name = f"{uuid.uuid4().hex}_{f.name}"
+            rel_path = f"artifacts/{artifact.id}/{safe_name}"
+            saved_path = default_storage.save(rel_path, f)
+
+            # Build the full public URL
+            request_obj = request._request if hasattr(request, "_request") else request
+            base = getattr(settings, "MEDIA_URL", "/media/")
+            # Full absolute URL
+            file_url = request_obj.build_absolute_uri(f"{base}{saved_path}")
+
+            media_refs.append({
+                "type": f.content_type or "file",
+                "url": file_url,
+                "filename": f.name,
+                "size": f.size,
+                "path": saved_path,
+            })
+
+        # --- 4. Append any link refs passed as JSON ---
+        raw_links = request.data.get("links", "[]")
+        try:
+            links = json.loads(raw_links) if isinstance(raw_links, str) else raw_links
+            if isinstance(links, list):
+                for lnk in links:
+                    if isinstance(lnk, dict) and lnk.get("url"):
+                        media_refs.append({
+                            "type": "link",
+                            "url": lnk["url"],
+                            "label": lnk.get("label", lnk["url"]),
+                        })
+        except Exception:
+            pass
+
+        # --- 5. Save media_refs back to artifact ---
+        artifact.media_refs = media_refs
+        artifact.save(update_fields=["media_refs"])
+
+        from .serializers import QuickArtifactSerializer
+        return Response(
+            {
+                "detail": "Artifact captured successfully",
+                "artifact": QuickArtifactSerializer(artifact).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=["get"], url_path="pending")
     def pending(self, request):
