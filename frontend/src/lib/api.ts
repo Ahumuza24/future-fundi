@@ -112,6 +112,8 @@ export const studentApi = {
   getDashboard: () => api.get('/api/student/dashboard/'),
   // Get pathway learning content
   getPathwayLearning: (enrollmentId: string) => api.get(`/api/pathway-learning/${enrollmentId}/learn/`),
+  // Get all artifacts for the authenticated student
+  getArtifacts: () => api.get('/api/student/artifacts/'),
 };
 
 export const dashboardApi = {
@@ -220,8 +222,32 @@ export const teacherApi = {
     learner: string;
     title: string;
     reflection?: string;
-    media_refs?: any[];
-  }) => api.post('/api/teacher/quick-artifacts/', withSelectedSchool(data)),
+    files?: File[];
+    links?: Array<{ url: string; label?: string }>;
+    module?: string;
+    session?: string;
+    metrics?: string[];
+  }) => {
+    const formData = new FormData();
+    const schoolId = localStorage.getItem('selected_school_id');
+    formData.append('learner', data.learner);
+    formData.append('title', data.title);
+    if (data.reflection) formData.append('reflection', data.reflection);
+    if (data.module)     formData.append('module', data.module);
+    if (data.session)    formData.append('session', data.session);
+    if (schoolId)        formData.append('school_id', schoolId);
+
+    // Attach each file under the "files" key
+    (data.files || []).forEach(f => formData.append('files', f));
+
+    // Links as JSON string
+    formData.append('links', JSON.stringify(data.links || []));
+    formData.append('metrics', JSON.stringify(data.metrics || []));
+
+    return api.post('/api/teacher/quick-artifacts/capture/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 
   // Badge Management
   badges: {

@@ -1,13 +1,7 @@
 """Student dashboard API endpoint."""
 
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
-from apps.api.serializers import (
-    AchievementSerializer,
-    ArtifactSerializer,
-    LearnerCourseEnrollmentSerializer,
-    LearnerSerializer,
-)
 from apps.core.models import (
     Achievement,
     Activity,
@@ -16,7 +10,7 @@ from apps.core.models import (
     LearnerCourseEnrollment,
     Session,
 )
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Q
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -290,6 +284,57 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 "badges": badges,
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="artifacts")
+    def artifacts(self, request):
+        """Get all artifacts uploaded by teachers for the authenticated student."""
+        user = request.user
+
+        try:
+            learner = Learner.objects.get(user=user)
+        except Learner.DoesNotExist:
+            return Response({"error": "Learner profile not found"}, status=404)
+
+        artifacts_qs = (
+            Artifact.objects.filter(learner=learner)
+            .order_by("-submitted_at")
+        )
+
+        from django.contrib.auth import get_user_model
+        get_user_model()
+
+        results = []
+        for a in artifacts_qs:
+            # Try to get teacher/author name via created_by field if it exists
+            teacher_name = ""
+            if hasattr(a, "created_by") and a.created_by:
+                try:
+                    teacher_name = a.created_by.get_full_name() or a.created_by.username
+                except Exception:
+                    pass
+
+            # Normalise media_refs
+            media_refs = a.media_refs or []
+            if isinstance(media_refs, str):
+                import json
+                try:
+                    media_refs = json.loads(media_refs)
+                except Exception:
+                    media_refs = []
+
+            results.append({
+                "id": str(a.id),
+                "title": a.title,
+                "reflection": a.reflection or "",
+                "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
+                "teacher_name": teacher_name,
+                "media_refs": media_refs if isinstance(media_refs, list) else [],
+            })
+
+        return Response({
+            "artifacts": results,
+            "total": len(results),
+        })
 
     def _get_pathway_icon(self, course_name: str) -> str:
         """Get an icon name for a pathway based on its name."""

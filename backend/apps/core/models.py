@@ -192,6 +192,14 @@ class Artifact(TenantModel):
     reflection = models.TextField(blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True, db_index=True)
     media_refs = models.JSONField(default=list)  # e.g., [{"s3_key": "..."}]
+    module = models.ForeignKey(
+        "Module",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifacts",
+        help_text="The specific microcredential/module this artifact is tied to",
+    )
 
 
 class Module(BaseUUIDModel):
