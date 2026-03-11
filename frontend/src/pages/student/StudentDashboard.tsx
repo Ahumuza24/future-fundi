@@ -356,6 +356,7 @@ const StudentDashboard = () => {
   const [artifactsLoading, setArtifactsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedArtifactIndex, setSelectedArtifactIndex] = useState<number | null>(null);
+  const [showAllLessons, setShowAllLessons] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -483,30 +484,41 @@ const StudentDashboard = () => {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="heading-font text-xl font-bold text-[var(--fundi-black)]">Upcoming Lessons</h2>
-                <Button variant="ghost" className="text-sm hover:text-[var(--fundi-orange)]">View All</Button>
+                {dashboardData.upcomingLessons.length > 3 && (
+                  <button
+                    onClick={() => setShowAllLessons(v => !v)}
+                    className="text-sm font-medium text-[var(--fundi-orange)] hover:underline"
+                  >
+                    {showAllLessons ? "Show less" : `View all ${dashboardData.upcomingLessons.length}`}
+                  </button>
+                )}
               </div>
               {dashboardData.upcomingLessons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {dashboardData.upcomingLessons.slice(0, 3).map((event, i) => (
+                  {(showAllLessons
+                    ? dashboardData.upcomingLessons
+                    : dashboardData.upcomingLessons.slice(0, 3)
+                  ).map((event, i) => (
                     <motion.div
                       key={event.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="bg-white p-4 rounded-xl shadow-sm border border-l-4 flex flex-col gap-1"
+                      transition={{ delay: i * 0.07 }}
+                      className="bg-white p-4 rounded-xl shadow-sm border border-l-4 flex flex-col gap-1 hover:shadow-md transition-shadow"
                       style={{ borderLeftColor: event.color }}
                     >
                       <span className="text-xs font-bold text-gray-600 line-clamp-1">{event.fullDate}</span>
                       <p className="font-bold text-gray-900 leading-tight line-clamp-1">{event.microcredential}</p>
                       <p className="text-xs text-gray-500 font-medium truncate">{event.pathway}</p>
-                      <p className="text-xs text-[var(--fundi-orange)] font-semibold mt-1">
-                        {event.startTime} - {event.endTime}
+                      <p className="text-xs font-semibold mt-1" style={{ color: event.color }}>
+                        {event.startTime} – {event.endTime}
                       </p>
                     </motion.div>
                   ))}
                 </div>
               ) : (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-dashed border-gray-200 text-center col-span-full">
+                  <GraduationCap className="h-10 w-10 mx-auto text-gray-300 mb-2" />
                   <p className="text-gray-500 text-sm font-medium">No upcoming lessons scheduled yet</p>
                   <p className="text-gray-400 text-xs mt-1">Check back soon for new activities!</p>
                 </div>
@@ -517,7 +529,11 @@ const StudentDashboard = () => {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="heading-font text-xl font-bold text-[var(--fundi-black)]">My Pathways</h2>
-                <Button variant="ghost" className="text-sm hover:text-[var(--fundi-orange)]">View All</Button>
+                {dashboardData.pathways.length > 0 && (
+                  <span className="text-xs font-bold text-white bg-[var(--fundi-orange)] px-2.5 py-1 rounded-full">
+                    {dashboardData.pathways.length} enrolled
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {dashboardData.pathways.map((pathway, i) => (
