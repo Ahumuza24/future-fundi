@@ -22,49 +22,59 @@ export const mockPathways: PathwayProps[] = [
   {
     id: "rob", title: "Robotics", icon: Bot,
     progress: 65, status: "good", microCredentialsEarned: 2, totalMicroCredentials: 5,
-    currentModule: "Advanced Sensors", color: "var(--fundi-orange)"
+    currentModule: "Advanced Sensors", currentLevel: "Level 2: Building", totalLevels: 3,
+    color: "var(--fundi-orange)"
   },
   {
     id: "web", title: "Web Development", icon: Globe,
     progress: 30, status: "warning", microCredentialsEarned: 1, totalMicroCredentials: 4,
-    currentModule: "CSS Flexbox", color: "var(--fundi-purple)"
+    currentModule: "CSS Flexbox", currentLevel: "Level 1: Foundations", totalLevels: 3,
+    color: "var(--fundi-purple)"
   },
   {
     id: "app", title: "App Development", icon: Smartphone,
     progress: 10, status: "good", microCredentialsEarned: 0, totalMicroCredentials: 4,
-    currentModule: "React Native Basics", color: "var(--fundi-cyan)"
+    currentModule: "React Native Basics", currentLevel: "Level 1: Foundations", totalLevels: 3,
+    color: "var(--fundi-cyan)"
   },
   {
     id: "ai", title: "AI Tools", icon: Brain,
     progress: 5, status: "good", microCredentialsEarned: 0, totalMicroCredentials: 3,
-    currentModule: "Intro to LLMs", color: "var(--fundi-lime)"
+    currentModule: "Intro to LLMs", currentLevel: "Level 1: Foundations", totalLevels: 2,
+    color: "var(--fundi-lime)"
   },
   {
     id: "ele", title: "Electronics", icon: Cpu,
     progress: 40, status: "good", microCredentialsEarned: 1, totalMicroCredentials: 3,
-    currentModule: "Circuit Design 101", color: "var(--fundi-pink)"
+    currentModule: "Circuit Design 101", currentLevel: "Level 1: Foundations", totalLevels: 3,
+    color: "var(--fundi-pink)"
   },
   {
     id: "iot", title: "Internet of Things", icon: Wifi,
     progress: 15, status: "warning", microCredentialsEarned: 0, totalMicroCredentials: 3,
-    currentModule: "Connecting ESP32", color: "var(--fundi-orange)"
+    currentModule: "Connecting ESP32", currentLevel: "Level 1: Foundations", totalLevels: 3,
+    color: "var(--fundi-orange)"
   },
   {
     id: "3dp", title: "3D Printing", icon: Printer,
     progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 2,
-    currentModule: "Not Started", color: "var(--fundi-purple)"
+    currentModule: "Not Started", currentLevel: "Level 1: Foundations", totalLevels: 2,
+    color: "var(--fundi-purple)"
   },
   {
     id: "cad", title: "CAD", icon: PenTool,
     progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 2,
-    currentModule: "Not Started", color: "var(--fundi-cyan)"
+    currentModule: "Not Started", currentLevel: "Level 1: Foundations", totalLevels: 2,
+    color: "var(--fundi-cyan)"
   },
   {
     id: "sec", title: "Data & Security", icon: Shield,
     progress: 0, status: "critical", microCredentialsEarned: 0, totalMicroCredentials: 4,
-    currentModule: "Not Started", color: "var(--fundi-lime)"
+    currentModule: "Not Started", currentLevel: "Level 1: Foundations", totalLevels: 3,
+    color: "var(--fundi-lime)"
   },
 ];
+
 
 export const earnedBadges = [
   { id: "b1", name: "Bot Builder L1", pathway: "Robotics", icon: Bot, color: "var(--fundi-orange)" },
