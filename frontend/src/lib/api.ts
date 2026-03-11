@@ -206,6 +206,13 @@ export const teacherApi = {
     status: 'present' | 'absent' | 'late' | 'excused';
     notes?: string;
   }>) => api.post(`/api/teacher/sessions/${sessionId}/mark-attendance/`, withSelectedSchool({ attendance })),
+
+  getAttendance: (sessionId: string) =>
+    api.get(`/api/teacher/sessions/${sessionId}/`, { params: withSelectedSchool({}) }),
+
+  getAttendanceSessions: (params?: { marked?: boolean; date_from?: string; date_to?: string }) =>
+    api.get('/api/teacher/sessions/', { params: withSelectedSchool(params || {}) }),
+
   
   // Quick Artifacts
   getPendingArtifacts: () => api.get('/api/teacher/quick-artifacts/pending/', { params: withSelectedSchool({}) }),
