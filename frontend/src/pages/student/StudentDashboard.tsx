@@ -107,7 +107,7 @@ function mediaIcon(ref: MediaRef) {
   if (t === "link")                                                 return { icon: Link2,         label: "Link",       color: "text-blue-500"   };
   if (t.startsWith("image") || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(n))
                                                                     return { icon: Image,          label: "Image",      color: "text-emerald-500"};
-  if (t.startsWith("video") || /\.(mp4|webm|mov)$/.test(n))        return { icon: Film,           label: "Video",      color: "text-purple-500" };
+  if (t.startsWith("video") || /\.(mp4|webm|mov|mkv)$/.test(n))        return { icon: Film,           label: "Video",      color: "text-purple-500" };
   if (t.includes("pdf") || n.endsWith(".pdf"))                     return { icon: FileText,       label: "PDF",        color: "text-red-500"    };
   if (t.includes("word") || /\.docx?$/.test(n))                   return { icon: FileText,       label: "Word",       color: "text-blue-600"   };
   if (t.includes("sheet") || /\.xlsx?$/.test(n))                  return { icon: FileSpreadsheet, label: "Excel",     color: "text-green-600"  };

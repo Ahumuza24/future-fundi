@@ -604,4 +604,8 @@ export const schoolApi = {
   classes: {
     getAll: (params?: any) => api.get('/api/school/classes/', { params }),
   },
+
+  sessions: {
+    getAll: () => api.get('/api/school/dashboard/sessions/'),
+  },
 };

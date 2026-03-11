@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
     Users, GraduationCap, Award, TrendingUp, BookOpen,
-    UserPlus, School, BarChart3, Medal, FileText, Map, CheckCircle2
+    UserPlus, School, BarChart3, Medal, FileText, Map, CheckCircle2,
+    CalendarClock, Clock, User as UserIcon
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { schoolApi } from "@/lib/api";
@@ -16,6 +17,20 @@ interface DashboardStats {
     total_artifacts: number;
     active_enrollments: number;
     average_progress: number;
+}
+
+interface SchoolSession {
+    id: string;
+    microcredential: string;
+    pathway: string;
+    teacher_name: string;
+    date: string;
+    fullDate: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    learner_count: number;
+    notes: string;
 }
 
 interface Pathway {
@@ -31,13 +46,13 @@ export default function SchoolDashboard() {
     const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats>({
         total_students: 0,
-
         total_badges: 0,
         total_artifacts: 0,
         active_enrollments: 0,
         average_progress: 0
     });
     const [pathways, setPathways] = useState<Pathway[]>([]);
+    const [sessions, setSessions] = useState<SchoolSession[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedPathway, setSelectedPathway] = useState<Pathway | null>(null);
 
@@ -67,6 +82,14 @@ export default function SchoolDashboard() {
                     ? pathwaysResponse.data
                     : (pathwaysResponse.data.results || []);
                 setPathways(pData);
+
+                // Fetch Sessions
+                try {
+                    const sessionsResponse = await schoolApi.sessions.getAll();
+                    setSessions(Array.isArray(sessionsResponse.data) ? sessionsResponse.data : []);
+                } catch {
+                    setSessions([]);
+                }
 
             } catch (error) {
                 console.error("Failed to fetch dashboard data:", error);
@@ -243,6 +266,92 @@ export default function SchoolDashboard() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Sessions Section */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <CalendarClock className="h-5 w-5" style={{ color: "var(--fundi-orange)" }} />
+                            Teacher Sessions
+                        </CardTitle>
+                        <CardDescription>All teaching sessions at your school — past, present, and upcoming</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {sessions.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400">
+                                <CalendarClock className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                                <p className="font-medium text-gray-500">No sessions yet</p>
+                                <p className="text-sm mt-1">Sessions created by teachers will appear here</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {sessions.map((session, i) => {
+                                    const statusColors: Record<string, string> = {
+                                        scheduled: "bg-blue-100 text-blue-700",
+                                        in_progress: "bg-green-100 text-green-700",
+                                        completed: "bg-gray-100 text-gray-600",
+                                        cancelled: "bg-red-100 text-red-600",
+                                    };
+                                    const statusColor = statusColors[session.status] ?? "bg-gray-100 text-gray-600";
+                                    const isUpcoming = new Date(session.date) >= new Date(new Date().toDateString());
+                                    return (
+                                        <motion.div
+                                            key={session.id}
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.04 }}
+                                            className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border transition-shadow hover:shadow-md ${
+                                                isUpcoming ? "border-orange-200 bg-orange-50/40" : "border-gray-100 bg-white"
+                                            }`}
+                                        >
+                                            {/* Date pill */}
+                                            <div
+                                                className="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl text-white font-bold text-sm"
+                                                style={{ backgroundColor: isUpcoming ? "var(--fundi-orange)" : "var(--fundi-purple)" }}
+                                            >
+                                                <span className="text-xs font-normal">
+                                                    {new Date(session.date).toLocaleDateString("en-GB", { month: "short" })}
+                                                </span>
+                                                <span className="text-xl leading-tight">
+                                                    {new Date(session.date).getDate()}
+                                                </span>
+                                            </div>
+
+                                            {/* Details */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                    <h4 className="font-bold text-gray-900 truncate">{session.microcredential}</h4>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
+                                                        {session.status.replace("_", " ")}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mb-1.5 truncate">
+                                                    <span className="font-medium text-gray-700">{session.pathway}</span>
+                                                </p>
+                                                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                                                    <span className="flex items-center gap-1">
+                                                        <UserIcon className="h-3 w-3" />
+                                                        {session.teacher_name}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {session.startTime} – {session.endTime}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Users className="h-3 w-3" />
+                                                        {session.learner_count} student{session.learner_count !== 1 ? "s" : ""}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                </motion.div>
 
                 {/* Pathways Section */}
                 <Card id="pathways-section">
