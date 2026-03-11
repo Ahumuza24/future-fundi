@@ -15,6 +15,7 @@ from apps.core.models import (
     LearnerLevelProgress,
     PodClass,
     School,
+    Session,
 )
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Q
@@ -337,6 +338,49 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
             )
 
         return Response(data)
+
+    @action(detail=False, methods=["get"])
+    def sessions(self, request):
+        """Return upcoming and recent sessions for the school."""
+        school = request.user.tenant
+        if not school:
+            return Response([], status=400)
+
+        now = timezone.now()
+        today = now.date()
+
+        qs = (
+            Session.objects.filter(tenant=school)
+            .select_related("teacher", "module", "module__course")
+            .prefetch_related("learners")
+            .order_by("date", "start_time")
+        )
+
+        data = []
+        for s in qs:
+            microcredential = s.module.name if s.module else "General Session"
+            pathway = s.module.course.name if s.module and getattr(s.module, "course", None) else "General Pathway"
+            teacher_name = (
+                f"{s.teacher.first_name} {s.teacher.last_name}".strip()
+                if s.teacher
+                else "Unknown Teacher"
+            )
+            data.append({
+                "id": str(s.id),
+                "microcredential": microcredential,
+                "pathway": pathway,
+                "teacher_name": teacher_name,
+                "date": s.date.isoformat(),
+                "fullDate": s.date.strftime("%B %d, %Y"),
+                "startTime": s.start_time.strftime("%I:%M %p") if s.start_time else "TBD",
+                "endTime": s.end_time.strftime("%I:%M %p") if s.end_time else "TBD",
+                "status": s.status,
+                "learner_count": s.learners.count(),
+                "notes": s.notes or "",
+            })
+
+        return Response(data)
+
 
 
 class SchoolStudentViewSet(viewsets.ModelViewSet):

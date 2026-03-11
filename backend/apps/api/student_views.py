@@ -8,6 +8,7 @@ from apps.core.models import (
     Artifact,
     Learner,
     LearnerCourseEnrollment,
+    Module as CourseModule,
     Session,
 )
 from django.db.models import Q
@@ -49,6 +50,22 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             .prefetch_related("level_progress")
         )
         enrollment_course_ids = list(enrollments.values_list("course_id", flat=True))
+
+        # Cache the most recent attended session's module per course so we can look
+        # up which microcredential was most recently being worked on
+        recent_session_module: dict[str, str] = {}
+        recent_sessions = (
+            Session.objects.filter(
+                learners=learner,
+                module__course_id__in=enrollment_course_ids,
+            )
+            .select_related("module")
+            .order_by("-date", "-start_time")
+        )
+        for sess in recent_sessions:
+            cid = str(sess.module.course_id) if sess.module else None
+            if cid and cid not in recent_session_module:
+                recent_session_module[cid] = sess.module.name
 
         pathways = []
         for enrollment in enrollments:
@@ -92,15 +109,29 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             else:
                 status = "critical"
 
-            # Get total modules for this course
+            # ── Determine the current microcredential label ──────────────────
+            # Prefer: last session's module name (shows what's actively being taught)
+            # Fallback: first module in the course (gives something meaningful always)
+            course_id_str = str(enrollment.course_id)
+            if course_id_str in recent_session_module:
+                current_microcredential = recent_session_module[course_id_str]
+            else:
+                first_module = (
+                    CourseModule.objects.filter(course=enrollment.course)
+                    .order_by("id")
+                    .values_list("name", flat=True)
+                    .first()
+                )
+                current_microcredential = first_module or "Getting Started"
+
+            # Module counts for progress tracking
             total_modules = enrollment.course.modules.count()
-            # Get completed modules (simplified - you may want to track this differently)
             completed_modules = int(total_modules * (overall_progress / 100))
 
             pathways.append(
                 {
                     "id": str(enrollment.id),
-                    "title": enrollment.course.name,  # Changed from 'name' to 'title'
+                    "title": enrollment.course.name,
                     "description": enrollment.course.description or "",
                     "progress": overall_progress,
                     "currentLevel": (
@@ -113,11 +144,7 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                         if enrollment.current_level
                         else 0
                     ),
-                    "currentModule": (
-                        enrollment.current_level.name
-                        if enrollment.current_level
-                        else "Getting Started"
-                    ),
+                    "currentModule": current_microcredential,
                     "totalLevels": total_levels,
                     "currentLevelProgress": current_level_progress,
                     "color": self._get_pathway_color(enrollment.course.name),

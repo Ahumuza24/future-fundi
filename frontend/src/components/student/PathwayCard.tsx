@@ -1,81 +1,105 @@
 import { motion } from "framer-motion";
 import type { ReactElement } from "react";
 import { Progress } from "@/components/ui/progress";
-import { ChevronRight, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { ChevronRight, AlertCircle, CheckCircle, Clock, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PathwayProps {
     id: string;
     title: string;
-    icon: React.ElementType; // Changed from React.ReactNode
+    icon: React.ElementType;
     progress: number;
     status: "not_started" | "good" | "warning" | "critical";
     microCredentialsEarned: number;
     totalMicroCredentials: number;
-    currentModule: string;
+    currentModule: string;   // current level name (microcredential)
+    currentLevel: string;    // current level label
+    totalLevels: number;
     color: string;
 }
 
-const statusColors: Record<PathwayProps["status"], string> = {
-    not_started: "bg-slate-100 text-slate-700 border-slate-200",
-    good: "bg-green-100 text-green-700 border-green-200",
-    warning: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    critical: "bg-red-100 text-red-700 border-red-200",
-};
-
-const statusIcon: Record<PathwayProps["status"], ReactElement> = {
-    not_started: <Clock className="h-4 w-4" />,
-    good: <CheckCircle className="h-4 w-4" />,
-    warning: <Clock className="h-4 w-4" />,
-    critical: <AlertCircle className="h-4 w-4" />,
-};
-
-const statusLabel: Record<PathwayProps["status"], string> = {
-    not_started: "Not Started",
-    good: "On Track",
-    warning: "Needs Focus",
-    critical: "Behind",
+const statusConfig: Record<PathwayProps["status"], { badge: string; icon: ReactElement; label: string }> = {
+    not_started: {
+        badge: "bg-slate-100 text-slate-600 border-slate-200",
+        icon: <Clock className="h-3 w-3" />,
+        label: "Not Started",
+    },
+    good: {
+        badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: <CheckCircle className="h-3 w-3" />,
+        label: "On Track",
+    },
+    warning: {
+        badge: "bg-amber-100 text-amber-700 border-amber-200",
+        icon: <Clock className="h-3 w-3" />,
+        label: "Needs Focus",
+    },
+    critical: {
+        badge: "bg-red-100 text-red-700 border-red-200",
+        icon: <AlertCircle className="h-3 w-3" />,
+        label: "Behind",
+    },
 };
 
 export const PathwayCard = ({ pathway, onClick }: { pathway: PathwayProps; onClick?: () => void }) => {
     const Icon = pathway.icon;
+    const cfg = statusConfig[pathway.status];
+
     return (
         <motion.div
-            whileHover={{ y: -5, scale: 1.02 }}
+            whileHover={{ y: -4, boxShadow: "0 16px 40px rgba(0,0,0,0.12)" }}
             whileTap={{ scale: 0.98 }}
-            className={cn(
-                "bg-white rounded-xl shadow-sm border p-5 cursor-pointer transition-all duration-200 hover:shadow-md",
-                "flex flex-col gap-4 relative overflow-hidden"
-            )}
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm cursor-pointer transition-all duration-200 overflow-hidden flex flex-col"
             onClick={onClick}
         >
-            {/* Decorative background accent */}
-            <div
-                className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10 -mr-4 -mt-4"
-                style={{ backgroundColor: pathway.color }}
-            />
+            {/* Coloured top bar */}
+            <div className="h-1.5 w-full" style={{ backgroundColor: pathway.color }} />
 
-            <div className="flex justify-between items-start z-10">
-                <div className="p-2 rounded-lg bg-gray-50 text-gray-700">
-                    <Icon className="h-6 w-6" />
+            <div className="p-5 flex flex-col gap-4 flex-1">
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-3">
+                    <div
+                        className="p-2.5 rounded-xl"
+                        style={{ backgroundColor: `${pathway.color}20` }}
+                    >
+                        <Icon className="h-5 w-5" style={{ color: pathway.color }} />
+                    </div>
+                    <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border", cfg.badge)}>
+                        {cfg.icon}
+                        {cfg.label}
+                    </span>
                 </div>
-                <div className={cn("px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border", statusColors[pathway.status])}>
-                    {statusIcon[pathway.status]}
-                    <span>{statusLabel[pathway.status]}</span>
-                </div>
-            </div>
 
-            <div className="z-10">
-                <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--fundi-black)' }}>{pathway.title}</h3>
-                <p className="text-sm text-gray-500 line-clamp-1">Current: {pathway.currentModule}</p>
-            </div>
+                {/* Pathway title */}
+                <div className="flex-1">
+                    <h3 className="font-bold text-base leading-tight text-gray-900 mb-2">{pathway.title}</h3>
 
-            <div className="mt-auto space-y-2 z-10">
-                <div className="flex justify-between text-xs text-gray-600">
-                    <span>{pathway.microCredentialsEarned}/{pathway.totalMicroCredentials} Modules</span>
-                    <span>{pathway.progress}%</span>
+                    {/* Current microcredential chip */}
+                    <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2.5 py-1.5 w-fit max-w-full">
+                        <BookOpen className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <span className="text-xs text-gray-600 font-medium truncate">
+                            {pathway.currentModule || "Starting soon"}
+                        </span>
+                    </div>
                 </div>
-                <Progress value={pathway.progress} className="h-2" indicatorColor={pathway.color} />
+
+                {/* Progress footer */}
+                <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-gray-500">
+                        <span className="font-medium">{pathway.microCredentialsEarned}/{pathway.totalMicroCredentials} modules</span>
+                        <span className="font-bold" style={{ color: pathway.color }}>{pathway.progress}%</span>
+                    </div>
+                    <Progress value={pathway.progress} className="h-1.5" indicatorColor={pathway.color} />
+                </div>
+
+                {/* CTA */}
+                <div
+                    className="flex items-center justify-between text-xs font-semibold pt-1"
+                    style={{ color: pathway.color }}
+                >
+                    <span>{pathway.progress === 0 ? "Begin pathway" : "Continue"}</span>
+                    <ChevronRight className="h-4 w-4" />
+                </div>
             </div>
         </motion.div>
     );
