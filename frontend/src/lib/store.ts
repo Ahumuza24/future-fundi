@@ -1,23 +1,5 @@
 import { create } from 'zustand';
-import { applySentryUserContext } from './auth';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  tenant: string | null;
-  school_id?: string | null;
-  tenant_name?: string;
-  tenant_code?: string;
-  teacher_school_ids?: string[];
-  teacher_schools?: Array<{ id: string; name: string; code?: string }>;
-  dashboard_url?: string;
-  date_joined: string;
-  is_active: boolean;
-}
+import { applySentryUserContext, User } from './auth';
 
 interface AuthState {
   user: User | null;
