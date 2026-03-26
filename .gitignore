@@ -32,3 +32,6 @@ docs
 backend/app.yaml
 # AI agent config (skills, workflows, memory — not for source control)
 .agent/
+.claude/
+CLAUDE.md
+frontend/.env.example

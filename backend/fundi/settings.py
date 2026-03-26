@@ -12,10 +12,22 @@ from pathlib import Path
 
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if not SENTRY_DSN:
+    raise RuntimeError("SENTRY_DSN must be set in the environment.")
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    send_default_pii=True,
+    integrations=[DjangoIntegration()],
+)
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "replace-this-in-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"  # Default OFF for safety

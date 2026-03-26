@@ -9,6 +9,9 @@ def health(_request):
     """Simple health probe endpoint."""
     return JsonResponse({"status": "ok"})
 
+def trigger_error(_request):
+    division_by_zero = 1 / 0
+    return JsonResponse({"status": "error", "result": division_by_zero})
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -19,11 +22,12 @@ urlpatterns = [
     path("api/", include("apps.api.urls")),
 ]
 
-
-
 if settings.DEBUG:
     urlpatterns += [
-        re_path(r'^media/(?P<path>.*)$', serve, {
-            'document_root': settings.MEDIA_ROOT,
-        }),
+        path("sentry-debug/", trigger_error),
+        re_path(
+            r"^media/(?P<path>.*)$",
+            serve,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
     ]

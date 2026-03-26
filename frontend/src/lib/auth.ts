@@ -1,6 +1,7 @@
 /**
  * Authentication utilities and role-based routing helpers
  */
+import * as Sentry from "@sentry/react";
 
 export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry' | 'school';
 
@@ -26,6 +27,88 @@ export interface User {
   is_active: boolean;
   avatar_url?: string | null;
 }
+
+const SENTRY_TAG_KEYS = [
+  "role",
+  "tenant_id",
+  "tenant_code",
+  "school_id",
+  "selected_school_id",
+  "school_name",
+  "teacher_school_count",
+  "dashboard_url",
+];
+
+const clearSentryContext = (): void => {
+  Sentry.setUser(null);
+  Sentry.setContext("tenant", null as unknown as Record<string, unknown>);
+  Sentry.setContext("school", null as unknown as Record<string, unknown>);
+  SENTRY_TAG_KEYS.forEach((key) => {
+    Sentry.setTag(key, null as unknown as string);
+  });
+};
+
+export const applySentryUserContext = (user: User | null): void => {
+  if (!user) {
+    clearSentryContext();
+    return;
+  }
+
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+  const selectedSchoolId = getSelectedTeacherSchoolId();
+  const selectedSchoolName = getSelectedTeacherSchoolName();
+
+  Sentry.setUser({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    segment: user.role,
+    ...(fullName ? { name: fullName } : {}),
+  });
+
+  Sentry.setTag("role", user.role);
+
+  if (user.tenant) {
+    Sentry.setTag("tenant_id", user.tenant);
+  }
+
+  if (user.tenant_code) {
+    Sentry.setTag("tenant_code", user.tenant_code);
+  }
+
+  if (user.school_id) {
+    Sentry.setTag("school_id", user.school_id);
+  }
+
+  if (selectedSchoolId) {
+    Sentry.setTag("selected_school_id", selectedSchoolId);
+  }
+
+  if (selectedSchoolName) {
+    Sentry.setTag("school_name", selectedSchoolName);
+  }
+
+  if (user.teacher_school_ids?.length) {
+    Sentry.setTag("teacher_school_count", String(user.teacher_school_ids.length));
+  }
+
+  if (user.dashboard_url) {
+    Sentry.setTag("dashboard_url", user.dashboard_url);
+  }
+
+  Sentry.setContext("tenant", {
+    id: user.tenant ?? null,
+    name: user.tenant_name ?? null,
+    code: user.tenant_code ?? null,
+  });
+
+  Sentry.setContext("school", {
+    id: user.school_id ?? null,
+    selected_id: selectedSchoolId ?? null,
+    name: selectedSchoolName ?? null,
+    teacher_school_count: user.teacher_school_ids?.length ?? 0,
+  });
+};
 
 /**
  * Get the dashboard route for a given user role
@@ -110,6 +193,7 @@ export const clearAuth = (): void => {
   localStorage.removeItem('user');
   localStorage.removeItem('selected_school_id');
   localStorage.removeItem('selected_school_name');
+  clearSentryContext();
 };
 
 export const setSelectedTeacherSchool = (schoolId: string, schoolName?: string): void => {
