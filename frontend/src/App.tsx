@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -44,7 +45,9 @@ import ActivityManagement from "@/pages/admin/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
-const router = createBrowserRouter([
+const sentryCreateBrowserRouter = Sentry.wrapCreateBrowserRouterV7(createBrowserRouter);
+
+const router = sentryCreateBrowserRouter([
   // Landing page - no layout (full-screen, no sidebar/topbar)
   {
     path: "/",

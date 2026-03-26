@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { applySentryUserContext } from './auth';
 
 interface User {
   id: string;
@@ -42,8 +43,11 @@ const tokenStorage = {
   removeItem: (k: string) => sessionStorage.removeItem(k),
 };
 
+const initialUser = JSON.parse(localStorage.getItem('user') || 'null');
+applySentryUserContext(initialUser);
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: initialUser,
   accessToken: tokenStorage.getItem('access_token'),
   refreshToken: tokenStorage.getItem('refresh_token'),
   isAuthenticated: !!tokenStorage.getItem('access_token'),
@@ -52,6 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     tokenStorage.setItem('access_token', accessToken);
     tokenStorage.setItem('refresh_token', refreshToken);
     localStorage.setItem('user', JSON.stringify(user)); // profile only, not a secret
+    applySentryUserContext(user);
     set({ 
       user, 
       accessToken, 
@@ -66,6 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('user');
     localStorage.removeItem('selected_school_id');
     localStorage.removeItem('selected_school_name');
+    applySentryUserContext(null);
     set({ 
       user: null, 
       accessToken: null, 
@@ -76,6 +82,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   setUser: (user) => {
     localStorage.setItem('user', JSON.stringify(user));
+    applySentryUserContext(user);
     set({ user });
   },
 }));

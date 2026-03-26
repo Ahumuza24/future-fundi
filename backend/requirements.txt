@@ -17,3 +17,4 @@ gunicorn
 whitenoise
 django-storages
 drf-spectacular
+sentry-sdk
