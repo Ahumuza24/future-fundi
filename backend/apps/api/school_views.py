@@ -8,32 +8,25 @@ from apps.api.serializers import (
 from apps.core.models import (
     Achievement,
     Artifact,
-    Career,
     Course,
     Learner,
     LearnerCourseEnrollment,
     LearnerLevelProgress,
     PodClass,
-    School,
     Session,
 )
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Q
+from django.db.models import Avg, Count, Q, Sum
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .permissions import IsSchoolAdmin
-from datetime import timedelta
 
-from django.db.models import Avg, Count, F, Q, Sum
 from django.utils import timezone
 
 
 User = get_user_model()
-
-
-
 
 class SchoolDashboardViewSet(viewsets.ViewSet):
     permission_classes = [IsSchoolAdmin]

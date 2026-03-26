@@ -178,6 +178,16 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Upload limits (bytes)
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "20"))
+MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
+FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
+
+# Fail closed in production if SECRET_KEY is not set securely.
+if not DEBUG and (not SECRET_KEY or SECRET_KEY == "replace-this-in-prod"):
+    raise RuntimeError("DJANGO_SECRET_KEY must be set securely in production.")
+
 # Password validation — enforce strong passwords at the Django level
 AUTH_PASSWORD_VALIDATORS = [
     {
