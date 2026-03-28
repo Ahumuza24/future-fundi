@@ -222,6 +222,8 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-school-id",
+    "baggage",
+    "sentry-trace",
 ]
 
 # CSRF Trusted Origins (Required for Django admin in production with HTTPS)
