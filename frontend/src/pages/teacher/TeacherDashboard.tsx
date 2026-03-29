@@ -42,6 +42,7 @@ interface DashboardData {
     pending_tasks: {
         attendance_needed: number;
         artifacts_needed: number;
+        student_submissions: number;
         total: number;
     };
     quick_stats: {
@@ -173,6 +174,9 @@ export default function TeacherDashboard() {
                                         <p>{dashboardData.pending_tasks.attendance_needed} attendance needed</p>
                                         {dashboardData.pending_tasks.artifacts_needed > 0 && (
                                             <p>{dashboardData.pending_tasks.artifacts_needed} artifacts needed</p>
+                                        )}
+                                        {dashboardData.pending_tasks.student_submissions > 0 && (
+                                            <p className="text-red-500 font-medium">{dashboardData.pending_tasks.student_submissions} submissions to review</p>
                                         )}
                                     </div>
                                 </div>
@@ -322,7 +326,7 @@ export default function TeacherDashboard() {
                         <CardTitle>Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <Button
                                 onClick={() => navigate("/teacher/sessions")}
                                 className="h-24 flex flex-col items-center justify-center gap-2"
@@ -353,7 +357,19 @@ export default function TeacherDashboard() {
                                 style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
                             >
                                 <Camera className="h-8 w-8" />
-                                <span className="font-semibold">Capture Artifact</span>
+                                <span className="font-semibold text-center leading-tight">Capture<br/>Artifact</span>
+                            </Button>
+                            <Button
+                                onClick={() => navigate("/teacher/review-pending")}
+                                className="h-24 flex flex-col items-center justify-center gap-2 relative bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                            >
+                                <CheckCheck className="h-8 w-8" />
+                                <span className="font-semibold text-center leading-tight">Review<br/>Submissions</span>
+                                {dashboardData.pending_tasks.student_submissions > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 border-2 border-white text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                        {dashboardData.pending_tasks.student_submissions}
+                                    </span>
+                                )}
                             </Button>
                         </div>
                     </CardContent>
@@ -373,6 +389,14 @@ export default function TeacherDashboard() {
                                         )}
                                         {dashboardData.pending_tasks.artifacts_needed > 0 && (
                                             <li>• {dashboardData.pending_tasks.artifacts_needed} sessions need artifact capture</li>
+                                        )}
+                                        {dashboardData.pending_tasks.student_submissions > 0 && (
+                                            <li
+                                                className="cursor-pointer underline underline-offset-2 hover:text-orange-900 transition-colors"
+                                                onClick={() => navigate("/teacher/review-pending")}
+                                            >
+                                                • {dashboardData.pending_tasks.student_submissions} student submission{dashboardData.pending_tasks.student_submissions > 1 ? "s" : ""} need review — <span className="font-semibold">Review now →</span>
+                                            </li>
                                         )}
                                     </ul>
                                 </div>

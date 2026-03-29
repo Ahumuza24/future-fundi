@@ -550,8 +550,11 @@ class ArtifactSerializer(serializers.ModelSerializer):
             "reflection",
             "submitted_at",
             "media_refs",
+            "status",
+            "uploaded_by_student",
+            "rejection_reason",
         ]
-        read_only_fields = ["id", "submitted_at"]
+        read_only_fields = ["id", "submitted_at", "status", "uploaded_by_student", "rejection_reason"]
 
 
 class PathwayInputsSerializer(serializers.ModelSerializer):
@@ -746,6 +749,7 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
     """Quick artifact capture serializer for teachers."""
 
     learner_name = serializers.CharField(source="learner.full_name", read_only=True)
+    reviewed_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Artifact
@@ -757,8 +761,68 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
             "reflection",
             "media_refs",
             "submitted_at",
+            "status",
+            "uploaded_by_student",
+            "reviewed_by",
+            "reviewed_by_name",
+            "reviewed_at",
+            "rejection_reason",
         ]
-        read_only_fields = ["id", "submitted_at"]
+        read_only_fields = [
+            "id", "submitted_at", "reviewed_by", "reviewed_at",
+            "status", "uploaded_by_student",
+        ]
+
+    def get_reviewed_by_name(self, obj):
+        """Return reviewer full name or username."""
+        if obj.reviewed_by:
+            return obj.reviewed_by.get_full_name() or obj.reviewed_by.username
+        return None
+
+
+class StudentArtifactUploadSerializer(serializers.ModelSerializer):
+    """Serializer for student-submitted artifacts.
+
+    Students can submit their own work. Artifacts start with status='pending'
+    and must be approved by a teacher before counting in progress metrics.
+    """
+
+    class Meta:
+        model = Artifact
+        fields = [
+            "id",
+            "title",
+            "reflection",
+            "media_refs",
+            "submitted_at",
+            "status",
+            "rejection_reason",
+        ]
+        read_only_fields = ["id", "submitted_at", "status", "rejection_reason", "media_refs"]
+
+
+class ArtifactReviewSerializer(serializers.Serializer):
+    """Serializer for teacher approval/rejection of student artifacts."""
+
+    ACTION_APPROVE = "approve"
+    ACTION_REJECT = "reject"
+    ACTION_CHOICES = [(ACTION_APPROVE, "Approve"), (ACTION_REJECT, "Reject")]
+
+    action = serializers.ChoiceField(choices=ACTION_CHOICES)
+    rejection_reason = serializers.CharField(
+        max_length=1000,
+        required=False,
+        allow_blank=True,
+        help_text="Required when action is 'reject'",
+    )
+
+    def validate(self, attrs):
+        """Require rejection_reason when rejecting."""
+        if attrs["action"] == self.ACTION_REJECT and not attrs.get("rejection_reason", "").strip():
+            raise serializers.ValidationError(
+                {"rejection_reason": "A reason is required when rejecting an artifact."}
+            )
+        return attrs
 
 
 class SessionCreateSerializer(serializers.ModelSerializer):
@@ -1484,8 +1548,7 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
                 validated_data["current_class"] = pod.name
             except PodClass.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"pod_class_id": "Invalid class for the selected school."}
-                )
+                    {"pod_class_id": "Invalid class for the selected school."})
 
         # Auto-set school info
         if tenant:

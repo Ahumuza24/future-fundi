@@ -19,6 +19,7 @@ import TeacherStudents from "@/pages/teacher/TeacherStudents";
 import TeacherPathways from "@/pages/teacher/TeacherPathways";
 import TeacherSessions from "@/pages/teacher/TeacherSessions";
 import TeacherTasks from "@/pages/teacher/TeacherTasks";
+import TeacherReviewSubmissions from "@/pages/teacher/TeacherReviewSubmissions";
 
 import MarkAttendance from "@/pages/teacher/MarkAttendance";
 import TeacherAttendanceHub from "@/pages/teacher/TeacherAttendanceHub";
@@ -236,6 +237,14 @@ const router = sentryCreateBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
             <TeacherTasks />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "teacher/review-pending",
+        element: (
+          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <TeacherReviewSubmissions />
           </ProtectedRoute>
         ),
       },
