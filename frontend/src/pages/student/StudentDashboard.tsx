@@ -39,6 +39,7 @@ import { MicroCredentialBadge } from "@/components/student/MicroCredentialBadge"
 import { Avatar } from "@/components/ui/avatar";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { StudentArtifactUploadModal } from "@/components/student/StudentArtifactUploadModal";
 
 /* ─────────────────────────────────────────────────────────
    Types
@@ -80,6 +81,8 @@ interface Artifact {
   submitted_at: string | null;
   teacher_name: string;
   media_refs: MediaRef[];
+  status?: string;
+  rejection_reason?: string;
 }
 
 interface MediaRef {
@@ -156,23 +159,31 @@ function ArtifactCard({ artifact, index, onClick }: {
       className="cursor-pointer rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300"
     >
       {/* Image preview or icon thumbnail */}
-      {previewUrl ? (
-        <div className="h-36 overflow-hidden">
-          <img src={previewUrl} alt={artifact.title} className="w-full h-full object-cover" />
-        </div>
-      ) : (
-        <div className="h-36 w-full flex items-center justify-center relative overflow-hidden" style={{ backgroundColor: `${accent}15` }}>
-           <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
-           {firstMedia ? (() => {
-               const { icon: Icon, color } = mediaIcon(firstMedia);
-               // If there's an icon, use its color (remove text- to just apply style, or rely on tailwind)
-               // The mediaIcon gives classNames like "text-blue-500", but we can also just use the icon with the accent color
-               return <Icon className="h-14 w-14 z-10" style={{ color: accent }} />
-           })() : (
-               <FileText className="h-14 w-14 z-10" style={{ color: accent }} />
-           )}
-        </div>
-      )}
+      <div className="relative">
+        {artifact.status && artifact.status !== 'approved' && (
+          <div
+            className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] uppercase font-bold z-20 shadow-sm backdrop-blur-md bg-white/90"
+            style={{ color: artifact.status === 'rejected' ? '#ef4444' : '#f59e0b' }}
+          >
+            {artifact.status}
+          </div>
+        )}
+        {previewUrl ? (
+          <div className="h-36 overflow-hidden">
+            <img src={previewUrl} alt={artifact.title} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="h-36 w-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: `${accent}15` }}>
+             <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
+             {firstMedia ? (() => {
+                 const { icon: Icon, color } = mediaIcon(firstMedia);
+                 return <Icon className="h-14 w-14 z-10" style={{ color: accent }} />
+             })() : (
+                 <FileText className="h-14 w-14 z-10" style={{ color: accent }} />
+             )}
+          </div>
+        )}
+      </div>
 
       <div className="p-4">
         {/* Caption band */}
@@ -357,6 +368,23 @@ const StudentDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedArtifactIndex, setSelectedArtifactIndex] = useState<number | null>(null);
   const [showAllLessons, setShowAllLessons] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  const fetchArtifacts = async () => {
+    try {
+      setArtifactsLoading(true);
+      const response = await studentApi.getArtifacts();
+      const data = Array.isArray(response.data?.artifacts)
+        ? response.data.artifacts
+        : Array.isArray(response.data) ? response.data : [];
+      setArtifacts(data);
+    } catch (err) {
+      console.error('Failed to fetch artifacts:', err);
+      setArtifacts([]);
+    } finally {
+      setArtifactsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -370,22 +398,6 @@ const StudentDashboard = () => {
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);
-      }
-    };
-
-    const fetchArtifacts = async () => {
-      try {
-        setArtifactsLoading(true);
-        const response = await studentApi.getArtifacts();
-        const data = Array.isArray(response.data?.artifacts)
-          ? response.data.artifacts
-          : Array.isArray(response.data) ? response.data : [];
-        setArtifacts(data);
-      } catch (err) {
-        console.error('Failed to fetch artifacts:', err);
-        setArtifacts([]);
-      } finally {
-        setArtifactsLoading(false);
       }
     };
 
@@ -458,7 +470,7 @@ const StudentDashboard = () => {
           {[
             { label: "Pathways", value: dashboardData.pathways.length, color: "var(--fundi-orange)", bg: "#fff7ed", border: "#fed7aa" },
             { label: "Badges Earned", value: dashboardData.badges.filter(b => !b.isLocked).length, color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-            { label: "Artifacts", value: artifacts.length, color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
+            { label: "Artifacts", value: artifacts.filter(a => !a.status || a.status === 'approved').length, color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -559,11 +571,20 @@ const StudentDashboard = () => {
                   <h2 className="heading-font text-xl font-bold text-[var(--fundi-black)]">My Artifacts</h2>
                   <p className="text-sm text-gray-500 mt-0.5">Your projects submitted in class</p>
                 </div>
-                {artifacts.length > 0 && (
-                  <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1.5 rounded-full">
-                    {artifacts.length}
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  {artifacts.length > 0 && (
+                    <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1.5 rounded-full">
+                      {artifacts.length}
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    className="bg-[#f97316] hover:bg-[#ea580c] text-white font-bold"
+                    onClick={() => setIsUploadModalOpen(true)}
+                  >
+                    Upload Artifact
+                  </Button>
+                </div>
               </div>
 
               {artifactsLoading ? (
@@ -730,6 +751,15 @@ const StudentDashboard = () => {
           hasNext={selectedArtifactIndex < artifacts.length - 1}
         />
       )}
+
+      <StudentArtifactUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={() => {
+          setIsUploadModalOpen(false);
+          fetchArtifacts();
+        }}
+      />
     </div>
   );
 };

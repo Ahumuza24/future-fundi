@@ -15,6 +15,12 @@ from django.db.models import Q
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
+from django.core.files.storage import default_storage
+from django.conf import settings
+import os
+import uuid
+import json
 
 
 class IsLearner(permissions.BasePermission):
@@ -355,6 +361,8 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
                 "teacher_name": teacher_name,
                 "media_refs": media_refs if isinstance(media_refs, list) else [],
+                "status": a.status,
+                "rejection_reason": a.rejection_reason,
             })
 
         return Response({
@@ -398,3 +406,68 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 return color
 
         return "#6b7280"  # gray default
+
+    @action(detail=False, methods=["post"], url_path="upload-artifact")
+    def upload_artifact(self, request):
+        """Allow a student to upload a new artifact."""
+        user = request.user
+
+        try:
+            learner = Learner.objects.get(user=user)
+        except Learner.DoesNotExist:
+            return Response({"error": "Learner profile not found"}, status=404)
+
+        from .serializers import StudentArtifactUploadSerializer, QuickArtifactSerializer
+
+        # Add learner to context or data
+        data = request.data.copy()
+        serializer = StudentArtifactUploadSerializer(data=data, context={'request': request, 'learner': learner})
+        if serializer.is_valid():
+            artifact = serializer.save(
+                learner=learner,
+                tenant=learner.tenant,
+                uploaded_by_student=True,
+                status='pending'
+            )
+            
+            # Save uploaded files
+            media_refs = []
+            uploaded_files = request.FILES.getlist("files")
+
+            for f in uploaded_files:
+                if getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 10 * 1024 * 1024) and f.size > getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 10 * 1024 * 1024):
+                    # For safety, if file is too big we skip or reject, but here we just return error
+                    return Response(
+                        {"detail": "File too large."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                safe_original_name = os.path.basename(f.name) or "upload"
+                safe_name = f"{uuid.uuid4().hex}_{safe_original_name}"
+                rel_path = f"artifacts/{artifact.id}/{safe_name}"
+                saved_path = default_storage.save(rel_path, f)
+
+                request_obj = request._request if hasattr(request, "_request") else request
+                base = getattr(settings, "MEDIA_URL", "/media/")
+                file_url = request_obj.build_absolute_uri(f"{base}{saved_path}")
+
+                media_refs.append({
+                    "type": f.content_type or "file",
+                    "url": file_url,
+                    "filename": f.name,
+                    "size": f.size,
+                    "path": saved_path,
+                })
+            
+            if media_refs:
+                artifact.media_refs = media_refs
+                artifact.save(update_fields=["media_refs"])
+
+            return Response(
+                {
+                    "detail": "Artifact uploaded successfully. Pending teacher approval.",
+                    "artifact": QuickArtifactSerializer(artifact).data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

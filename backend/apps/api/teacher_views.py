@@ -337,6 +337,17 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             status__in=["in_progress", "completed"],
         ).count()
 
+        # Pending student artifact submissions
+        from apps.core.models import Artifact
+        school = self._resolve_school_context(request)
+        pending_student_submissions = 0
+        if school:
+            pending_student_submissions = Artifact.objects.filter(
+                uploaded_by_student=True,
+                tenant=school,
+                status=Artifact.STATUS_PENDING,
+            ).count()
+
         # Sessions needing artifacts (completed this month, zero artifacts captured that day)
         sessions_needing_artifacts = (
             scoped_sessions.filter(
@@ -393,7 +404,8 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
                 "pending_tasks": {
                     "attendance_needed": sessions_without_attendance,
                     "artifacts_needed": sessions_needing_artifacts,
-                    "total": sessions_without_attendance + sessions_needing_artifacts,
+                    "student_submissions": pending_student_submissions,
+                    "total": sessions_without_attendance + sessions_needing_artifacts + pending_student_submissions,
                 },
                 "quick_stats": {
                     "sessions_this_week": sessions_this_week,
@@ -613,6 +625,109 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         return Response(
             {"pending_sessions": pending_sessions, "total": len(pending_sessions)}
         )
+
+    @action(detail=False, methods=["get"], url_path="student-submissions")
+    def student_submissions(self, request):
+        """List student-submitted artifacts for the teacher's school.
+
+        Query Params:
+          status: 'pending' | 'approved' | 'rejected' (default all)
+          learner_id: filter by specific learner UUID
+        """
+        school = self._resolve_school_context(request)
+        if school is None:
+            return Response({"results": [], "pending_count": 0, "total": 0})
+
+        qs = (
+            Artifact.objects.filter(
+                uploaded_by_student=True,
+                tenant=school,
+            )
+            .select_related("learner", "reviewed_by", "tenant")
+            .order_by("-submitted_at")
+        )
+
+        status_filter = request.query_params.get("status")
+        if status_filter in (Artifact.STATUS_PENDING, Artifact.STATUS_APPROVED, Artifact.STATUS_REJECTED):
+            qs = qs.filter(status=status_filter)
+
+        learner_id = request.query_params.get("learner_id")
+        if learner_id:
+            qs = qs.filter(learner_id=learner_id)
+
+        from .serializers import QuickArtifactSerializer
+
+        results = []
+        for artifact in qs:
+            data = QuickArtifactSerializer(artifact).data
+            # Enrich with learner details for the review card
+            data["learner_name"] = artifact.learner.full_name if artifact.learner else ""
+            results.append(data)
+
+        pending_count = Artifact.objects.filter(
+            uploaded_by_student=True,
+            tenant=school,
+            status=Artifact.STATUS_PENDING,
+        ).count()
+
+        return Response({
+            "results": results,
+            "pending_count": pending_count,
+            "total": len(results),
+        })
+
+    @action(detail=True, methods=["post"], url_path="review")
+    def review_artifact(self, request, pk=None):
+        """Approve or reject a student-submitted artifact.
+
+        Expected payload:
+        {
+            "action": "approve" | "reject",
+            "rejection_reason": "..." (required when action is 'reject')
+        }
+        """
+        from django.utils import timezone
+
+        from .serializers import ArtifactReviewSerializer, QuickArtifactSerializer
+
+        # Only allow review of student-submitted artifacts
+        try:
+            artifact = Artifact.objects.get(pk=pk, uploaded_by_student=True)
+        except Artifact.DoesNotExist:
+            return Response(
+                {"detail": "Student artifact not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Scope: teacher must belong to the same school
+        school = self._resolve_school_context(request)
+        if school is None or str(artifact.tenant_id) != str(school.id):
+            return Response(
+                {"detail": "You can only review artifacts for students in your school."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = ArtifactReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        action_choice = serializer.validated_data["action"]
+        rejection_reason = serializer.validated_data.get("rejection_reason", "")
+
+        if action_choice == ArtifactReviewSerializer.ACTION_APPROVE:
+            artifact.status = Artifact.STATUS_APPROVED
+            artifact.rejection_reason = ""
+        else:
+            artifact.status = Artifact.STATUS_REJECTED
+            artifact.rejection_reason = rejection_reason
+
+        artifact.reviewed_by = request.user
+        artifact.reviewed_at = timezone.now()
+        artifact.save(update_fields=["status", "rejection_reason", "reviewed_by", "reviewed_at"])
+
+        return Response({
+            "detail": f"Artifact {action_choice}d successfully.",
+            "artifact": QuickArtifactSerializer(artifact).data,
+        })
 
 
 class BadgeManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):

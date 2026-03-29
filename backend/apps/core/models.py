@@ -200,6 +200,45 @@ class Artifact(TenantModel):
         related_name="artifacts",
         help_text="The specific microcredential/module this artifact is tied to",
     )
+    # ── Student upload & approval workflow ────────────────────────────────
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending Review"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_APPROVED,
+        db_index=True,
+        help_text="Approval status; teacher-captured artifacts default to approved",
+    )
+    uploaded_by_student = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True when submitted by the student directly",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifacts_reviewed",
+        help_text="Teacher who approved or rejected this student submission",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the teacher reviewed this artifact",
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        help_text="Optional reason provided when rejecting a student artifact",
+    )
 
 
 class Module(BaseUUIDModel):

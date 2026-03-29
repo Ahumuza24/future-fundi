@@ -102,9 +102,7 @@ export const artifactApi = {
   getById: (id: string) => api.get(`/api/artifacts/${id}/`),
   create: (data: any) => api.post('/api/artifacts/', data),
   uploadMedia: (id: string, formData: FormData) => 
-    api.post(`/api/artifacts/${id}/upload-media/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    api.post(`/api/artifacts/${id}/upload-media/`, formData),
 };
 
 export const studentApi = {
@@ -114,6 +112,19 @@ export const studentApi = {
   getPathwayLearning: (enrollmentId: string) => api.get(`/api/pathway-learning/${enrollmentId}/learn/`),
   // Get all artifacts for the authenticated student
   getArtifacts: () => api.get('/api/student/artifacts/'),
+  // Upload a new artifact for teacher review
+  uploadArtifact: (data: {
+    title: string;
+    reflection?: string;
+    files?: File[];
+  }) => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    if (data.reflection) formData.append('reflection', data.reflection);
+    (data.files || []).forEach(f => formData.append('files', f));
+
+    return api.post('/api/student/upload-artifact/', formData);
+  },
 };
 
 export const dashboardApi = {
@@ -248,6 +259,11 @@ export const teacherApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+
+  // Student Artifact Submissions Review
+  getStudentSubmissions: () => api.get('/api/teacher/quick-artifacts/student_submissions/', { params: withSelectedSchool({}) }),
+  reviewArtifact: (id: string, data: { status: 'approved' | 'rejected', rejection_reason?: string }) =>
+    api.post(`/api/teacher/quick-artifacts/${id}/review_artifact/`, withSelectedSchool(data)),
 
   // Badge Management
   badges: {
