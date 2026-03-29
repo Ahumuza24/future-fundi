@@ -391,7 +391,12 @@ export default function TeacherDashboard() {
                                             <li>• {dashboardData.pending_tasks.artifacts_needed} sessions need artifact capture</li>
                                         )}
                                         {dashboardData.pending_tasks.student_submissions > 0 && (
-                                            <li>• {dashboardData.pending_tasks.student_submissions} student submissions need review</li>
+                                            <li
+                                                className="cursor-pointer underline underline-offset-2 hover:text-orange-900 transition-colors"
+                                                onClick={() => navigate("/teacher/review-pending")}
+                                            >
+                                                • {dashboardData.pending_tasks.student_submissions} student submission{dashboardData.pending_tasks.student_submissions > 1 ? "s" : ""} need review — <span className="font-semibold">Review now →</span>
+                                            </li>
                                         )}
                                     </ul>
                                 </div>

@@ -185,6 +185,17 @@ function ArtifactCard({ artifact, index, onClick }: {
         )}
       </div>
 
+      {/* Rejection feedback strip - visible below the image */}
+      {artifact.status === 'rejected' && artifact.rejection_reason && (
+        <div className="bg-red-50 border-b border-red-100 px-4 py-2.5 flex items-start gap-2">
+          <span className="text-red-500 mt-0.5 shrink-0" aria-hidden>⚠</span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-0.5">Teacher's Feedback</p>
+            <p className="text-xs text-red-700 line-clamp-2 leading-relaxed">{artifact.rejection_reason}</p>
+          </div>
+        </div>
+      )}
+
       <div className="p-4">
         {/* Caption band */}
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -288,6 +299,21 @@ function ArtifactModal({ artifact, onClose, onPrev, onNext, hasPrev, hasNext }: 
                     </a>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Rejection feedback - shown prominently for rejected artifacts */}
+            {artifact.status === 'rejected' && (
+              <div className="bg-red-50 rounded-xl border border-red-200 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-red-600">Teacher's Feedback</p>
+                </div>
+                {artifact.rejection_reason ? (
+                  <p className="text-sm text-red-800 leading-relaxed">"{artifact.rejection_reason}"</p>
+                ) : (
+                  <p className="text-sm text-red-600 italic">This artifact was returned for revision. Please resubmit an improved version.</p>
+                )}
               </div>
             )}
 

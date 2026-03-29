@@ -261,9 +261,9 @@ export const teacherApi = {
   },
 
   // Student Artifact Submissions Review
-  getStudentSubmissions: () => api.get('/api/teacher/quick-artifacts/student_submissions/', { params: withSelectedSchool({}) }),
-  reviewArtifact: (id: string, data: { status: 'approved' | 'rejected', rejection_reason?: string }) =>
-    api.post(`/api/teacher/quick-artifacts/${id}/review_artifact/`, withSelectedSchool(data)),
+  getStudentSubmissions: () => api.get('/api/teacher/quick-artifacts/student-submissions/', { params: withSelectedSchool({}) }),
+  reviewArtifact: (id: string, data: { action: 'approve' | 'reject', rejection_reason?: string }) =>
+    api.post(`/api/teacher/quick-artifacts/${id}/review/`, withSelectedSchool(data)),
 
   // Badge Management
   badges: {

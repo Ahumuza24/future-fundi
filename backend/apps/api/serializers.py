@@ -1548,8 +1548,7 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
                 validated_data["current_class"] = pod.name
             except PodClass.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"pod_class_id": "Invalid class for the selected school."}
-                )
+                    {"pod_class_id": "Invalid class for the selected school."})
 
         # Auto-set school info
         if tenant:
