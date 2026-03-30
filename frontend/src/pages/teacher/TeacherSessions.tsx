@@ -161,18 +161,63 @@ export default function TeacherSessions() {
             }
             setDialogOpen(false);
             await fetchSessions();
-        } catch (e: any) {
-            const detail = e?.response?.data;
-            setError(typeof detail === "string" ? detail : JSON.stringify(detail) || "Failed to save session.");
+        } catch (error: unknown) {
+            const fallbackMessage = "Failed to save session.";
+            if (error && typeof error === "object" && "response" in error) {
+                const response = (error as { response?: { data?: unknown } }).response;
+                const detail = response?.data;
+                if (typeof detail === "string") {
+                    setError(detail);
+                    return;
+                }
+                if (detail) {
+                    setError(JSON.stringify(detail));
+                    return;
+                }
+            }
+            setError(fallbackMessage);
         } finally {
             setSaving(false);
         }
     };
 
     /* ── Actions ────────────────────────────────────────────────────────── */
-    const handleStart = async (id: string) => { setActionLoading(id + "_start"); try { await teacherApi.startSession(id); await fetchSessions(); } catch (e) { } finally { setActionLoading(null); } };
-    const handleComplete = async (id: string) => { setActionLoading(id + "_complete"); try { await teacherApi.completeSession(id); await fetchSessions(); } catch (e) { } finally { setActionLoading(null); } };
-    const handleDelete = async (id: string) => { setActionLoading(id + "_delete"); try { await teacherApi.deleteSession(id); await fetchSessions(); } catch (e) { } finally { setActionLoading(null); setDeleteConfirmId(null); } };
+    const handleStart = async (id: string) => {
+        setActionLoading(id + "_start");
+        try {
+            await teacherApi.startSession(id);
+            await fetchSessions();
+        } catch (error) {
+            console.error("Failed to start session", error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleComplete = async (id: string) => {
+        setActionLoading(id + "_complete");
+        try {
+            await teacherApi.completeSession(id);
+            await fetchSessions();
+        } catch (error) {
+            console.error("Failed to complete session", error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        setActionLoading(id + "_delete");
+        try {
+            await teacherApi.deleteSession(id);
+            await fetchSessions();
+        } catch (error) {
+            console.error("Failed to delete session", error);
+        } finally {
+            setActionLoading(null);
+            setDeleteConfirmId(null);
+        }
+    };
 
     /* ── Derived ────────────────────────────────────────────────────────── */
     const filtered = sessions.filter(s => filterStatus === "all" || s.status === filterStatus);

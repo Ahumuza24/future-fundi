@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-    User, ArrowLeft, Grid, List, Calendar, Star,
+    ArrowLeft, Grid, List, Star,
     TrendingUp, FileText, MessageSquare, Flag, Camera,
-    ChevronRight, Award, BookOpen
+    ChevronRight, Award
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Artifact {
     id: string;
@@ -48,63 +48,75 @@ interface LearnerProfile {
     skill_progress: { name: string; current: number; previous: number }[];
 }
 
+const createDemoArtifacts = (): Artifact[] => ([
+    { id: "1", title: "Robot Arm Project", type: "photo", date: "Oct 18", thumbnail_color: "var(--fundi-orange)", module: "Robotics", reflection: "I learned how to connect servo motors!" },
+    { id: "2", title: "Coding Challenge", type: "code", date: "Oct 15", thumbnail_color: "var(--fundi-cyan)", module: "Coding", reflection: "Loops are fun once you understand them." },
+    { id: "3", title: "Team Bridge Build", type: "photo", date: "Oct 12", thumbnail_color: "var(--fundi-purple)", module: "Engineering", reflection: "Working together made it stronger!" },
+    { id: "4", title: "Circuit Design", type: "photo", date: "Oct 10", thumbnail_color: "var(--fundi-lime)", module: "Electronics", reflection: "LEDs need resistors or they burn out." },
+    { id: "5", title: "3D Printed Gear", type: "photo", date: "Oct 8", thumbnail_color: "var(--fundi-pink)", module: "3D Printing", reflection: "My first 3D print took 2 hours!" },
+    { id: "6", title: "Sensor Testing", type: "video", date: "Oct 5", thumbnail_color: "var(--fundi-orange)", module: "Robotics", reflection: "Ultrasonic sensors can detect objects far away." },
+]);
+
+const createDemoAssessments = (): Assessment[] => ([
+    { id: "1", date: "Oct 18", module: "Robotics", score: 85, skills: [{ name: "Technical", score: 4 }, { name: "Problem Solving", score: 5 }] },
+    { id: "2", date: "Oct 11", module: "Coding", score: 78, skills: [{ name: "Logic", score: 4 }, { name: "Debugging", score: 3 }] },
+    { id: "3", date: "Oct 4", module: "Engineering", score: 90, skills: [{ name: "Design", score: 5 }, { name: "Teamwork", score: 4 }] },
+]);
+
+const createDemoAchievements = () => ([
+    { name: "First Steps", icon: "⭐", earned_at: "Oct 5" },
+    { name: "Problem Solver", icon: "🧩", earned_at: "Oct 12" },
+    { name: "Team Player", icon: "👥", earned_at: "Oct 18" },
+]);
+
+const createDemoSkillProgress = () => ([
+    { name: "Problem Solving", current: 4, previous: 3 },
+    { name: "Creativity", current: 5, previous: 4 },
+    { name: "Technical Skills", current: 4, previous: 3 },
+    { name: "Collaboration", current: 3, previous: 3 },
+]);
+
+const createDemoNotes = (): TeacherNote[] => ([
+    { id: "1", date: "Oct 18", content: "Alex showed excellent leadership during the group project today.", type: "praise" },
+    { id: "2", date: "Oct 15", content: "Still struggling with debugging code. Consider pair programming next session.", type: "observation" },
+    { id: "3", date: "Oct 10", content: "Has been less engaged this week. Check in about home situation.", type: "concern" },
+]);
+
+const createDemoLearner = (learnerId?: string, artifactsCount?: number): LearnerProfile => ({
+    id: learnerId || "1",
+    first_name: "Alex",
+    last_name: "Kato",
+    full_name: "Alex Kato",
+    age: 10,
+    current_level: "Level 2: Explorer",
+    current_course: "Robotics Foundations",
+    attendance_rate: 95,
+    artifacts_count: artifactsCount ?? 0,
+    achievements: createDemoAchievements(),
+    skill_progress: createDemoSkillProgress(),
+});
+
+type TabId = "artifacts" | "assessments" | "notes";
+
+const TAB_OPTIONS: Array<{ id: TabId; label: string; icon: typeof Camera }> = [
+    { id: "artifacts", label: "Artifacts", icon: Camera },
+    { id: "assessments", label: "Assessments", icon: FileText },
+    { id: "notes", label: "Teacher Notes", icon: MessageSquare },
+];
+
 export default function TeacherLearnerPortfolio() {
     const { learnerId } = useParams<{ learnerId: string }>();
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<"grid" | "timeline">("grid");
-    const [activeTab, setActiveTab] = useState<"artifacts" | "assessments" | "notes">("artifacts");
-    const [learner, setLearner] = useState<LearnerProfile | null>(null);
-    const [artifacts, setArtifacts] = useState<Artifact[]>([]);
-    const [assessments, setAssessments] = useState<Assessment[]>([]);
-    const [notes, setNotes] = useState<TeacherNote[]>([]);
+    const [activeTab, setActiveTab] = useState<TabId>("artifacts");
+    const artifacts = useMemo(() => createDemoArtifacts(), []);
+    const assessments = useMemo(() => createDemoAssessments(), []);
+    const learner = useMemo(
+        () => createDemoLearner(learnerId, artifacts.length),
+        [learnerId, artifacts.length]
+    );
+    const [notes, setNotes] = useState<TeacherNote[]>(() => createDemoNotes());
     const [newNote, setNewNote] = useState("");
-
-    useEffect(() => {
-        // Load demo data
-        setLearner({
-            id: learnerId || "1",
-            first_name: "Alex",
-            last_name: "Kato",
-            full_name: "Alex Kato",
-            age: 10,
-            current_level: "Level 2: Explorer",
-            current_course: "Robotics Foundations",
-            attendance_rate: 95,
-            artifacts_count: 12,
-            achievements: [
-                { name: "First Steps", icon: "⭐", earned_at: "Oct 5" },
-                { name: "Problem Solver", icon: "🧩", earned_at: "Oct 12" },
-                { name: "Team Player", icon: "👥", earned_at: "Oct 18" },
-            ],
-            skill_progress: [
-                { name: "Problem Solving", current: 4, previous: 3 },
-                { name: "Creativity", current: 5, previous: 4 },
-                { name: "Technical Skills", current: 4, previous: 3 },
-                { name: "Collaboration", current: 3, previous: 3 },
-            ],
-        });
-
-        setArtifacts([
-            { id: "1", title: "Robot Arm Project", type: "photo", date: "Oct 18", thumbnail_color: "var(--fundi-orange)", module: "Robotics", reflection: "I learned how to connect servo motors!" },
-            { id: "2", title: "Coding Challenge", type: "code", date: "Oct 15", thumbnail_color: "var(--fundi-cyan)", module: "Coding", reflection: "Loops are fun once you understand them." },
-            { id: "3", title: "Team Bridge Build", type: "photo", date: "Oct 12", thumbnail_color: "var(--fundi-purple)", module: "Engineering", reflection: "Working together made it stronger!" },
-            { id: "4", title: "Circuit Design", type: "photo", date: "Oct 10", thumbnail_color: "var(--fundi-lime)", module: "Electronics", reflection: "LEDs need resistors or they burn out." },
-            { id: "5", title: "3D Printed Gear", type: "photo", date: "Oct 8", thumbnail_color: "var(--fundi-pink)", module: "3D Printing", reflection: "My first 3D print took 2 hours!" },
-            { id: "6", title: "Sensor Testing", type: "video", date: "Oct 5", thumbnail_color: "var(--fundi-orange)", module: "Robotics", reflection: "Ultrasonic sensors can detect objects far away." },
-        ]);
-
-        setAssessments([
-            { id: "1", date: "Oct 18", module: "Robotics", score: 85, skills: [{ name: "Technical", score: 4 }, { name: "Problem Solving", score: 5 }] },
-            { id: "2", date: "Oct 11", module: "Coding", score: 78, skills: [{ name: "Logic", score: 4 }, { name: "Debugging", score: 3 }] },
-            { id: "3", date: "Oct 4", module: "Engineering", score: 90, skills: [{ name: "Design", score: 5 }, { name: "Teamwork", score: 4 }] },
-        ]);
-
-        setNotes([
-            { id: "1", date: "Oct 18", content: "Alex showed excellent leadership during the group project today.", type: "praise" },
-            { id: "2", date: "Oct 15", content: "Still struggling with debugging code. Consider pair programming next session.", type: "observation" },
-            { id: "3", date: "Oct 10", content: "Has been less engaged this week. Check in about home situation.", type: "concern" },
-        ]);
-    }, [learnerId]);
 
     const addNote = () => {
         if (!newNote.trim()) return;
@@ -231,14 +243,10 @@ export default function TeacherLearnerPortfolio() {
 
                 {/* Tabs */}
                 <div className="flex gap-2 border-b">
-                    {[
-                        { id: "artifacts", label: "Artifacts", icon: Camera },
-                        { id: "assessments", label: "Assessments", icon: FileText },
-                        { id: "notes", label: "Teacher Notes", icon: MessageSquare },
-                    ].map(tab => (
+                    {TAB_OPTIONS.map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
+                            onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${activeTab === tab.id
                                     ? "border-cyan-500 text-cyan-600 font-medium"
                                     : "border-transparent text-gray-500 hover:text-gray-700"

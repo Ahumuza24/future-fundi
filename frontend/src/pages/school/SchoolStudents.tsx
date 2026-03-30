@@ -3,11 +3,9 @@ import { schoolApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
-    Search, Plus, User, GraduationCap, Map, Download,
-    MoreHorizontal, Filter, ChevronLeft, ChevronRight, Key, School, CheckCircle, AlertCircle
+    Search, Plus, User, GraduationCap, Map, Key
 } from "lucide-react";
 
 interface Student {
@@ -31,6 +29,20 @@ interface Pathway {
     id: string;
     name: string;
     description: string;
+}
+
+interface CreateStudentPayload {
+    first_name: string;
+    last_name: string;
+    username: string;
+    password: string;
+    password_confirm?: string;
+    current_class: string;
+    pathway_ids: string[];
+    date_of_birth: string | null;
+    consent_media: boolean;
+    equity_flag: boolean;
+    pod_class_id?: string;
 }
 
 export default function SchoolStudents() {
@@ -123,7 +135,7 @@ export default function SchoolStudents() {
 
         try {
             setIsSubmitting(true);
-            const payload: any = {
+            const payload: CreateStudentPayload = {
                 first_name: studentForm.first_name,
                 last_name: studentForm.last_name,
                 username: studentForm.username,
@@ -153,10 +165,10 @@ export default function SchoolStudents() {
                 username: "", password: "", password_confirm: "", consent_media: true, equity_flag: false, pathway_ids: []
             });
             toast.success("Student added successfully. Login credentials are ready.", "Student Created");
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to add student:", error);
             // Show backend validation errors
-            const data = error?.response?.data;
+            const data = (error as { response?: { data?: Record<string, unknown> } } | undefined)?.response?.data;
             if (data) {
                 const messages = Object.entries(data)
                     .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)

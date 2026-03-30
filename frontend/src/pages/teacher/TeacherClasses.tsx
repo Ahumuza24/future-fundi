@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { teacherApi, courseApi } from "@/lib/api";
+import { teacherApi } from "@/lib/api";
 import {
-    Users, Search, Award, BookOpen, Eye, UserPlus,
-    Medal, GraduationCap, TrendingUp, AlertCircle
+    Users, Search, Award, Eye, UserPlus,
+    Medal, GraduationCap, AlertCircle, BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AddStudentDialog } from "@/components/teacher/AddStudentDialog";
+import { AddStudentDialog } from "@/components/common/AddStudentDialog";
 
 interface Student {
     id: string;
@@ -50,6 +50,7 @@ export default function TeacherClasses() {
         learner_id: "",
         course_id: "",
     });
+    const [enrolling, setEnrolling] = useState(false);
 
     // Badge form state
     const [badgeForm, setBadgeForm] = useState({
@@ -63,11 +64,7 @@ export default function TeacherClasses() {
         issuer: "Future Fundi Academy",
     });
 
-    useEffect(() => {
-        fetchData();
-    }, [selectedCourse]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const params = selectedCourse ? { course_id: selectedCourse } : {};
@@ -81,11 +78,52 @@ export default function TeacherClasses() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedCourse]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
         setTimeout(() => setMessage(null), 3000);
+    };
+
+    const openEnrollDialog = (student: Student) => {
+        setSelectedStudent(student);
+        setEnrollForm({ learner_id: student.id, course_id: selectedCourse || "" });
+        setIsEnrollDialogOpen(true);
+    };
+
+    const resetEnrollForm = () => {
+        setEnrollForm({ learner_id: "", course_id: "" });
+    };
+
+    const handleEnrollStudent = async () => {
+        if (!enrollForm.learner_id || !enrollForm.course_id) {
+            showMessage('error', 'Select a student and course to enroll');
+            return;
+        }
+
+        try {
+            setEnrolling(true);
+            await teacherApi.students.enroll({
+                learner_id: enrollForm.learner_id,
+                course_id: enrollForm.course_id,
+            });
+            showMessage('success', 'Student enrolled successfully');
+            setIsEnrollDialogOpen(false);
+            resetEnrollForm();
+            fetchData();
+        } catch (error: unknown) {
+            const detail =
+                typeof error === 'object' && error && 'response' in error
+                    ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+                    : undefined;
+            showMessage('error', detail || 'Failed to enroll student');
+        } finally {
+            setEnrolling(false);
+        }
     };
 
     const handleAwardBadge = async () => {
@@ -102,8 +140,12 @@ export default function TeacherClasses() {
             setIsBadgeDialogOpen(false);
             setBadgeForm({ badge_name: "", description: "" });
             fetchData();
-        } catch (error: any) {
-            showMessage('error', error.response?.data?.detail || 'Failed to award badge');
+        } catch (error: unknown) {
+            const detail =
+                typeof error === 'object' && error && 'response' in error
+                    ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+                    : undefined;
+            showMessage('error', detail || 'Failed to award badge');
         }
     };
 
@@ -121,8 +163,12 @@ export default function TeacherClasses() {
             setIsCredentialDialogOpen(false);
             setCredentialForm({ name: "", issuer: "Future Fundi Academy" });
             fetchData();
-        } catch (error: any) {
-            showMessage('error', error.response?.data?.detail || 'Failed to award credential');
+        } catch (error: unknown) {
+            const detail =
+                typeof error === 'object' && error && 'response' in error
+                    ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+                    : undefined;
+            showMessage('error', detail || 'Failed to award credential');
         }
     };
 
@@ -339,6 +385,14 @@ export default function TeacherClasses() {
                                 >
                                     <GraduationCap className="h-4 w-4" />
                                 </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEnrollDialog(student)}
+                                    title="Enroll in Course"
+                                >
+                                    <BookOpen className="h-4 w-4" />
+                                </Button>
                             </div>
                         </motion.div>
                     ))}
@@ -441,6 +495,67 @@ export default function TeacherClasses() {
                             style={{ backgroundColor: "var(--fundi-purple)", color: "white" }}
                         >
                             Award Credential
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Enroll Dialog */}
+            <Dialog
+                open={isEnrollDialogOpen}
+                onOpenChange={(open) => {
+                    setIsEnrollDialogOpen(open);
+                    if (!open) {
+                        resetEnrollForm();
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5" style={{ color: "var(--fundi-cyan)" }} />
+                            Enroll Student
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedStudent ? `Enroll ${selectedStudent.full_name} into a pathway` : 'Select a student to enroll'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="enroll_student">Student</Label>
+                            <Input
+                                id="enroll_student"
+                                value={selectedStudent?.full_name || ''}
+                                readOnly
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="enroll_course">Course *</Label>
+                            <select
+                                id="enroll_course"
+                                className="w-full border rounded-md p-2"
+                                value={enrollForm.course_id}
+                                onChange={(e) => setEnrollForm((prev) => ({ ...prev, course_id: e.target.value }))}
+                            >
+                                <option value="">Select a course...</option>
+                                {courses.map((course) => (
+                                    <option key={course.id} value={course.id}>
+                                        {course.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEnrollDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleEnrollStudent}
+                            disabled={enrolling || !enrollForm.course_id}
+                            style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
+                        >
+                            {enrolling ? "Enrolling..." : "Enroll"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

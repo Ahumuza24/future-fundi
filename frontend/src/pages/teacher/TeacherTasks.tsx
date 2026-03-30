@@ -3,11 +3,11 @@ import { teacherApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus, CheckCircle2, Circle, Clock, AlertCircle, Trash2, Edit3,
-    Flag, Calendar, ChevronDown, X, Loader2, ListTodo, TrendingUp, Check
+    Calendar, Loader2, ListTodo, TrendingUp, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -104,8 +104,8 @@ export default function TeacherTasks() {
             }
             setDialogOpen(false);
             await fetchAll();
-        } catch (e: any) {
-            console.error("Save failed:", e);
+        } catch (error) {
+            console.error("Save failed:", error);
             alert("Failed to save task.");
         } finally {
             setSaving(false);

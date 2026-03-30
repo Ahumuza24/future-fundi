@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-    TrendingUp, Search, ArrowLeft, User, BookOpen, Award, Target
+    TrendingUp, Search, ArrowLeft, User, BookOpen
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -32,13 +32,8 @@ export default function SchoolProgress() {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
 
-    useEffect(() => {
-        fetchProgressData();
-    }, []);
-
-    const fetchProgressData = async () => {
+    const fetchProgressData = useCallback(async () => {
         try {
-            setLoading(true);
             const response = await schoolApi.progress.getAll();
             setProgressData(response.data || []);
             setLoading(false);
@@ -46,7 +41,11 @@ export default function SchoolProgress() {
             console.error("Failed to fetch progress data:", error);
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchProgressData();
+    }, [fetchProgressData]);
 
     const getStatusColor = (status: string) => {
         switch (status) {

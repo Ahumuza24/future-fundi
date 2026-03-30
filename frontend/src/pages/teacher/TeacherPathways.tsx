@@ -44,7 +44,19 @@ interface CourseSummary {
   careers?: Array<{ id: string; title: string; description?: string }>;
 }
 
-interface CourseDetail extends CourseSummary {}
+type CourseDetail = CourseSummary;
+
+interface MediaRecord {
+  id?: string;
+  name?: string;
+  url?: string;
+  file?: string;
+  path?: string;
+  src?: string;
+  link?: string;
+  content_type?: string;
+  type?: string;
+}
 
 interface NormalizedMediaItem {
   id: string;
@@ -53,7 +65,7 @@ interface NormalizedMediaItem {
   kind: "image" | "video" | "file";
 }
 
-const resolveMediaUrl = (media: Record<string, any>): string | null => {
+const resolveMediaUrl = (media: MediaRecord): string | null => {
   const raw =
     media?.url || media?.file || media?.path || media?.src || media?.link || "";
   const value = String(raw || "").trim().replace(/\\/g, "/");
@@ -73,7 +85,7 @@ const resolveMediaUrl = (media: Record<string, any>): string | null => {
   return `${MEDIA_BASE_URL}/${value.replace(/^\.?\//, "")}`;
 };
 
-const resolveMediaKind = (media: Record<string, any>, url: string | null): "image" | "video" | "file" => {
+const resolveMediaKind = (media: MediaRecord, url: string | null): "image" | "video" | "file" => {
   const type = String(media?.content_type || media?.type || "").toLowerCase();
   const source = String(url || "").toLowerCase();
 
