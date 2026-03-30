@@ -338,6 +338,155 @@ class SchoolLearnerSerializer(serializers.ModelSerializer):
         ]
 
 
+class SchoolStudentDetailSerializer(SchoolLearnerSerializer):
+    """Detailed learner profile for school admins with progress artifacts and history."""
+
+    progress = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
+    artifacts = serializers.SerializerMethodField()
+    attendance = serializers.SerializerMethodField()
+
+    class Meta(SchoolLearnerSerializer.Meta):
+        fields = SchoolLearnerSerializer.Meta.fields + [
+            "progress",
+            "badges",
+            "artifacts",
+            "attendance",
+        ]
+
+    def get_progress(self, obj):
+        enrollments = (
+            obj.course_enrollments.filter(is_active=True)
+            .select_related("course", "current_level")
+            .prefetch_related("course__levels", "level_progress")
+        )
+        progress_data = []
+        for enrollment in enrollments:
+            course = enrollment.course
+            if not course:
+                continue
+
+            levels = list(course.levels.all()) if hasattr(course, "levels") else []
+            total_modules = sum(
+                (level.required_modules_count or 0) for level in levels if level
+            ) or 1
+
+            level_progress = list(enrollment.level_progress.all())
+            modules_completed = sum((p.modules_completed or 0) for p in level_progress)
+            artifacts_submitted = sum((p.artifacts_submitted or 0) for p in level_progress)
+            assessment_scores = [
+                p.assessment_score
+                for p in level_progress
+                if p.assessment_score is not None
+            ]
+            avg_score = (
+                round(sum(assessment_scores) / len(assessment_scores), 1)
+                if assessment_scores
+                else 0
+            )
+
+            completion_pct = min(100, int((modules_completed / total_modules) * 100))
+
+            status = "on_track"
+            if completion_pct >= 100 or enrollment.completed_at:
+                status = "completed"
+            elif avg_score and avg_score < 50:
+                status = "needs_attention"
+
+            progress_data.append(
+                {
+                    "enrollment_id": str(enrollment.id),
+                    "course_id": str(course.id),
+                    "course_name": course.name,
+                    "current_level": (
+                        f"Level {enrollment.current_level.level_number}: {enrollment.current_level.name}"
+                        if enrollment.current_level
+                        else "Not Started"
+                    ),
+                    "completion_percentage": completion_pct,
+                    "modules_completed": modules_completed,
+                    "total_modules": total_modules,
+                    "artifacts_submitted": artifacts_submitted,
+                    "assessment_score": avg_score,
+                    "status": status,
+                }
+            )
+
+        return progress_data
+
+    def get_badges(self, obj):
+        badges = (
+            Badge.objects.filter(learner=obj)
+            .select_related("module", "awarded_by")
+            .order_by("-awarded_at")
+        )
+        return [
+            {
+                "id": str(badge.id),
+                "name": badge.badge_name,
+                "description": badge.description or "",
+                "module_name": badge.module.name if badge.module else None,
+                "awarded_at": badge.awarded_at,
+                "awarded_by": badge.awarded_by.get_full_name()
+                if badge.awarded_by
+                else None,
+            }
+            for badge in badges
+        ]
+
+    def get_artifacts(self, obj):
+        artifacts = (
+            Artifact.objects.filter(learner=obj)
+            .select_related("module")
+            .order_by("-submitted_at")
+        )
+        return [
+            {
+                "id": str(artifact.id),
+                "title": artifact.title,
+                "submitted_at": artifact.submitted_at,
+                "module_name": artifact.module.name if artifact.module else None,
+                "status": artifact.status,
+                "uploaded_by_student": artifact.uploaded_by_student,
+                "media": [
+                    {
+                        "type": media.get("type", "file"),
+                        "url": media.get("url"),
+                        "file_url": media.get("url"),
+                        "filename": media.get("filename"),
+                        "thumbnail_url": media.get("thumbnail_url"),
+                        "size": media.get("size"),
+                    }
+                    for media in (artifact.media_refs or [])
+                    if isinstance(media, dict)
+                ],
+            }
+            for artifact in artifacts
+        ]
+
+    def get_attendance(self, obj):
+        records = (
+            Attendance.objects.filter(learner=obj)
+            .select_related("session", "session__module")
+            .order_by("-marked_at")
+        )
+        return [
+            {
+                "id": str(record.id),
+                "status": record.status,
+                "notes": record.notes,
+                "marked_at": record.marked_at,
+                "session": {
+                    "id": str(record.session.id),
+                    "date": record.session.date,
+                    "module_name": record.session.module.name if record.session.module else None,
+                    "status": record.session.status,
+                },
+            }
+            for record in records
+        ]
+
+
 class ChildCreateSerializer(serializers.ModelSerializer):
     """Serializer for parents to create/add children with login credentials."""
 

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import {
     Search, Plus, User, GraduationCap, Map, Key
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Student {
     id: string;
@@ -46,6 +47,7 @@ interface CreateStudentPayload {
 }
 
 export default function SchoolStudents() {
+    const navigate = useNavigate();
     const [students, setStudents] = useState<Student[]>([]);
     const [classes, setClasses] = useState<PodClass[]>([]);
     const [pathways, setPathways] = useState<Pathway[]>([]);
@@ -302,7 +304,13 @@ export default function SchoolStudents() {
                                             {new Date(student.joined_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Button variant="ghost" size="sm">Details</Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => navigate(`/school/students/${student.id}`)}
+                                            >
+                                                Details
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -520,6 +528,7 @@ export default function SchoolStudents() {
                     </DialogContent>
                 </Dialog>
             </div>
+
         </div>
     );
 }

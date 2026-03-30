@@ -3,6 +3,7 @@ from apps.api.serializers import (
     PodClassSerializer,
     SchoolLearnerSerializer,
     SchoolStudentCreateSerializer,
+    SchoolStudentDetailSerializer,
     UserSerializer,
 )
 from apps.core.models import (
@@ -386,13 +387,26 @@ class SchoolStudentViewSet(viewsets.ModelViewSet):
         return (
             Learner.objects.filter(tenant=tenant)
             .select_related("user", "parent")
-            .prefetch_related("course_enrollments__course")
+            .prefetch_related(
+                "course_enrollments__course",
+                "course_enrollments__course__levels",
+                "course_enrollments__level_progress",
+                "artifacts",
+                "achievements",
+                "attendance_records__session",
+                "attendance_records__session__module",
+            )
         )
 
     def get_serializer_class(self):
         if self.action == "create":
             return SchoolStudentCreateSerializer
         return SchoolLearnerSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        learner = self.get_object()
+        serializer = SchoolStudentDetailSerializer(learner)
+        return Response(serializer.data)
 
 
 class SchoolTeacherViewSet(viewsets.ModelViewSet):

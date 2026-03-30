@@ -35,6 +35,7 @@ import SchoolPathways from "@/pages/school/SchoolPathways";
 import SchoolProgress from "@/pages/school/SchoolProgress";
 import SchoolBadges from "@/pages/school/SchoolBadges";
 import SchoolAnalytics from "@/pages/school/SchoolAnalytics";
+import SchoolStudentDetail from "@/pages/school/SchoolStudentDetail";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCourseManagement from "@/pages/admin/AdminCourseManagement";
 import AdminMonitor from "@/pages/admin/AdminMonitor";
@@ -271,6 +272,14 @@ const router = sentryCreateBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['school', 'admin']}>
             <SchoolStudents />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/students/:id",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolStudentDetail />
           </ProtectedRoute>
         ),
       },
