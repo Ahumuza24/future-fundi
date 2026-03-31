@@ -1,17 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-    Flag, MessageSquare, Bell, Send, Eye, CheckCircle,
-    AlertTriangle, User, Calendar, FileText, Users, X
+    Flag,
+    MessageSquare,
+    Bell,
+    Send,
+    Eye,
+    CheckCircle,
+    FileText,
+    X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+type FlagPriority = "high" | "medium" | "low";
+type RequestType = "support" | "resources" | "concern" | "other";
 
 interface FlaggedLearner {
     id: string;
     learner_name: string;
     reason: string;
-    priority: "high" | "medium" | "low";
+    priority: FlagPriority;
     flagged_at: string;
     status: "pending" | "notified" | "resolved";
     notes?: string;
@@ -30,73 +39,74 @@ interface WeeklySummary {
 
 interface AdminRequest {
     id: string;
-    type: "support" | "resources" | "concern" | "other";
+    type: RequestType;
     subject: string;
     message: string;
     status: "pending" | "acknowledged" | "resolved";
     created_at: string;
 }
 
+const initialFlaggedLearners: FlaggedLearner[] = [
+        { id: "1", learner_name: "Diana Asiimwe", reason: "Declining attendance (78% this month)", priority: "high", flagged_at: "Today", status: "pending", notes: "Has missed 3 sessions in 2 weeks" },
+        { id: "2", learner_name: "Charles Mugisha", reason: "Needs additional challenge", priority: "low", flagged_at: "Yesterday", status: "notified" },
+        { id: "3", learner_name: "Faith Nambi", reason: "Struggling with technical concepts", priority: "medium", flagged_at: "2 days ago", status: "pending" },
+    ];
+const initialWeeklySummaries: WeeklySummary[] = [
+        {
+            learner_id: "1", learner_name: "Alex Kato", parent_name: "Mr. Kato",
+            attendance: 100, artifacts_count: 3,
+            highlights: ["Completed robot arm project", "Helped peers with coding"],
+            areas_for_growth: ["Could improve documentation"],
+            preview_ready: true
+        },
+        {
+            learner_id: "2", learner_name: "Bella Nakato", parent_name: "Mrs. Nakato",
+            attendance: 80, artifacts_count: 2,
+            highlights: ["Great teamwork", "Creative solutions"],
+            areas_for_growth: ["Needs more practice with debugging"],
+            preview_ready: true
+        },
+        {
+            learner_id: "3", learner_name: "Charles Mugisha", parent_name: "Mr. Mugisha",
+            attendance: 100, artifacts_count: 4,
+            highlights: ["Exceptional problem-solving", "Mentored other learners"],
+            areas_for_growth: ["Building communication skills"],
+            preview_ready: false
+        },
+    ];
+const initialAdminRequests: AdminRequest[] = [
+        { id: "1", type: "resources", subject: "Need more Arduino kits", message: "We've run out of Arduino starter kits for the Robotics class. Need at least 5 more.", status: "acknowledged", created_at: "3 days ago" },
+        { id: "2", type: "concern", subject: "Safety issue in lab", message: "The power strip near station 3 is damaged and needs replacement.", status: "resolved", created_at: "1 week ago" },
+    ];
+
 export default function TeacherCommunication() {
     const [activeTab, setActiveTab] = useState<"flags" | "summaries" | "admin">("flags");
-    const [flaggedLearners, setFlaggedLearners] = useState<FlaggedLearner[]>([]);
-    const [weeklySummaries, setWeeklySummaries] = useState<WeeklySummary[]>([]);
-    const [adminRequests, setAdminRequests] = useState<AdminRequest[]>([]);
+    const [flaggedLearners, setFlaggedLearners] = useState<FlaggedLearner[]>(initialFlaggedLearners);
+    const weeklySummaries = initialWeeklySummaries;
+    const [adminRequests, setAdminRequests] = useState<AdminRequest[]>(initialAdminRequests);
     const [showNewFlagModal, setShowNewFlagModal] = useState(false);
     const [showNewRequestModal, setShowNewRequestModal] = useState(false);
     const [selectedSummary, setSelectedSummary] = useState<WeeklySummary | null>(null);
 
     // New flag form
-    const [newFlag, setNewFlag] = useState({
+    const [newFlag, setNewFlag] = useState<{ learner_name: string; reason: string; priority: FlagPriority }>({
         learner_name: "",
         reason: "",
-        priority: "medium" as "high" | "medium" | "low"
+        priority: "medium",
     });
 
     // New request form
-    const [newRequest, setNewRequest] = useState({
-        type: "support" as "support" | "resources" | "concern" | "other",
+    const [newRequest, setNewRequest] = useState<{ type: RequestType; subject: string; message: string }>({
+        type: "support",
         subject: "",
-        message: ""
+        message: "",
     });
 
-    useEffect(() => {
-        // Load demo data
-        setFlaggedLearners([
-            { id: "1", learner_name: "Diana Asiimwe", reason: "Declining attendance (78% this month)", priority: "high", flagged_at: "Today", status: "pending", notes: "Has missed 3 sessions in 2 weeks" },
-            { id: "2", learner_name: "Charles Mugisha", reason: "Needs additional challenge", priority: "low", flagged_at: "Yesterday", status: "notified" },
-            { id: "3", learner_name: "Faith Nambi", reason: "Struggling with technical concepts", priority: "medium", flagged_at: "2 days ago", status: "pending" },
-        ]);
-
-        setWeeklySummaries([
-            {
-                learner_id: "1", learner_name: "Alex Kato", parent_name: "Mr. Kato",
-                attendance: 100, artifacts_count: 3,
-                highlights: ["Completed robot arm project", "Helped peers with coding"],
-                areas_for_growth: ["Could improve documentation"],
-                preview_ready: true
-            },
-            {
-                learner_id: "2", learner_name: "Bella Nakato", parent_name: "Mrs. Nakato",
-                attendance: 80, artifacts_count: 2,
-                highlights: ["Great teamwork", "Creative solutions"],
-                areas_for_growth: ["Needs more practice with debugging"],
-                preview_ready: true
-            },
-            {
-                learner_id: "3", learner_name: "Charles Mugisha", parent_name: "Mr. Mugisha",
-                attendance: 100, artifacts_count: 4,
-                highlights: ["Exceptional problem-solving", "Mentored other learners"],
-                areas_for_growth: ["Building communication skills"],
-                preview_ready: false
-            },
-        ]);
-
-        setAdminRequests([
-            { id: "1", type: "resources", subject: "Need more Arduino kits", message: "We've run out of Arduino starter kits for the Robotics class. Need at least 5 more.", status: "acknowledged", created_at: "3 days ago" },
-            { id: "2", type: "concern", subject: "Safety issue in lab", message: "The power strip near station 3 is damaged and needs replacement.", status: "resolved", created_at: "1 week ago" },
-        ]);
-    }, []);
+    const tabs: Array<{ id: "flags" | "summaries" | "admin"; label: string; icon: typeof Flag; count: number }> = [
+        { id: "flags", label: "Parent Flags", icon: Flag, count: flaggedLearners.length },
+        { id: "summaries", label: "Weekly Summaries", icon: FileText, count: weeklySummaries.length },
+        { id: "admin", label: "Admin Requests", icon: Bell, count: adminRequests.length },
+    ];
 
     const handleAddFlag = () => {
         if (!newFlag.learner_name || !newFlag.reason) return;
@@ -179,14 +189,10 @@ export default function TeacherCommunication() {
 
                 {/* Tabs */}
                 <div className="flex gap-2 border-b">
-                    {[
-                        { id: "flags", label: "Parent Flags", icon: Flag, count: flaggedLearners.length },
-                        { id: "summaries", label: "Weekly Summaries", icon: FileText, count: weeklySummaries.length },
-                        { id: "admin", label: "Admin Requests", icon: Bell, count: adminRequests.length },
-                    ].map(tab => (
+                    {tabs.map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
+                            onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${activeTab === tab.id
                                     ? "border-purple-500 text-purple-600 font-medium"
                                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -446,10 +452,10 @@ export default function TeacherCommunication() {
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Priority</label>
                                         <div className="flex gap-2">
-                                            {["low", "medium", "high"].map(p => (
+                                            {(["low", "medium", "high"] as FlagPriority[]).map(p => (
                                                 <button
                                                     key={p}
-                                                    onClick={() => setNewFlag({ ...newFlag, priority: p as any })}
+                                                    onClick={() => setNewFlag({ ...newFlag, priority: p })}
                                                     className={`flex-1 py-2 rounded-lg border-2 capitalize transition-all ${newFlag.priority === p
                                                             ? "border-orange-500 bg-orange-50"
                                                             : "border-gray-200 hover:border-gray-300"
@@ -562,7 +568,7 @@ export default function TeacherCommunication() {
                                         <label className="block text-sm font-medium mb-1">Request Type</label>
                                         <select
                                             value={newRequest.type}
-                                            onChange={(e) => setNewRequest({ ...newRequest, type: e.target.value as any })}
+                                            onChange={(e) => setNewRequest({ ...newRequest, type: e.target.value as RequestType })}
                                             className="w-full p-3 border rounded-lg"
                                         >
                                             <option value="support">General Support</option>

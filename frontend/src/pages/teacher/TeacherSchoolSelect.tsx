@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export default function TeacherSchoolSelect() {
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>(
     getSelectedTeacherSchoolId() || ""
   );
+  const initialSelectedIdRef = useRef(selectedSchoolId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +35,8 @@ export default function TeacherSchoolSelect() {
 
         setSchools(schoolsData);
 
-        if (preselected && !selectedSchoolId) {
+        if (preselected && !initialSelectedIdRef.current) {
+          initialSelectedIdRef.current = preselected;
           setSelectedSchoolId(preselected);
         }
       } catch (err) {
@@ -47,6 +49,10 @@ export default function TeacherSchoolSelect() {
 
     fetchSchools();
   }, []);
+
+  useEffect(() => {
+    initialSelectedIdRef.current = selectedSchoolId;
+  }, [selectedSchoolId]);
 
   const selectedSchool = useMemo(
     () => schools.find((school) => school.id === selectedSchoolId),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import {
     Users,
     CheckCircle,
     XCircle,
-    Clock,
     AlertCircle,
     ArrowLeft,
     Save,
@@ -28,6 +27,15 @@ interface AttendanceRecord {
     notes: string;
 }
 
+type AttendanceStatus = "present" | "absent" | "late" | "excused";
+
+interface SessionAttendanceRecord {
+    learner_id: string;
+    learner_name: string;
+    status: AttendanceStatus;
+    notes: string;
+}
+
 interface Session {
     id: string;
     module_name: string;
@@ -36,12 +44,7 @@ interface Session {
     status: string;
     attendance_marked: boolean;
     learners: Learner[];
-    attendance_records: Array<{
-        learner_id: string;
-        learner_name: string;
-        status: string;
-        notes: string;
-    }>;
+    attendance_records: SessionAttendanceRecord[];
 }
 
 export default function TeacherAttendance() {
@@ -54,24 +57,19 @@ export default function TeacherAttendance() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    useEffect(() => {
-        if (sessionId) {
-            fetchSession();
-        }
-    }, [sessionId]);
-
-    const fetchSession = async () => {
+    const fetchSession = useCallback(async () => {
+        if (!sessionId) return;
         try {
             setLoading(true);
-            const response = await teacherApi.getSession(sessionId!);
-            const sessionData = response.data;
+            const response = await teacherApi.getSession(sessionId);
+            const sessionData = response.data as Session;
             setSession(sessionData);
 
             // Initialize attendance from existing records or default to present
             const initialAttendance: Record<string, AttendanceRecord> = {};
             sessionData.learners.forEach((learner: Learner) => {
                 const existing = sessionData.attendance_records?.find(
-                    (r: any) => r.learner_id === learner.id
+                    (record) => record.learner_id === learner.id
                 );
                 initialAttendance[learner.id] = {
                     learner_id: learner.id,
@@ -80,13 +78,17 @@ export default function TeacherAttendance() {
                 };
             });
             setAttendance(initialAttendance);
-        } catch (err: any) {
+        } catch (err) {
             setError("Failed to load session");
             console.error(err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId]);
+
+    useEffect(() => {
+        fetchSession();
+    }, [fetchSession]);
 
     const updateAttendance = (learnerId: string, status: AttendanceRecord["status"]) => {
         setAttendance((prev) => ({
@@ -124,12 +126,13 @@ export default function TeacherAttendance() {
             setSaving(true);
             setError(null);
             const attendanceArray = Object.values(attendance);
-            await teacherApi.markAttendance(sessionId!, attendanceArray);
+            if (!sessionId) return;
+            await teacherApi.markAttendance(sessionId, attendanceArray);
             setSuccess(true);
             setTimeout(() => {
                 navigate("/teacher");
             }, 1500);
-        } catch (err: any) {
+        } catch (err) {
             setError("Failed to save attendance");
             console.error(err);
         } finally {
@@ -272,8 +275,6 @@ export default function TeacherAttendance() {
                         <div className="space-y-3">
                             {session.learners.map((learner, index) => {
                                 const learnerAttendance = attendance[learner.id];
-                                const colors = statusColors[learnerAttendance?.status || "present"];
-
                                 return (
                                     <motion.div
                                         key={learner.id}

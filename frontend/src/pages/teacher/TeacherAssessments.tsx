@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    ClipboardCheck, User, Save, ChevronDown, ChevronUp,
+    ClipboardCheck, Save, ChevronDown, ChevronUp,
     TrendingUp, TrendingDown, Minus, CheckCircle, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,46 +34,42 @@ const SKILL_RUBRICS: SkillRubric[] = [
     { id: "persistence", name: "Persistence", description: "Continuing despite challenges", max_score: 5 },
 ];
 
+const DEMO_LEARNERS: LearnerAssessment[] = [
+    {
+        id: "1", learner_id: "1", learner_name: "Alex Kato",
+        skills: { problem_solving: 4, creativity: 5, collaboration: 3, technical_skills: 4, communication: 4, persistence: 5 },
+        notes: "Shows excellent problem-solving abilities. Needs encouragement in group work.",
+        trend: "up",
+        last_assessment: "2 weeks ago"
+    },
+    {
+        id: "2", learner_id: "2", learner_name: "Bella Nakato",
+        skills: { problem_solving: 3, creativity: 4, collaboration: 5, technical_skills: 3, communication: 5, persistence: 4 },
+        notes: "Great team player. Building technical confidence.",
+        trend: "stable",
+        last_assessment: "1 week ago"
+    },
+    {
+        id: "3", learner_id: "3", learner_name: "Charles Mugisha",
+        skills: { problem_solving: 5, creativity: 3, collaboration: 4, technical_skills: 5, communication: 3, persistence: 4 },
+        notes: "Strong technical skills. Working on creative thinking.",
+        trend: "up",
+        last_assessment: "3 days ago"
+    },
+    {
+        id: "4", learner_id: "4", learner_name: "Diana Asiimwe",
+        skills: { problem_solving: 2, creativity: 4, collaboration: 4, technical_skills: 2, communication: 4, persistence: 3 },
+        notes: "Showing improvement. Needs extra support with technical tasks.",
+        trend: "down",
+        last_assessment: "1 week ago"
+    },
+];
+
 export default function TeacherAssessments() {
-    const [learners, setLearners] = useState<LearnerAssessment[]>([]);
+    const [learners, setLearners] = useState<LearnerAssessment[]>(DEMO_LEARNERS);
     const [expandedLearner, setExpandedLearner] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        // Load demo learners with assessments
-        const demoLearners: LearnerAssessment[] = [
-            {
-                id: "1", learner_id: "1", learner_name: "Alex Kato",
-                skills: { problem_solving: 4, creativity: 5, collaboration: 3, technical_skills: 4, communication: 4, persistence: 5 },
-                notes: "Shows excellent problem-solving abilities. Needs encouragement in group work.",
-                trend: "up",
-                last_assessment: "2 weeks ago"
-            },
-            {
-                id: "2", learner_id: "2", learner_name: "Bella Nakato",
-                skills: { problem_solving: 3, creativity: 4, collaboration: 5, technical_skills: 3, communication: 5, persistence: 4 },
-                notes: "Great team player. Building technical confidence.",
-                trend: "stable",
-                last_assessment: "1 week ago"
-            },
-            {
-                id: "3", learner_id: "3", learner_name: "Charles Mugisha",
-                skills: { problem_solving: 5, creativity: 3, collaboration: 4, technical_skills: 5, communication: 3, persistence: 4 },
-                notes: "Strong technical skills. Working on creative thinking.",
-                trend: "up",
-                last_assessment: "3 days ago"
-            },
-            {
-                id: "4", learner_id: "4", learner_name: "Diana Asiimwe",
-                skills: { problem_solving: 2, creativity: 4, collaboration: 4, technical_skills: 2, communication: 4, persistence: 3 },
-                notes: "Showing improvement. Needs extra support with technical tasks.",
-                trend: "down",
-                last_assessment: "1 week ago"
-            },
-        ];
-        setLearners(demoLearners);
-    }, []);
 
     const updateSkillScore = (learnerId: string, skillId: string, score: number) => {
         setLearners(prev => prev.map(l => {

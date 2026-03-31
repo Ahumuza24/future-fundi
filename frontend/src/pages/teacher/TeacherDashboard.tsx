@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
     AlertCircle,
     Play,
     CheckCheck,
-    GraduationCap,
     ListTodo,
     CalendarDays,
 } from "lucide-react";
@@ -58,34 +57,47 @@ interface DashboardData {
     };
 }
 
+const parseErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) {
+        return err.message;
+    }
+    if (typeof err === "object" && err && "response" in err) {
+        const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+        if (detail) {
+            return detail;
+        }
+    }
+    return fallback;
+};
+
 export default function TeacherDashboard() {
     const navigate = useNavigate();
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchDashboard();
-    }, []);
-
-    const fetchDashboard = async () => {
+    const fetchDashboard = useCallback(async () => {
         try {
             setLoading(true);
             const response = await teacherApi.getDashboard();
             setDashboardData(response.data);
-        } catch (err: any) {
-            setError("Failed to load dashboard");
+        } catch (err: unknown) {
+            setError(parseErrorMessage(err, "Failed to load dashboard"));
             console.error(err);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchDashboard();
+    }, [fetchDashboard]);
 
     const handleStartSession = async (sessionId: string) => {
         try {
             await teacherApi.startSession(sessionId);
             fetchDashboard();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to start session:", err);
         }
     };
@@ -94,7 +106,7 @@ export default function TeacherDashboard() {
         try {
             await teacherApi.completeSession(sessionId);
             fetchDashboard();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to complete session:", err);
         }
     };

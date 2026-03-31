@@ -66,6 +66,35 @@ interface MetricPreset {
     category: string;
 }
 
+type RawLearner = {
+    id?: string | number;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+};
+
+type RawPathwaySummary = {
+    id?: string | number;
+    name?: string;
+};
+
+type RawModule = {
+    id?: string | number;
+    name?: string;
+    badge_name?: string;
+};
+
+interface ArtifactCapturePayload {
+    learner: string;
+    title: string;
+    reflection: string;
+    metrics: string[];
+    session?: string;
+    module?: string;
+    files: File[];
+    links: { url: string; label?: string }[];
+}
+
 /* Attached item — file or URL */
 interface AttachedItem {
     id: string;                // local uuid
@@ -188,7 +217,7 @@ export default function TeacherArtifactCapture() {
     const [currentPrompt, setCurrentPrompt] = useState(0);
 
     /* ── Initial load ──────────────────────────────────── */
-    const normalizeLearner = (raw: any): Learner => ({
+    const normalizeLearner = (raw: RawLearner): Learner => ({
         id: String(raw?.id ?? ""),
         first_name: raw?.first_name || "",
         last_name:  raw?.last_name  || "",
@@ -221,7 +250,7 @@ export default function TeacherArtifactCapture() {
                 const rawPathways = Array.isArray(pathwaysRes.data)
                     ? pathwaysRes.data
                     : pathwaysRes.data?.results ?? [];
-                setPathways(rawPathways.map((p: any) => ({ id: String(p.id), name: p.name ?? "Pathway" })));
+                setPathways(rawPathways.map((p: RawPathwaySummary) => ({ id: String(p.id), name: p.name ?? "Pathway" })));
             } catch {
                 setSessions([]);
                 setAllLearners([]);
@@ -247,7 +276,7 @@ export default function TeacherArtifactCapture() {
                 const res = await courseApi.getById(selectedPathway);
                 const modules = Array.isArray(res.data?.modules) ? res.data.modules : [];
                 setMicrocredentials(
-                    modules.map((m: any) => ({ id: String(m.id), name: m.name ?? "Module", badge_name: m.badge_name }))
+                    modules.map((m: RawModule) => ({ id: String(m.id), name: m.name ?? "Module", badge_name: m.badge_name }))
                 );
             } catch {
                 setMicrocredentials([]);
@@ -346,16 +375,18 @@ export default function TeacherArtifactCapture() {
                 label: a.label
             }));
 
-            await teacherApi.captureArtifact({
-                learner:     selectedLearner,
-                title:       title.trim(),
-                reflection:  reflection.trim(),
-                metrics:     selectedMetrics,
-                session:     selectedSession?.id,
-                module:      selectedMicrocredential || undefined,
-                files:       files,
-                links:       links,
-            } as any);
+            const payload: ArtifactCapturePayload = {
+                learner: selectedLearner,
+                title: title.trim(),
+                reflection: reflection.trim(),
+                metrics: selectedMetrics,
+                session: selectedSession?.id,
+                module: selectedMicrocredential || undefined,
+                files,
+                links,
+            };
+
+            await teacherApi.captureArtifact(payload);
 
             setSuccess(true);
             localStorage.removeItem("artifact_draft");
@@ -365,8 +396,9 @@ export default function TeacherArtifactCapture() {
                 setSelectedSession(null); setSelectedPathway("");
                 setSelectedMicrocredential(""); setSuccess(false);
             }, 2000);
-        } catch (err: any) {
-            setError(err.response?.data?.detail || "Failed to capture artifact");
+        } catch (err) {
+            const responseDetail = (err as { response?: { data?: { detail?: string } } } | undefined)?.response?.data?.detail;
+            setError(responseDetail || "Failed to capture artifact");
         } finally {
             setSaving(false);
         }

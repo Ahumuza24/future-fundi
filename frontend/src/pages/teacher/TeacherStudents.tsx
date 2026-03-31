@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
     Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { AddStudentDialog } from "@/components/teacher/AddStudentDialog";
+import { AddStudentDialog } from "@/components/common/AddStudentDialog";
 
 interface Student {
     id: string;
@@ -57,7 +57,7 @@ export default function TeacherStudents() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     // Add Student State
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const [studentsRes, pathwaysRes] = await Promise.all([
@@ -94,11 +94,11 @@ export default function TeacherStudents() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
 
 

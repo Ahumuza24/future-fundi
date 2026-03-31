@@ -677,7 +677,7 @@ export default function UserManagement() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label htmlFor="first_name">Sur Name</Label>
+                                        <Label htmlFor="first_name">Sir Name</Label>
                                         <Input
                                             id="first_name"
                                             value={formData.first_name}
@@ -853,7 +853,7 @@ export default function UserManagement() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label htmlFor="edit-first_name">Sur Name</Label>
+                                        <Label htmlFor="edit-first_name">Sir Name</Label>
                                         <Input
                                             id="edit-first_name"
                                             value={formData.first_name}

@@ -64,6 +64,11 @@ interface SessionDetail extends SessionListItem {
     attendance_records: ExistingRecord[];
 }
 
+type RawSession = SessionListItem & {
+    learners?: Learner[] | null;
+    attendance_records?: ExistingRecord[] | null;
+};
+
 type Tab = "capture" | "history";
 
 const STATUS_COLORS = {
@@ -477,10 +482,10 @@ export default function TeacherAttendanceHub() {
                 : res.data?.results ?? res.data?.sessions ?? [];
 
             // Normalise — ensure arrays exist
-            const data: SessionListItem[] = (raw as any[]).map(s => ({
-                ...s,
-                learners:           s.learners           ?? [],
-                attendance_records: s.attendance_records ?? [],
+            const data: SessionListItem[] = (raw as RawSession[]).map((session) => ({
+                ...session,
+                learners: session.learners ?? [],
+                attendance_records: session.attendance_records ?? [],
             }));
 
             // Sort: needs-capture first, then by date desc

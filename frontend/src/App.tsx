@@ -5,8 +5,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import SignUpPage from "@/pages/SignUpPage";
-import StudentDashboard from "@/pages/student/StudentDashboard";
-import PathwayLearning from "@/pages/student/PathwayLearning";
+import StudentDashboard from "@/features/student/dashboard/StudentDashboard";
+import PathwayLearning from "@/features/student/pathways/PathwayLearning";
 import ParentPortal from "@/pages/parent/ParentPortal";
 import ParentMyChildren from "@/pages/parent/ParentMyChildren";
 import ParentWeeklyUpdates from "@/pages/parent/ParentWeeklyUpdates";
@@ -21,9 +21,9 @@ import TeacherSessions from "@/pages/teacher/TeacherSessions";
 import TeacherTasks from "@/pages/teacher/TeacherTasks";
 import TeacherReviewSubmissions from "@/pages/teacher/TeacherReviewSubmissions";
 
-import MarkAttendance from "@/pages/teacher/MarkAttendance";
+import MarkAttendance from "@/features/teacher/attendance/MarkAttendance";
 import TeacherAttendanceHub from "@/pages/teacher/TeacherAttendanceHub";
-import StudentDetail from "@/pages/teacher/StudentDetail";
+import StudentDetail from "@/features/teacher/students/StudentDetail";
 import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/teacher/TeacherLearnerPortfolio";
 import TeacherCommunication from "@/pages/teacher/TeacherCommunication";
@@ -35,6 +35,7 @@ import SchoolPathways from "@/pages/school/SchoolPathways";
 import SchoolProgress from "@/pages/school/SchoolProgress";
 import SchoolBadges from "@/pages/school/SchoolBadges";
 import SchoolAnalytics from "@/pages/school/SchoolAnalytics";
+import SchoolStudentDetail from "@/pages/school/SchoolStudentDetail";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCourseManagement from "@/pages/admin/AdminCourseManagement";
 import AdminMonitor from "@/pages/admin/AdminMonitor";
@@ -271,6 +272,14 @@ const router = sentryCreateBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['school', 'admin']}>
             <SchoolStudents />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "school/students/:id",
+        element: (
+          <ProtectedRoute allowedRoles={['school', 'admin']}>
+            <SchoolStudentDetail />
           </ProtectedRoute>
         ),
       },

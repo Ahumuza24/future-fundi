@@ -22,6 +22,21 @@ export const handleError = (error: unknown): string => {
 };
 
 export const isNetworkError = (error: unknown): boolean => {
-  // Logic to determine if it is network error
-  return false; // placeholder
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  if ("code" in error && typeof (error as { code?: string }).code === "string") {
+    const code = (error as { code?: string }).code;
+    if (code === "ECONNABORTED" || code === "ECONNRESET") {
+      return true;
+    }
+  }
+
+  if ("message" in error && typeof (error as { message?: string }).message === "string") {
+    const message = (error as { message?: string }).message?.toLowerCase() ?? "";
+    return message.includes("network error") || message.includes("failed to fetch");
+  }
+
+  return false;
 };

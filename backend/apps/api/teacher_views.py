@@ -955,9 +955,10 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         """Get detailed information about a specific student."""
-        from apps.core.models import Badge, Credential
+        from apps.core.models import Artifact, Badge, Credential
 
         from .serializers import (
+            ArtifactSerializer,
             BadgeSerializer,
             CredentialSerializer,
             TeacherStudentSerializer,
@@ -989,12 +990,19 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
             learner=learner, is_active=True
         ).select_related("course", "current_level")
 
+        artifacts = (
+            Artifact.objects.filter(learner=learner)
+            .select_related("module")
+            .order_by("-submitted_at")
+        )
+
         return Response(
             {
                 "student": TeacherStudentSerializer(learner).data,
                 "badges": BadgeSerializer(badges, many=True).data,
                 "credentials": CredentialSerializer(credentials, many=True).data,
                 "enrollments": StudentEnrollmentSerializer(enrollments, many=True).data,
+                "artifacts": ArtifactSerializer(artifacts, many=True).data,
             }
         )
 
