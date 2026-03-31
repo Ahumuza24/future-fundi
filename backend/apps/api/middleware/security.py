@@ -8,7 +8,7 @@ _CSP = (
     "script-src 'self' 'unsafe-inline'; "  # Vite bundles need this
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
-    "img-src 'self' data: blob: https:; "
+    "img-src 'self' data: blob: https: http://localhost:8000 http://localhost:5173; "
     "connect-src 'self'; "
     "frame-ancestors 'none'; "
     "base-uri 'self'; "

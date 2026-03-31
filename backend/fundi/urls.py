@@ -20,14 +20,15 @@ urlpatterns = [
     path("", include("apps.users.urls")),
     # API
     path("api/", include("apps.api.urls")),
+    # Media files (serve in both DEBUG and production for local development)
+    re_path(
+        r"^media/(?P<path>.*)$",
+        serve,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
 ]
 
 if settings.DEBUG:
     urlpatterns += [
         path("sentry-debug/", trigger_error),
-        re_path(
-            r"^media/(?P<path>.*)$",
-            serve,
-            {"document_root": settings.MEDIA_ROOT},
-        ),
     ]
