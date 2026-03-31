@@ -405,7 +405,7 @@ class SchoolStudentViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         learner = self.get_object()
-        serializer = SchoolStudentDetailSerializer(learner)
+        serializer = SchoolStudentDetailSerializer(learner, context={"request": request})
         return Response(serializer.data)
 
 

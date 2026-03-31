@@ -436,7 +436,7 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      {selectedArtifact && (
+      {selectedArtifact && selectedArtifactIndex !== null && (
         <ArtifactModal
           artifact={selectedArtifact}
           onClose={closeModal}

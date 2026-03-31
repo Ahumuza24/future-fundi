@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { teacherStudentsService } from '../services/teacherStudentsService';
 import type {
+  TeacherArtifactItem,
   TeacherBadgeItem,
   TeacherCredentialItem,
   TeacherEnrollment,
@@ -14,6 +15,7 @@ interface UseTeacherStudentDetailResult {
   badges: TeacherBadgeItem[];
   credentials: TeacherCredentialItem[];
   enrollments: TeacherEnrollment[];
+  artifacts: TeacherArtifactItem[];
   refresh: () => Promise<void>;
 }
 
@@ -24,6 +26,7 @@ export const useTeacherStudentDetail = (studentId?: string): UseTeacherStudentDe
   const [badges, setBadges] = useState<TeacherBadgeItem[]>([]);
   const [credentials, setCredentials] = useState<TeacherCredentialItem[]>([]);
   const [enrollments, setEnrollments] = useState<TeacherEnrollment[]>([]);
+  const [artifacts, setArtifacts] = useState<TeacherArtifactItem[]>([]);
 
   const fetchStudent = useCallback(async () => {
     if (!studentId) {
@@ -37,6 +40,7 @@ export const useTeacherStudentDetail = (studentId?: string): UseTeacherStudentDe
       setBadges(response.badges ?? []);
       setCredentials(response.credentials ?? []);
       setEnrollments(response.enrollments ?? []);
+      setArtifacts(response.artifacts ?? []);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch student data', err);
@@ -45,6 +49,7 @@ export const useTeacherStudentDetail = (studentId?: string): UseTeacherStudentDe
       setBadges([]);
       setCredentials([]);
       setEnrollments([]);
+      setArtifacts([]);
     } finally {
       setLoading(false);
     }
@@ -61,6 +66,7 @@ export const useTeacherStudentDetail = (studentId?: string): UseTeacherStudentDe
     badges,
     credentials,
     enrollments,
+    artifacts,
     refresh: fetchStudent,
   };
 };

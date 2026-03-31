@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,12 +12,10 @@ import {
   Archive,
   Clock,
   Map,
-  Image as ImageIcon,
-  FileText,
-  ExternalLink,
 } from 'lucide-react';
 import { useSchoolStudentDetail } from '@/features/school/students/hooks/useSchoolStudentDetail';
 import type { SchoolStudentDetail } from '@/features/school/students/types';
+import { ArtifactGallery, type ArtifactCardData } from '@/components/common/ArtifactGallery';
 
 const InfoPill = ({ label, value }: { label: string; value: string | number }) => (
   <div className="rounded-lg border border-gray-200 bg-white px-4 py-2">
@@ -97,86 +95,6 @@ const BadgeGrid = ({ student }: { student: SchoolStudentDetail }) => {
   );
 };
 
-const ArtifactTimeline = ({ student }: { student: SchoolStudentDetail }) => {
-  if (student.artifacts.length === 0) return <EmptyState message="No artifacts submitted yet." />;
-
-  return (
-    <div className="space-y-3">
-      {student.artifacts.map((artifact) => (
-        <div
-          key={artifact.id}
-          className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-        >
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-lg font-semibold" style={{ color: 'var(--fundi-black)' }}>
-                {artifact.title}
-              </p>
-              <p className="text-xs text-gray-500">{artifact.moduleName ?? 'General module'}</p>
-              <p className="text-xs text-gray-400">
-                {artifact.submittedAt ? new Date(artifact.submittedAt).toLocaleString() : 'Pending submission'}
-              </p>
-            </div>
-            <Badge
-              variant={artifact.uploadedByStudent ? 'secondary' : 'outline'}
-              className="capitalize self-start md:self-auto"
-            >
-              {artifact.status}
-            </Badge>
-          </div>
-
-          {artifact.media && artifact.media.length > 0 && (
-            <div className="mt-4 grid gap-3 md:grid-cols-[160px_1fr]">
-              <div className="flex items-center justify-center rounded-lg border border-gray-100 bg-gray-50 p-3">
-                {(() => {
-                  const media = artifact.media[0];
-                  const previewUrl = media.thumbnailUrl || media.url;
-                  const isImage = media.type?.startsWith('image');
-                  if (previewUrl && isImage) {
-                    return (
-                      <img
-                        src={previewUrl}
-                        alt={media.filename ?? 'artifact preview'}
-                        className="h-32 w-full rounded-md object-cover"
-                      />
-                    );
-                  }
-                  return (
-                    <div className="flex flex-col items-center gap-2 text-gray-500">
-                      <ImageIcon className="h-8 w-8" />
-                      <span className="text-xs">Preview unavailable</span>
-                    </div>
-                  );
-                })()}
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Attachments
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {artifact.media.map((media) => (
-                    <a
-                      key={`${artifact.id}-${media.filename ?? media.url}`}
-                      href={media.url ?? '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-sm text-[var(--fundi-black)] transition-colors hover:border-[var(--fundi-cyan)] hover:text-[var(--fundi-cyan)]"
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span>{media.filename ?? 'View file'}</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 const AttendanceList = ({ student }: { student: SchoolStudentDetail }) => {
   if (student.attendance.length === 0) return <EmptyState message="No attendance records yet." />;
 
@@ -230,6 +148,28 @@ const SchoolStudentDetailPage = () => {
   const handleBack = useCallback(() => {
     navigate('/school/students');
   }, [navigate]);
+
+  const artifactCards = useMemo<ArtifactCardData[]>(() => {
+    if (!student) {
+      return [];
+    }
+    return student.artifacts.map((artifact) => ({
+      id: artifact.id,
+      title: artifact.title,
+      moduleName: artifact.moduleName,
+      submittedAt: artifact.submittedAt,
+      reflection: artifact.reflection ?? null,
+      status: artifact.status,
+      uploadedByStudent: artifact.uploadedByStudent,
+      rejectionReason: artifact.rejectionReason ?? null,
+      media: artifact.media?.map((media) => ({
+        type: media.type,
+        url: media.url,
+        filename: media.filename,
+        thumbnailUrl: media.thumbnailUrl,
+      })) ?? [],
+    }));
+  }, [student]);
 
   if (loading) {
     return (
@@ -303,7 +243,7 @@ const SchoolStudentDetailPage = () => {
               <Archive className="h-5 w-5 text-[var(--fundi-cyan)]" />
               Artifacts
             </div>
-            <ArtifactTimeline student={student} />
+            <ArtifactGallery artifacts={artifactCards} />
           </CardContent>
         </Card>
 

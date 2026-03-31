@@ -336,7 +336,7 @@ export default function SchoolStudents() {
                             {/* Personal Info */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-semibold mb-1">Sur Name <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-semibold mb-1">Sir Name <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         className={inputClass}

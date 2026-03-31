@@ -41,6 +41,8 @@ export interface StudentArtifactSummary {
   status: string;
   uploadedByStudent: boolean;
   media: StudentArtifactMedia[];
+  reflection?: string | null;
+  rejectionReason?: string | null;
 }
 
 export interface StudentAttendanceSession {

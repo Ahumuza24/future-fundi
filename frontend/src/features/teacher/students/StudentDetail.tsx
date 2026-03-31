@@ -8,6 +8,7 @@ import { StudentStats } from './components/StudentStats';
 import { EnrollmentList } from './components/EnrollmentList';
 import { BadgeGrid } from './components/BadgeGrid';
 import { CredentialList } from './components/CredentialList';
+import { ArtifactGallery } from './components/ArtifactGallery';
 import { ProgressDialog } from './components/ProgressDialog';
 import { useTeacherStudentDetail } from './hooks/useTeacherStudentDetail';
 import { useTeacherProgressDialog } from './hooks/useTeacherProgressDialog';
@@ -16,7 +17,7 @@ import type { TeacherEnrollment } from './types';
 const StudentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { loading, error, student, badges, credentials, enrollments, refresh } = useTeacherStudentDetail(id);
+  const { loading, error, student, badges, credentials, enrollments, artifacts, refresh } = useTeacherStudentDetail(id);
   const {
     isOpen,
     loading: progressLoading,
@@ -108,6 +109,8 @@ const StudentDetail = () => {
           <BadgeGrid badges={badges} />
           <CredentialList credentials={credentials} />
         </div>
+
+        <ArtifactGallery artifacts={artifacts} />
       </div>
 
       <ProgressDialog

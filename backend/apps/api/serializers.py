@@ -24,7 +24,9 @@ from apps.core.models import (
 )
 from apps.core.roles import UserRole
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 # Import standard response but we might not use it directly inside serializers
 # as DRF handles validation errors via exceptions.
@@ -354,6 +356,32 @@ class SchoolStudentDetailSerializer(SchoolLearnerSerializer):
             "attendance",
         ]
 
+    def _resolve_media_url(self, media_obj):
+        request = self.context.get("request") if hasattr(self, "context") else None
+        candidate = media_obj.get("url") or media_obj.get("file_url")
+        if candidate:
+            if str(candidate).startswith(("http://", "https://")):
+                return candidate
+            media_base = getattr(settings, "MEDIA_URL", "/media/")
+            normalized = str(candidate).lstrip("/")
+            relative_path = f"{media_base.rstrip('/')}/{normalized}"
+            if request:
+                return request.build_absolute_uri(relative_path)
+            return relative_path
+
+        path = media_obj.get("path")
+        if not path:
+            return None
+
+        media_path = (
+            path
+            if str(path).startswith("/")
+            else f"{getattr(settings, 'MEDIA_URL', '/media/').rstrip('/')}/{str(path).lstrip('/')}"
+        )
+        if request:
+            return request.build_absolute_uri(media_path)
+        return media_path
+
     def get_progress(self, obj):
         enrollments = (
             obj.course_enrollments.filter(is_active=True)
@@ -444,17 +472,21 @@ class SchoolStudentDetailSerializer(SchoolLearnerSerializer):
             {
                 "id": str(artifact.id),
                 "title": artifact.title,
+                "reflection": artifact.reflection,
                 "submitted_at": artifact.submitted_at,
                 "module_name": artifact.module.name if artifact.module else None,
                 "status": artifact.status,
                 "uploaded_by_student": artifact.uploaded_by_student,
+                "rejection_reason": artifact.rejection_reason,
                 "media": [
                     {
                         "type": media.get("type", "file"),
-                        "url": media.get("url"),
-                        "file_url": media.get("url"),
+                        "url": self._resolve_media_url(media),
+                        "file_url": self._resolve_media_url(media),
                         "filename": media.get("filename"),
-                        "thumbnail_url": media.get("thumbnail_url"),
+                        "thumbnail_url": self._resolve_media_url(
+                            {"url": media.get("thumbnail_url")}
+                        ),
                         "size": media.get("size"),
                     }
                     for media in (artifact.media_refs or [])
@@ -688,6 +720,7 @@ class ArtifactSerializer(serializers.ModelSerializer):
     """Serializer for learner artifacts."""
 
     learner_name = serializers.CharField(source="learner.full_name", read_only=True)
+    module_name = serializers.CharField(source="module.name", read_only=True)
 
     class Meta:
         model = Artifact
@@ -699,6 +732,7 @@ class ArtifactSerializer(serializers.ModelSerializer):
             "reflection",
             "submitted_at",
             "media_refs",
+            "module_name",
             "status",
             "uploaded_by_student",
             "rejection_reason",

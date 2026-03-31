@@ -63,6 +63,8 @@ const mapArtifacts = (artifacts: RawArtifact[] = []): StudentArtifactSummary[] =
     status: (artifact.status as string) ?? 'approved',
     uploadedByStudent: Boolean(artifact.uploaded_by_student),
     media: mapMedia(artifact.media ?? artifact.media_refs ?? []),
+    reflection: (artifact.reflection as string) ?? null,
+    rejectionReason: (artifact.rejection_reason as string) ?? null,
   }));
 };
 

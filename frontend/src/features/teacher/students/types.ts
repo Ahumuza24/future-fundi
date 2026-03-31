@@ -11,6 +11,25 @@ export interface TeacherStudentDetail {
   attendance_rate: number;
 }
 
+export interface TeacherArtifactMedia {
+  type?: string;
+  url?: string;
+  filename?: string;
+  thumbnail_url?: string;
+}
+
+export interface TeacherArtifactItem {
+  id: string;
+  title: string;
+  reflection: string;
+  submitted_at: string;
+  module_name?: string;
+  status: string;
+  uploaded_by_student: boolean;
+  rejection_reason?: string;
+  media_refs?: TeacherArtifactMedia[];
+}
+
 export interface TeacherBadgeItem {
   id: string;
   badge_name: string;
@@ -81,4 +100,5 @@ export interface TeacherStudentDetailResponse {
   badges?: TeacherBadgeItem[];
   credentials?: TeacherCredentialItem[];
   enrollments?: TeacherEnrollment[];
+  artifacts?: TeacherArtifactItem[];
 }
