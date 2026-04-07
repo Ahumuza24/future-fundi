@@ -112,6 +112,18 @@ class RegisterSerializer(serializers.ModelSerializer):
                 {"password": "Password fields didn't match."}
             )
 
+        # Check for duplicate username
+        if User.objects.filter(username=attrs["username"]).exists():
+            raise serializers.ValidationError(
+                {"username": "This username is already taken."}
+            )
+
+        # Check for duplicate email
+        if User.objects.filter(email=attrs["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "This email is already registered."}
+            )
+
         # Validate school code if provided
         school_code = attrs.get("school_code")
         if school_code:

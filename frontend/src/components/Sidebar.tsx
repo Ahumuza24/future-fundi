@@ -194,7 +194,7 @@ const allNavItems: NavItem[] = [
     color: "var(--fundi-orange)",
     roles: ["school"],
   },
-  {
+  /* {
     title: "Progress Tracking",
     path: "/school/progress",
     icon: TrendingUp,
@@ -207,7 +207,7 @@ const allNavItems: NavItem[] = [
     icon: Award,
     color: "var(--fundi-orange)",
     roles: ["school"],
-  },
+  }, */
   {
     title: "Analytics",
     path: "/school/analytics",

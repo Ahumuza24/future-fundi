@@ -44,6 +44,8 @@ class User(AbstractUser):
         default=UserRole.LEARNER,
         db_index=True,
     )
+    email = models.EmailField(unique=True, null=True, blank=True)
+
     avatar = models.ImageField(
         upload_to=user_avatar_path,
         null=True,
