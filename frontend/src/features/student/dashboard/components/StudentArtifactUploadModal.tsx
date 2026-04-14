@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Loader2 } from "lucide-react";
+import { UploadCloud, X, Loader2, BookOpen, GraduationCap } from "lucide-react";
 import { studentApi } from "@/lib/api";
+
+interface Module {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Pathway {
+  course_id: string;
+  course_name: string;
+  modules: Module[];
+}
 
 interface StudentArtifactUploadModalProps {
   isOpen: boolean;
@@ -28,6 +40,43 @@ export function StudentArtifactUploadModal({
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Pathway and Module selection
+  const [pathways, setPathways] = useState<Pathway[]>([]);
+  const [selectedPathwayId, setSelectedPathwayId] = useState<string>("");
+  const [selectedModuleId, setSelectedModuleId] = useState<string>("");
+  const [modulesLoading, setModulesLoading] = useState(false);
+
+  // Fetch pathways and modules when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchModules();
+    }
+  }, [isOpen]);
+
+  const fetchModules = async () => {
+    setModulesLoading(true);
+    try {
+      const response = await studentApi.getMyModules();
+      const data = response.data as { pathways: Pathway[] };
+      setPathways(data.pathways || []);
+    } catch (err) {
+      console.error("Failed to fetch modules:", err);
+    } finally {
+      setModulesLoading(false);
+    }
+  };
+
+  // Get modules for selected pathway
+  const availableModules = selectedPathwayId
+    ? pathways.find((p) => p.course_id === selectedPathwayId)?.modules || []
+    : [];
+
+  // Handle pathway selection
+  const handlePathwayChange = (pathwayId: string) => {
+    setSelectedPathwayId(pathwayId);
+    setSelectedModuleId(""); // Reset module when pathway changes
+  };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -48,13 +97,16 @@ export function StudentArtifactUploadModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim()) {
       setError("Please add a title for your artifact.");
       return;
     }
+    if (!selectedModuleId) {
+      setError("Please select a pathway and microcredential for this artifact.");
+      return;
+    }
     if (files.length === 0) {
-      // In a real app we might allow no files if reflection is provided, but typically we want at least one image/doc
       setError("Please add at least one file or image.");
       return;
     }
@@ -67,15 +119,39 @@ export function StudentArtifactUploadModal({
         title,
         reflection,
         files: files.length > 0 ? files : undefined,
+        module_id: selectedModuleId,
       });
 
       // Reset form
       setTitle("");
       setReflection("");
       setFiles([]);
+      setSelectedPathwayId("");
+      setSelectedModuleId("");
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Failed to upload artifact. Please try again.");
+      // Handle validation errors from the backend
+      const responseData = err.response?.data;
+      if (responseData) {
+        // Check for specific field errors
+        if (responseData.title) {
+          setError(`Title: ${responseData.title}`);
+        } else if (responseData.reflection) {
+          setError(`Reflection: ${responseData.reflection}`);
+        } else if (responseData.error) {
+          setError(responseData.error);
+        } else if (responseData.detail) {
+          setError(responseData.detail);
+        } else {
+          // Handle generic validation errors object
+          const errorMessages = Object.entries(responseData)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+          setError(errorMessages || "Failed to upload artifact. Please try again.");
+        }
+      } else {
+        setError(err.message || "Failed to upload artifact. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -83,21 +159,85 @@ export function StudentArtifactUploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>Upload Artifact</DialogTitle>
           <DialogDescription>
             Submit your work for teacher review.
           </DialogDescription>
         </DialogHeader>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
+        <div className="px-6 pb-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Pathway Selection - Using native select to avoid clipping issues */}
+          <div className="space-y-2">
+            <Label htmlFor="pathway">
+              <span className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-orange-500" />
+                Pathway <span className="text-red-500">*</span>
+              </span>
+            </Label>
+            <div className="relative">
+              <select
+                id="pathway"
+                value={selectedPathwayId}
+                onChange={(e) => handlePathwayChange(e.target.value)}
+                disabled={loading || modulesLoading}
+                className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8L9.5 4.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}
+              >
+                <option value="">{modulesLoading ? "Loading pathways..." : "Select your pathway"}</option>
+                {pathways.map((pathway) => (
+                  <option key={pathway.course_id} value={pathway.course_id}>
+                    {pathway.course_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Module/Microcredential Selection - Using native select */}
+          <div className="space-y-2">
+            <Label htmlFor="module">
+              <span className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-orange-500" />
+                Microcredential <span className="text-red-500">*</span>
+              </span>
+            </Label>
+            <div className="relative">
+              <select
+                id="module"
+                value={selectedModuleId}
+                onChange={(e) => setSelectedModuleId(e.target.value)}
+                disabled={loading || !selectedPathwayId || availableModules.length === 0}
+                className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 appearance-none cursor-pointer"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8L9.5 4.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}
+              >
+                <option value="">
+                  {!selectedPathwayId
+                    ? "Select a pathway first"
+                    : availableModules.length === 0
+                    ? "No modules available"
+                    : "Select microcredential"}
+                </option>
+                {availableModules.map((module) => (
+                  <option key={module.id} value={module.id}>
+                    {module.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedPathwayId && availableModules.length === 0 && (
+              <p className="text-xs text-amber-600">No microcredentials available for this pathway.</p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -176,16 +316,21 @@ export function StudentArtifactUploadModal({
             )}
           </div>
 
-          <div className="pt-4 flex justify-end gap-2">
+          <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-white border-t border-gray-100 mt-4 -mx-6 px-6 pb-0">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
+              className="rounded-lg"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-orange-500 hover:bg-orange-600 font-bold text-white">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg px-6"
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -197,6 +342,7 @@ export function StudentArtifactUploadModal({
             </Button>
           </div>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

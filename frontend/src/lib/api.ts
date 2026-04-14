@@ -112,18 +112,26 @@ export const studentApi = {
   getPathwayLearning: (enrollmentId: string) => api.get(`/api/pathway-learning/${enrollmentId}/learn/`),
   // Get all artifacts for the authenticated student
   getArtifacts: () => api.get('/api/student/artifacts/'),
+  // Get modules for student's enrolled pathways
+  getMyModules: () => api.get('/api/student/my-modules/'),
   // Upload a new artifact for teacher review
   uploadArtifact: (data: {
     title: string;
     reflection?: string;
     files?: File[];
+    module_id?: string;
   }) => {
     const formData = new FormData();
     formData.append('title', data.title);
     if (data.reflection) formData.append('reflection', data.reflection);
+    if (data.module_id) formData.append('module_id', data.module_id);
     (data.files || []).forEach(f => formData.append('files', f));
 
-    return api.post('/api/student/upload-artifact/', formData);
+    return api.post('/api/student/upload-artifact/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 };
 

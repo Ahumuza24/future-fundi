@@ -634,14 +634,22 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
           status: 'pending' | 'approved' | 'rejected' (default all)
           learner_id: filter by specific learner UUID
         """
+        from django.db.models import Q
+
         school = self._resolve_school_context(request)
         if school is None:
             return Response({"results": [], "pending_count": 0, "total": 0})
 
+        # Include artifacts from:
+        # 1. Learners formally enrolled in the school (tenant=school)
+        # 2. Independent learners whose current_school text matches this school name
         qs = (
             Artifact.objects.filter(
                 uploaded_by_student=True,
-                tenant=school,
+            )
+            .filter(
+                Q(tenant=school) |
+                Q(tenant__isnull=True, learner__current_school__iexact=school.name)
             )
             .select_related("learner", "reviewed_by", "tenant")
             .order_by("-submitted_at")
@@ -666,8 +674,10 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
 
         pending_count = Artifact.objects.filter(
             uploaded_by_student=True,
-            tenant=school,
             status=Artifact.STATUS_PENDING,
+        ).filter(
+            Q(tenant=school) |
+            Q(tenant__isnull=True, learner__current_school__iexact=school.name)
         ).count()
 
         return Response({
@@ -688,6 +698,9 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         """
         from django.utils import timezone
 
+        import logging
+        logger = logging.getLogger(__name__)
+
         from .serializers import ArtifactReviewSerializer, QuickArtifactSerializer
 
         # Only allow review of student-submitted artifacts
@@ -699,9 +712,18 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Scope: teacher must belong to the same school
+        # Scope: teacher must belong to the same school, OR artifact has no school (independent learner)
         school = self._resolve_school_context(request)
-        if school is None or str(artifact.tenant_id) != str(school.id):
+        logger.info(f"Review artifact {pk}: school={school.id if school else None}, artifact.tenant_id={artifact.tenant_id}")
+
+        if school is None:
+            return Response(
+                {"detail": "Please select a school context to review artifacts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        # Allow review if artifact belongs to teacher's school OR artifact has no school assigned
+        if artifact.tenant_id is not None and str(artifact.tenant_id) != str(school.id):
+            logger.warning(f"Permission denied: artifact.tenant_id={artifact.tenant_id} != school.id={school.id}")
             return Response(
                 {"detail": "You can only review artifacts for students in your school."},
                 status=status.HTTP_403_FORBIDDEN,

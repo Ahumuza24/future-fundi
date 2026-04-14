@@ -177,6 +177,15 @@ class ParentContact(TenantModel):
 class Artifact(TenantModel):
     """Weekly learner artifact (photos, metrics, reflection)."""
 
+    # Override tenant to allow null for independent learners (not in formal schools)
+    tenant = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="School/organization (optional for independent learners)",
+    )
+
     learner = models.ForeignKey(
         Learner, on_delete=models.CASCADE, related_name="artifacts"
     )

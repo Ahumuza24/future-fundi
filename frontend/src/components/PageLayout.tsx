@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import BrandToasts from "./BrandToasts";
+import Breadcrumb from "./Breadcrumb";
 
 import { useUIStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const PageLayout = () => {
         )}
       >
         <TopBar />
+        <Breadcrumb />
         <main className="flex-1 overflow-auto p-0">
           <Outlet />
         </main>

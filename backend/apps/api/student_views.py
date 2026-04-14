@@ -407,9 +407,55 @@ class StudentDashboardViewSet(viewsets.ViewSet):
 
         return "#6b7280"  # gray default
 
+    @action(detail=False, methods=["get"], url_path="my-modules")
+    def my_modules(self, request):
+        """Get all modules for the student's enrolled pathways (courses)."""
+        user = request.user
+
+        try:
+            learner = Learner.objects.get(user=user)
+        except Learner.DoesNotExist:
+            return Response({"error": "Learner profile not found"}, status=404)
+
+        # Get active enrollments
+        enrollments = (
+            LearnerCourseEnrollment.objects.filter(learner=learner, is_active=True)
+            .select_related("course")
+        )
+
+        # Get all modules for enrolled courses
+        from apps.core.models import Module
+        course_ids = list(enrollments.values_list("course_id", flat=True))
+        modules = Module.objects.filter(course_id__in=course_ids).select_related("course").order_by("course__name", "name")
+
+        # Group modules by pathway/course
+        pathways_data = []
+        for enrollment in enrollments:
+            course = enrollment.course
+            course_modules = [m for m in modules if m.course_id == course.id]
+            pathways_data.append({
+                "course_id": str(course.id),
+                "course_name": course.name,
+                "modules": [
+                    {
+                        "id": str(m.id),
+                        "name": m.name,
+                        "description": getattr(m, "description", ""),
+                    }
+                    for m in course_modules
+                ]
+            })
+
+        return Response({
+            "pathways": pathways_data,
+        })
+
     @action(detail=False, methods=["post"], url_path="upload-artifact")
     def upload_artifact(self, request):
         """Allow a student to upload a new artifact."""
+        import logging
+        logger = logging.getLogger(__name__)
+
         user = request.user
 
         try:
@@ -419,13 +465,18 @@ class StudentDashboardViewSet(viewsets.ViewSet):
 
         from .serializers import StudentArtifactUploadSerializer, QuickArtifactSerializer
 
-        # Add learner to context or data
-        data = request.data.copy()
-        serializer = StudentArtifactUploadSerializer(data=data, context={'request': request, 'learner': learner})
-        if serializer.is_valid():
+        try:
+            # Add learner to context or data
+            data = request.data.copy()
+            serializer = StudentArtifactUploadSerializer(data=data, context={'request': request, 'learner': learner})
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Allow learners without a formal school tenant to upload artifacts
+            # The current_school field (text) captures the school name for display
             artifact = serializer.save(
                 learner=learner,
-                tenant=learner.tenant,
+                tenant=learner.tenant,  # Can be None for independent learners
                 uploaded_by_student=True,
                 status='pending'
             )
@@ -436,7 +487,6 @@ class StudentDashboardViewSet(viewsets.ViewSet):
 
             for f in uploaded_files:
                 if getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 10 * 1024 * 1024) and f.size > getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 10 * 1024 * 1024):
-                    # For safety, if file is too big we skip or reject, but here we just return error
                     return Response(
                         {"detail": "File too large."},
                         status=status.HTTP_400_BAD_REQUEST,
@@ -470,4 +520,9 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 },
                 status=status.HTTP_201_CREATED
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Error in upload_artifact: %s", str(e))
+            return Response(
+                {"error": f"Server error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
