@@ -93,6 +93,8 @@ export default function TeacherReviewSubmissions() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
   const [isApproving, setIsApproving] = useState<string | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<PendingSubmission | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -145,12 +147,24 @@ export default function TeacherReviewSubmissions() {
       setSubmissions((prev) => prev.filter((s) => s.id !== rejectingId));
       setRejectingId(null);
       setRejectionReason("");
+      setIsDetailOpen(false);
+      setSelectedSubmission(null);
     } catch (err) {
       console.error("Reject error:", err);
       toast.error("Failed to return artifact");
     } finally {
       setIsRejecting(false);
     }
+  };
+
+  const openDetailView = (submission: PendingSubmission) => {
+    setSelectedSubmission(submission);
+    setIsDetailOpen(true);
+  };
+
+  const closeDetailView = () => {
+    setIsDetailOpen(false);
+    setSelectedSubmission(null);
   };
 
   const pendingCount = submissions.filter((s) => s.status === "pending").length;
@@ -229,7 +243,17 @@ export default function TeacherReviewSubmissions() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.88, transition: { duration: 0.18 } }}
                 >
-                  <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-shadow bg-white rounded-2xl h-full flex flex-col">
+                  <Card
+                    className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-all bg-white rounded-2xl h-full flex flex-col cursor-pointer group relative"
+                    onClick={() => openDetailView(sub)}
+                  >
+                    {/* Click indicator overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10 pointer-events-none" />
+                    <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm border border-gray-200">
+                        Click to review
+                      </span>
+                    </div>
                     <MediaPreview submission={sub} />
 
                     <CardContent className="p-5 flex flex-col flex-1">
@@ -269,7 +293,8 @@ export default function TeacherReviewSubmissions() {
                         <Button
                           variant="outline"
                           className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 bg-white shadow-sm rounded-xl"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setRejectingId(sub.id);
                             setRejectionReason("");
                           }}
@@ -279,8 +304,14 @@ export default function TeacherReviewSubmissions() {
                           Return
                         </Button>
                         <Button
-                          className="bg-green-500 hover:bg-green-600 text-white shadow-sm shadow-green-500/20 rounded-xl"
-                          onClick={() => handleApprove(sub.id)}
+                          className="text-white shadow-sm rounded-xl"
+                          style={{ backgroundColor: 'var(--fundi-orange)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--fundi-orange)'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApprove(sub.id);
+                          }}
                           disabled={isApproving === sub.id}
                         >
                           {isApproving === sub.id ? (
@@ -301,6 +332,127 @@ export default function TeacherReviewSubmissions() {
           </div>
         )}
       </div>
+
+      {/* Artifact Detail Review Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-0 shadow-xl p-0">
+          {selectedSubmission && (
+            <>
+              <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-bold text-gray-900">
+                      {selectedSubmission.title}
+                    </DialogTitle>
+                    <p className="text-sm text-blue-600 font-medium mt-1">
+                      by {selectedSubmission.learner_name}
+                    </p>
+                  </div>
+                  <Badge className={`text-sm px-3 py-1 ${
+                    selectedSubmission.status === 'pending'
+                      ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                      : selectedSubmission.status === 'approved'
+                      ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                      : 'bg-red-100 text-red-700 hover:bg-red-100'
+                  }`}>
+                    {selectedSubmission.status === 'pending' ? 'Pending Review' : selectedSubmission.status}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="px-6 py-4 space-y-6">
+                {/* Media Gallery */}
+                {selectedSubmission.media_refs && selectedSubmission.media_refs.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-700">Attached Files</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {selectedSubmission.media_refs.map((media, idx) => (
+                        <a
+                          key={idx}
+                          href={media.url.startsWith("http") ? media.url : `${MEDIA_BASE_URL}${media.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-square bg-gray-100 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                        >
+                          {media.type?.startsWith("image") ? (
+                            <img
+                              src={media.url.startsWith("http") ? media.url : `${MEDIA_BASE_URL}${media.url}`}
+                              alt={media.filename || `File ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                              <FileText className="h-10 w-10 text-gray-400 mb-2" />
+                              <span className="text-xs text-gray-500 text-center truncate w-full">
+                                {media.filename || `File ${idx + 1}`}
+                              </span>
+                            </div>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reflection */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-700">Student Reflection</h4>
+                  {selectedSubmission.reflection ? (
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      <p className="text-gray-700 italic">&ldquo;{selectedSubmission.reflection}&rdquo;</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">No reflection provided</p>
+                  )}
+                </div>
+
+                {/* Submission Date */}
+                <div className="text-sm text-gray-500">
+                  Submitted on {new Date(selectedSubmission.submitted_at).toLocaleDateString("en-US", {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRejectingId(selectedSubmission.id);
+                    setRejectionReason("");
+                  }}
+                  disabled={isApproving === selectedSubmission.id || selectedSubmission.status !== 'pending'}
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 bg-white rounded-xl px-6"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Return
+                </Button>
+                <Button
+                  onClick={() => handleApprove(selectedSubmission.id)}
+                  disabled={isApproving === selectedSubmission.id || selectedSubmission.status !== 'pending'}
+                  className="rounded-xl px-6 shadow-sm text-white"
+                  style={{ backgroundColor: 'var(--fundi-orange)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--fundi-orange)'}
+                >
+                  {isApproving === selectedSubmission.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Approve
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog

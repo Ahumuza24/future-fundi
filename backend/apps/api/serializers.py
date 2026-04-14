@@ -952,7 +952,7 @@ class QuickArtifactSerializer(serializers.ModelSerializer):
             "rejection_reason",
         ]
         read_only_fields = [
-            "id", "submitted_at", "reviewed_by", "reviewed_at",
+            "id", "learner", "created_by", "module", "submitted_at", "reviewed_by", "reviewed_at",
             "status", "uploaded_by_student",
         ]
 
@@ -970,6 +970,8 @@ class StudentArtifactUploadSerializer(serializers.ModelSerializer):
     and must be approved by a teacher before counting in progress metrics.
     """
 
+    module_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
+
     class Meta:
         model = Artifact
         fields = [
@@ -980,8 +982,31 @@ class StudentArtifactUploadSerializer(serializers.ModelSerializer):
             "submitted_at",
             "status",
             "rejection_reason",
+            "module_id",
         ]
         read_only_fields = ["id", "submitted_at", "status", "rejection_reason", "media_refs"]
+
+    def validate_module_id(self, value):
+        """Validate that the module exists if provided."""
+        if value is None:
+            return None
+        from apps.core.models import Module
+        try:
+            module = Module.objects.get(id=value)
+            return module
+        except Module.DoesNotExist:
+            raise serializers.ValidationError("Selected microcredential not found.")
+        return None
+
+    def create(self, validated_data):
+        """Create artifact with module assignment."""
+        # Extract module from validated data - it was validated as a Module object
+        module = validated_data.pop('module_id', None)
+        artifact = super().create(validated_data)
+        if module:
+            artifact.module = module
+            artifact.save(update_fields=['module'])
+        return artifact
 
 
 class ArtifactReviewSerializer(serializers.Serializer):
