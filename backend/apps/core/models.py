@@ -111,6 +111,68 @@ class Learner(BaseUUIDModel):
         null=True, blank=True, help_text="Date enrolled in program"
     )
 
+    # ── PRD §2.3 / §3.1 — competency level & age band ────────────────────────
+    LEVEL_EXPLORER = "explorer"
+    LEVEL_BUILDER = "builder"
+    LEVEL_PRACTITIONER = "practitioner"
+    LEVEL_PRE_PROFESSIONAL = "pre_professional"
+    LEVEL_CHOICES = [
+        (LEVEL_EXPLORER, "Explorer"),
+        (LEVEL_BUILDER, "Builder"),
+        (LEVEL_PRACTITIONER, "Practitioner"),
+        (LEVEL_PRE_PROFESSIONAL, "Pre-Professional"),
+    ]
+    level = models.CharField(
+        max_length=24,
+        choices=LEVEL_CHOICES,
+        default=LEVEL_EXPLORER,
+        db_index=True,
+        help_text=(
+            "Competency level — skill-based, not age-based (PRD §2.3). "
+            "A 14-year-old joining for the first time starts at Explorer."
+        ),
+    )
+
+    AGE_BAND_6_8 = "6-8"
+    AGE_BAND_9_12 = "9-12"
+    AGE_BAND_13_15 = "13-15"
+    AGE_BAND_16_18 = "16-18"
+    AGE_BAND_CHOICES = [
+        (AGE_BAND_6_8, "6–8"),
+        (AGE_BAND_9_12, "9–12"),
+        (AGE_BAND_13_15, "13–15"),
+        (AGE_BAND_16_18, "16–18"),
+    ]
+    age_band = models.CharField(
+        max_length=8,
+        choices=AGE_BAND_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=(
+            "Informational age grouping. "
+            "Computed from date_of_birth; can be set manually if DOB unknown."
+        ),
+    )
+
+    # ── PRD §3.1 — current position in the learning hierarchy ────────────────
+    current_track = models.ForeignKey(
+        "Track",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_learners",
+        help_text="Track the learner is currently enrolled in",
+    )
+    current_program = models.ForeignKey(
+        "Program",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_learners",
+        help_text="Program the learner is currently enrolled in",
+    )
+
     # Use default manager instead of TenantManager
     objects = models.Manager()
 
@@ -277,17 +339,87 @@ class Module(BaseUUIDModel):
         help_text="List of uploaded media files [{type, url, name}]",
     )
 
-    # Link to a primary course (Pathway) - optional if shared, but useful for hierarchy
-    course = models.ForeignKey(
-        "Course",
+    # ── PRD §3.3 — hierarchy link ─────────────────────────────────────────────
+    # New canonical FK: Module → Program (the PRD hierarchy).
+    # Nullable until existing modules are reassigned via a data migration.
+    program = models.ForeignKey(
+        "Program",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="modules",
-        help_text="Primary pathway this module belongs to",
+        help_text=(
+            "Program this module belongs to. "
+            "Replaces the legacy `course` FK once data is migrated."
+        ),
     )
 
-    # Gamification
+    # Legacy FK kept for backward compatibility with existing API code.
+    # Deprecated — use `program` for all new code.
+    course = models.ForeignKey(
+        "Pathway",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="modules",
+        help_text="[Deprecated] Use `program` instead.",
+    )
+
+    # ── PRD §3.3 — instructional metadata ────────────────────────────────────
+    outcome_statement = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="One sentence: 'Learner can…' shown to learners",
+    )
+    duration_sessions = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Expected number of sessions to complete this module",
+    )
+
+    # Teacher-only — NEVER exposed to learners or parents (PRD §5.2).
+    teacher_notes = models.TextField(
+        blank=True,
+        help_text=(
+            "Facilitator notes (misconceptions, differentiation tips). "
+            "Teacher-only — never shown to learners or parents."
+        ),
+    )
+
+    # unlock_gate: {"type": "previous_module"|"badge_set"|"none", "ref_id": UUID|null}
+    unlock_gate = models.JSONField(
+        default=dict,
+        help_text=(
+            'Gate rule: {"type": "previous_module"|"badge_set"|"none", '
+            '"ref_id": "<uuid>"|null}'
+        ),
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent program (1-based)",
+    )
+
+    STATUS_DRAFT = "draft"
+    STATUS_ACTIVE = "active"
+    STATUS_ARCHIVED = "archived"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_ARCHIVED, "Archived"),
+    ]
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        db_index=True,
+        help_text=(
+            "Only Active modules are visible to learners. "
+            "Status change Draft→Active requires peer review (PRD §4.5 F-19)."
+        ),
+    )
+
+    # Gamification (legacy — badge linking moves to BadgeTemplate in Phase 2)
     badge_name = models.CharField(
         max_length=255,
         blank=True,
@@ -295,6 +427,298 @@ class Module(BaseUUIDModel):
     )
 
     objects = models.Manager()  # Explicit default manager
+
+
+# =============================================================================
+# LEARNING HIERARCHY — LOWER LAYERS (Unit → Lesson → LearningTask)
+# Added in Phase 1 migrations 0031–0033 to complete the 7-layer PRD hierarchy.
+# =============================================================================
+
+
+class Unit(BaseUUIDModel):
+    """A topic cluster inside a Module (PRD §2.1, layer 5).
+
+    Each Module contains 3–6 Units.
+    Completing a Unit's observable criteria triggers badge issuance (PRD F-06).
+    """
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name="units",
+        help_text="Parent module this unit belongs to",
+    )
+    title = models.CharField(max_length=255, db_index=True)
+    learning_objectives = models.JSONField(
+        default=list,
+        help_text="2–4 observable learning objectives for this unit",
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent module (1-based)",
+    )
+    badge_criteria = models.TextField(
+        blank=True,
+        help_text=(
+            "Observable skill description used to award the badge "
+            "linked to this unit"
+        ),
+    )
+    # {"type": "previous_unit"|"open", "ref_id": UUID|null}
+    unlock_gate = models.JSONField(
+        default=dict,
+        help_text=(
+            'Gate rule: {"type": "previous_unit"|"open", '
+            '"ref_id": "<uuid>"|null}'
+        ),
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_unit"
+        verbose_name = "Unit"
+        verbose_name_plural = "Units"
+        ordering = ["module", "sequence_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["module", "sequence_order"],
+                name="unique_unit_order_per_module",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.module.name} › {self.title}"
+
+
+class Lesson(BaseUUIDModel):
+    """A single instructional session inside a Unit (PRD §2.1, layer 6).
+
+    Each Unit contains 2–4 Lessons.
+    learner_content and teacher_content are stored separately so teacher-only
+    material is never exposed to learners or parents (PRD §5.2, §8.3).
+    """
+
+    COMPLETION_TRIGGER_CHOICES = [
+        ("task_submission", "Task Submission"),
+        ("teacher_sign_off", "Teacher Sign-Off"),
+        ("auto_on_time", "Auto on Time"),
+    ]
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+
+    unit = models.ForeignKey(
+        Unit,
+        on_delete=models.CASCADE,
+        related_name="lessons",
+        help_text="Parent unit this lesson belongs to",
+    )
+    title = models.CharField(max_length=255, db_index=True)
+    duration_minutes = models.PositiveIntegerField(
+        default=60,
+        help_text="Expected session duration in minutes",
+    )
+    learner_objectives = models.JSONField(
+        default=list,
+        help_text="Objectives visible to learners for this lesson",
+    )
+    # Learner-facing — visible once the gate is cleared.
+    learner_content = models.TextField(
+        blank=True,
+        help_text="Rich text / markdown content shown to learners",
+    )
+    # Teacher-only — NEVER exposed to learners or parents (PRD §5.2).
+    teacher_content = models.TextField(
+        blank=True,
+        help_text=(
+            "Facilitator guide — teacher-only. "
+            "Never exposed to learners or parents."
+        ),
+    )
+    # [{"url": "...", "title": "...", "type": "learner"|"teacher"}]
+    resource_links = models.JSONField(
+        default=list,
+        help_text=(
+            'Links list: [{"url":"...", "title":"...", '
+            '"type":"learner"|"teacher"}]'
+        ),
+    )
+    # {"type": "previous_lesson"|"unit_open", "ref_id": UUID|null}
+    unlock_gate = models.JSONField(
+        default=dict,
+        help_text=(
+            'Gate rule: {"type": "previous_lesson"|"unit_open", '
+            '"ref_id": "<uuid>"|null}'
+        ),
+    )
+    completion_trigger = models.CharField(
+        max_length=24,
+        choices=COMPLETION_TRIGGER_CHOICES,
+        default="task_submission",
+        help_text="What marks this lesson as complete",
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent unit (1-based)",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_lesson"
+        verbose_name = "Lesson"
+        verbose_name_plural = "Lessons"
+        ordering = ["unit", "sequence_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["unit", "sequence_order"],
+                name="unique_lesson_order_per_unit",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.unit.title} › {self.title}"
+
+
+class LearningTask(BaseUUIDModel):
+    """A discrete learner action inside a Lesson (PRD §2.1, layer 7).
+
+    Each Lesson contains 2–5 LearningTasks.
+    Named LearningTask (not Task) to avoid confusion with TeacherTask.
+
+    teacher_rubric and answer_key are NEVER exposed to learners or parents
+    (PRD §5.2, §8.3).
+
+    evidence_required enforces the PRD hard constraint: no badge,
+    microcredential, or certification without at least one linked evidence
+    object (PRD F-09).
+    """
+
+    TYPE_OBSERVATION = "observation"
+    TYPE_SUBMISSION = "submission"
+    TYPE_QUIZ = "quiz"
+    TYPE_REFLECTION = "reflection"
+    TYPE_PRACTICAL = "practical"
+    TYPE_PEER_REVIEW = "peer_review"
+    TYPE_CHOICES = [
+        (TYPE_OBSERVATION, "Observation"),
+        (TYPE_SUBMISSION, "Submission"),
+        (TYPE_QUIZ, "Quiz"),
+        (TYPE_REFLECTION, "Reflection"),
+        (TYPE_PRACTICAL, "Practical"),
+        (TYPE_PEER_REVIEW, "Peer Review"),
+    ]
+
+    ARTIFACT_TYPE_CHOICES = [
+        ("photo", "Photo"),
+        ("file", "File"),
+        ("text", "Text"),
+        ("video", "Video"),
+        ("code", "Code"),
+        ("link", "Link"),
+    ]
+
+    COMPLETION_TRIGGER_CHOICES = [
+        ("submission", "Submission"),
+        ("teacher_verification", "Teacher Verification"),
+        ("auto", "Auto"),
+    ]
+
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name="tasks",
+        help_text="Parent lesson this task belongs to",
+    )
+    title = models.CharField(max_length=255, db_index=True)
+    type = models.CharField(
+        max_length=16,
+        choices=TYPE_CHOICES,
+        db_index=True,
+        help_text="Category of task the learner must perform",
+    )
+    # Learner-facing — visible once parent lesson unlocked.
+    learner_instructions = models.TextField(
+        help_text="Step-by-step instructions shown to the learner",
+    )
+    # Teacher-only fields — NEVER exposed to learners or parents (PRD §5.2).
+    teacher_rubric = models.TextField(
+        blank=True,
+        help_text=(
+            "Marking rubric — teacher-only. "
+            "Never exposed to learners or parents."
+        ),
+    )
+    answer_key = models.TextField(
+        blank=True,
+        help_text=(
+            "Expected output / answer key — teacher-only. "
+            "Never exposed to learners or parents."
+        ),
+    )
+    evidence_required = models.BooleanField(
+        default=False,
+        help_text=(
+            "If True, learner must submit an artifact to complete this task "
+            "(PRD F-09: no recognition without evidence)."
+        ),
+    )
+    # Only meaningful when evidence_required=True.
+    artifact_type = models.CharField(
+        max_length=8,
+        choices=ARTIFACT_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Expected artifact format when evidence_required is True",
+    )
+    completion_trigger = models.CharField(
+        max_length=24,
+        choices=COMPLETION_TRIGGER_CHOICES,
+        default="submission",
+        help_text="What marks this task as complete",
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent lesson (1-based)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_learning_task"
+        verbose_name = "Learning Task"
+        verbose_name_plural = "Learning Tasks"
+        ordering = ["lesson", "sequence_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["lesson", "sequence_order"],
+                name="unique_task_order_per_lesson",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.lesson.title} › {self.title}"
 
 
 class Assessment(TenantModel):
@@ -544,30 +968,66 @@ class Attendance(BaseUUIDModel):
 # =============================================================================
 
 
-class Course(BaseUUIDModel):
-    """A structured course within a domain for a specific age band.
+class Pathway(BaseUUIDModel):
+    """A broad future direction (e.g. Robotics, AI) — top of the learning hierarchy.
 
-    Courses are created by Super Admins and contain progressive levels.
-    Learners are enrolled in courses based on their age.
+    Pathways are global (not school-scoped) and are created by admins.
+    Each pathway contains 2–4 Tracks.  The eight defined pathways are listed
+    in PRD §13.
 
-    Examples:
-    - Robotics for Ages 6-8
-    - Coding Foundations for Ages 9-12
+    Was previously named 'Course' — renamed in migration 0028.
     """
+
+    STATUS_DRAFT = "draft"
+    STATUS_ACTIVE = "active"
+    STATUS_ARCHIVED = "archived"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_ARCHIVED, "Archived"),
+    ]
 
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True)
+    icon = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Icon name, emoji, or URL for this pathway",
+    )
+    color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="#3B82F6",
+        help_text="Hex color code for UI theming (e.g. #3B82F6)",
+    )
+    age_band_min = models.PositiveIntegerField(
+        default=6,
+        help_text="Minimum recommended age for this pathway",
+    )
+    age_band_target = models.PositiveIntegerField(
+        default=12,
+        help_text="Target/ideal starting age for this pathway",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        db_index=True,
+        help_text="Publication status; only Active pathways are visible to learners",
+    )
+    # Legacy boolean kept so existing read-paths aren't broken; derive from status.
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Optional tenant scope (None = global course available to all schools)
+    # Optional tenant scope (None = global pathway available to all schools)
     tenant = models.ForeignKey(
         School,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        help_text="If set, course is only for this school. If null, available globally.",
+        help_text="If set, pathway is only for this school. If null, available globally.",
     )
 
     teachers = models.ManyToManyField(
@@ -575,26 +1035,172 @@ class Course(BaseUUIDModel):
         related_name="courses_taught",
         blank=True,
         limit_choices_to={"role": "teacher"},
-        help_text="Teachers assigned to this course",
+        help_text="Teachers assigned to this pathway",
     )
 
     class Meta:
-        db_table = "core_course"
-        verbose_name = "Course"
-        verbose_name_plural = "Courses"
+        db_table = "core_pathway"
+        verbose_name = "Pathway"
+        verbose_name_plural = "Pathways"
         ordering = ["name"]
         indexes = [
             models.Index(fields=["is_active"]),
+            models.Index(fields=["status"]),
         ]
 
     def __str__(self) -> str:
         return f"{self.name}"
 
 
-class Career(BaseUUIDModel):
-    """Potential careers linked to a pathway (Course) - Global content."""
+# Backward-compatibility alias — all existing `from apps.core.models import Course`
+# statements (serializers, views, tests) keep working without any changes.
+# New code should use `Pathway` directly.
+Course = Pathway
 
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="careers")
+
+class Track(BaseUUIDModel):
+    """A specialisation within a Pathway (PRD §2.1, layer 2).
+
+    Each Pathway contains 2–4 Tracks.
+    Example: Pathway='Robotics' → Track='Robot Programming'
+    """
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+
+    pathway = models.ForeignKey(
+        Pathway,
+        on_delete=models.CASCADE,
+        related_name="tracks",
+        help_text="Parent pathway this track belongs to",
+    )
+    title = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text="Specialisation name, e.g. 'Robot Programming'",
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Learner-facing description of this track",
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent pathway (1-based)",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_track"
+        verbose_name = "Track"
+        verbose_name_plural = "Tracks"
+        ordering = ["pathway", "sequence_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pathway", "sequence_order"],
+                name="unique_track_order_per_pathway",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.pathway.name} › {self.title}"
+
+
+class Program(BaseUUIDModel):
+    """A bundled module sequence leading to a certification (PRD §2.1, layer 3).
+
+    Each Track contains 2–3 Programs.
+    The `level` is competency-based, not age-based (PRD §2.3).
+    Example: Track='Robot Programming' → Program='Robotics Foundations (Explorer)'
+    """
+
+    LEVEL_EXPLORER = "explorer"
+    LEVEL_BUILDER = "builder"
+    LEVEL_PRACTITIONER = "practitioner"
+    LEVEL_PRE_PROFESSIONAL = "pre_professional"
+    LEVEL_CHOICES = [
+        (LEVEL_EXPLORER, "Explorer"),
+        (LEVEL_BUILDER, "Builder"),
+        (LEVEL_PRACTITIONER, "Practitioner"),
+        (LEVEL_PRE_PROFESSIONAL, "Pre-Professional"),
+    ]
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+
+    track = models.ForeignKey(
+        Track,
+        on_delete=models.CASCADE,
+        related_name="programs",
+        help_text="Parent track this program belongs to",
+    )
+    title = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text="e.g. 'Robotics Foundations Program'",
+    )
+    level = models.CharField(
+        max_length=24,
+        choices=LEVEL_CHOICES,
+        default=LEVEL_EXPLORER,
+        db_index=True,
+        help_text=(
+            "Competency level for this program. "
+            "Levels are skill-based, not age-based."
+        ),
+    )
+    description = models.TextField(
+        blank=True,
+        help_text=(
+            "Learner-facing outcome statement, e.g. "
+            "'By the end you will be able to…'"
+        ),
+    )
+    sequence_order = models.PositiveIntegerField(
+        default=1,
+        help_text="Display order within the parent track (1-based)",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_program"
+        verbose_name = "Program"
+        verbose_name_plural = "Programs"
+        ordering = ["track", "sequence_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["track", "sequence_order"],
+                name="unique_program_order_per_track",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.track.title} › {self.title} ({self.get_level_display()})"
+
+
+class Career(BaseUUIDModel):
+    """Potential careers linked to a pathway — Global content."""
+
+    course = models.ForeignKey(Pathway, on_delete=models.CASCADE, related_name="careers")
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
 
@@ -605,13 +1211,17 @@ class Career(BaseUUIDModel):
 
 
 class CourseLevel(BaseUUIDModel):
-    """A progressive level within a course.
+    """A progressive level within a pathway (legacy model).
 
     Each level has completion criteria that must be met before
     the learner can progress to the next level.
+
+    Note: This model predates the full 7-layer hierarchy. New code should use
+    the Track → Program → Module chain. CourseLevel will be deprecated once the
+    data migration to Program is complete.
     """
 
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="levels")
+    course = models.ForeignKey(Pathway, on_delete=models.CASCADE, related_name="levels")
     level_number = models.PositiveIntegerField(
         default=1, help_text="Order of this level (1, 2, 3...)"
     )
@@ -655,7 +1265,7 @@ class CourseLevel(BaseUUIDModel):
 
 
 class LearnerCourseEnrollment(BaseUUIDModel):
-    """Tracks which courses a learner is enrolled in.
+    """Tracks which pathways a learner is enrolled in.
 
     Learners are enrolled by admins/program leads based on age eligibility.
     """
@@ -664,7 +1274,7 @@ class LearnerCourseEnrollment(BaseUUIDModel):
         Learner, on_delete=models.CASCADE, related_name="course_enrollments"
     )
     course = models.ForeignKey(
-        Course, on_delete=models.CASCADE, related_name="enrollments"
+        Pathway, on_delete=models.CASCADE, related_name="enrollments"
     )
     current_level = models.ForeignKey(
         CourseLevel,
@@ -880,7 +1490,7 @@ class Achievement(BaseUUIDModel):
     icon = models.CharField(max_length=100, blank=True, help_text="Icon name or emoji")
 
     # Link to what earned it (optional)
-    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
+    course = models.ForeignKey(Pathway, on_delete=models.SET_NULL, null=True, blank=True)
     level = models.ForeignKey(
         CourseLevel, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -922,12 +1532,12 @@ class Activity(BaseUUIDModel):
 
     # Optional links to curriculum
     course = models.ForeignKey(
-        Course,
+        Pathway,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="activities",
-        help_text="Related pathway/course",
+        help_text="Related pathway",
     )
 
     # Media storage (similar to Module)
