@@ -20,8 +20,6 @@ import TeacherPathways from "@/pages/teacher/TeacherPathways";
 import TeacherSessions from "@/pages/teacher/TeacherSessions";
 import TeacherTasks from "@/pages/teacher/TeacherTasks";
 import TeacherReviewSubmissions from "@/pages/teacher/TeacherReviewSubmissions";
-
-import MarkAttendance from "@/features/teacher/attendance/MarkAttendance";
 import TeacherAttendanceHub from "@/pages/teacher/TeacherAttendanceHub";
 import StudentDetail from "@/features/teacher/students/StudentDetail";
 import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
@@ -154,10 +152,10 @@ const router = sentryCreateBrowserRouter([
       },
 
       {
-        path: "teacher/mark-attendance",
+        path: "teacher/mark-attendance/:sessionId",
         element: (
           <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-            <MarkAttendance />
+            <TeacherAttendance />
           </ProtectedRoute>
         ),
       },

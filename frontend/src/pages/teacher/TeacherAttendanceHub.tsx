@@ -18,6 +18,7 @@ import {
     ListChecks,
     Eye,
     ArrowLeft,
+    Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO, isValid } from "date-fns";
@@ -344,12 +345,70 @@ function AttendanceHistoryPanel({ sessions }: { sessions: SessionListItem[] }) {
         (s.date ?? "").includes(search)
     );
 
+    // Generate CSV from attendance data
+    const exportToCSV = () => {
+        if (marked.length === 0) return;
+
+        // CSV Header
+        const headers = ["Session", "Date", "Learner Name", "Status", "Notes"];
+        
+        // CSV Rows
+        const rows: string[][] = [];
+        marked.forEach(session => {
+            const sessionName = session.module_name ?? "Session";
+            const sessionDate = session.date ?? "";
+            
+            if (session.attendance_records && session.attendance_records.length > 0) {
+                session.attendance_records.forEach(record => {
+                    rows.push([
+                        sessionName,
+                        sessionDate,
+                        record.learner_name,
+                        record.status,
+                        record.notes || ""
+                    ]);
+                });
+            } else {
+                rows.push([sessionName, sessionDate, "No records", "", ""]);
+            }
+        });
+
+        // Create CSV content
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => 
+                row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(",")
+            )
+        ].join("\n");
+
+        // Download CSV
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `attendance-history-${new Date().toISOString().split("T")[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="space-y-4">
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search by module or date…" value={search}
-                    onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input placeholder="Search by module or date…" value={search}
+                        onChange={e => setSearch(e.target.value)} className="pl-9" />
+                </div>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={exportToCSV}
+                    disabled={marked.length === 0}
+                    className="gap-1.5 shrink-0"
+                >
+                    <Download className="h-4 w-4" /> Export CSV
+                </Button>
             </div>
 
             {filtered.length === 0 && (
