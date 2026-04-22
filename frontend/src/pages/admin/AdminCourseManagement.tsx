@@ -125,15 +125,14 @@ export default function AdminCourseManagement() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h1 className="heading-font text-3xl md:text-4xl font-bold" style={{ color: 'var(--fundi-black)' }}>
+                        <h1 className="heading-font text-3xl md:text-4xl font-bold text-fundi-black">
                             Course Management
                         </h1>
                         <p className="text-gray-600">Create and manage courses and their levels</p>
                     </div>
                     <Button
                         onClick={() => setShowNewCourseForm(true)}
-                        style={{ backgroundColor: 'var(--fundi-orange)', color: 'white' }}
-                        className="gap-2"
+                        className="bg-fundi-orange text-white gap-2"
                     >
                         <Plus className="h-5 w-5" />
                         Create Course
@@ -142,19 +141,19 @@ export default function AdminCourseManagement() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-orange)' }}>
+                    <Card className="border-l-4 border-l-fundi-orange">
                         <CardHeader className="p-4 pb-2">
                             <CardDescription>Total Courses</CardDescription>
                             <CardTitle className="text-3xl mono-font">{courses.length}</CardTitle>
                         </CardHeader>
                     </Card>
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-cyan)' }}>
+                    <Card className="border-l-4 border-l-fundi-cyan">
                         <CardHeader className="p-4 pb-2">
                             <CardDescription>Active Courses</CardDescription>
                             <CardTitle className="text-3xl mono-font">{courses.filter(c => c.is_active).length}</CardTitle>
                         </CardHeader>
                     </Card>
-                    <Card className="border-l-4" style={{ borderLeftColor: 'var(--fundi-purple)' }}>
+                    <Card className="border-l-4 border-l-fundi-purple">
                         <CardHeader className="p-4 pb-2">
                             <CardDescription>Total Levels</CardDescription>
                             <CardTitle className="text-3xl mono-font">{courses.reduce((sum, c) => sum + c.level_count, 0)}</CardTitle>
@@ -174,7 +173,7 @@ export default function AdminCourseManagement() {
                             <Card className="border-2 border-orange-200">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
-                                        <Plus className="h-5 w-5" style={{ color: 'var(--fundi-orange)' }} />
+                                        <Plus className="h-5 w-5 text-fundi-orange" />
                                         Create New Course
                                     </CardTitle>
                                 </CardHeader>
@@ -202,7 +201,7 @@ export default function AdminCourseManagement() {
                                         <Button variant="outline" onClick={() => setShowNewCourseForm(false)}>
                                             <X className="h-4 w-4 mr-1" /> Cancel
                                         </Button>
-                                        <Button onClick={handleCreateCourse} style={{ backgroundColor: 'var(--fundi-orange)', color: 'white' }}>
+                                        <Button onClick={handleCreateCourse} className="bg-fundi-orange text-white">
                                             <Save className="h-4 w-4 mr-1" /> Create Course
                                         </Button>
                                     </div>
@@ -223,10 +222,9 @@ export default function AdminCourseManagement() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div
-                                            className="p-3 rounded-lg"
-                                            style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}
+                                            className="p-3 rounded-lg bg-fundi-orange/10"
                                         >
-                                            <BookOpen className="h-6 w-6" style={{ color: 'var(--fundi-orange)' }} />
+                                            <BookOpen className="h-6 w-6 text-fundi-orange" />
                                         </div>
                                         <div>
                                             <CardTitle className="text-xl">{course.name}</CardTitle>
@@ -302,7 +300,7 @@ export default function AdminCourseManagement() {
                             <p className="text-gray-500 mb-4">Create your first course to get started</p>
                             <Button
                                 onClick={() => setShowNewCourseForm(true)}
-                                style={{ backgroundColor: 'var(--fundi-orange)', color: 'white' }}
+                                className="bg-fundi-orange text-white"
                             >
                                 <Plus className="h-4 w-4 mr-2" /> Create Course
                             </Button>

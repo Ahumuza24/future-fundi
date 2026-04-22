@@ -25,7 +25,15 @@ const tokenStorage = {
   removeItem: (k: string) => sessionStorage.removeItem(k),
 };
 
-const initialUser = JSON.parse(localStorage.getItem('user') || 'null');
+function safeParseUser(): User | null {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+  } catch {
+    return null;
+  }
+}
+
+const initialUser = safeParseUser();
 applySentryUserContext(initialUser);
 
 export const useAuthStore = create<AuthState>((set) => ({

@@ -111,6 +111,11 @@
       "sourceType": "github",
       "computedHash": "2c20b12bb4ece445d45fc63bda020aecf78b3cdf6d593beb59c273f658293130"
     },
+    "resolve-agent-reviews": {
+      "source": "pbakaus/agent-reviews",
+      "sourceType": "github",
+      "computedHash": "cd48d9a9b1251a39b8b04545d2ed5e8d5fa0b12758d20a404d0277bbb0eaf55f"
+    },
     "security-best-practices": {
       "source": "openai/skills",
       "sourceType": "github",

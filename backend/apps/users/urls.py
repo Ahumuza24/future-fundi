@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     AvatarUploadView,
+    ChangePasswordView,
     CustomTokenObtainPairView,
     UserProfileView,
     dashboard_redirect_view,
@@ -21,5 +22,6 @@ urlpatterns = [
     # User profile
     path("user/profile/", UserProfileView.as_view(), name="user_profile"),
     path("user/avatar/", AvatarUploadView.as_view(), name="user_avatar"),
+    path("user/change-password/", ChangePasswordView.as_view(), name="change_password"),
     path("user/dashboard/", dashboard_redirect_view, name="dashboard_redirect"),
 ]

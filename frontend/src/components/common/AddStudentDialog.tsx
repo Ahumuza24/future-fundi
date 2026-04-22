@@ -38,11 +38,14 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const getErrorMessage = (data: any): string => {
+    const getErrorMessage = (data: Record<string, unknown> | null | undefined): string => {
         if (!data) return "Failed to add student. Please check input.";
         if (typeof data === "string") return data;
-        if (data.error?.message) return data.error.message;
-        if (typeof data.error === "string") return data.error;
+        const errorField = data.error;
+        if (errorField && typeof errorField === "object" && "message" in errorField && typeof (errorField as Record<string, unknown>).message === "string") {
+            return (errorField as Record<string, unknown>).message as string;
+        }
+        if (typeof errorField === "string") return errorField;
         if (typeof data.detail === "string") return data.detail;
 
         if (typeof data === "object") {
@@ -141,9 +144,10 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
             };
 
             // Remove password_confirm from payload
-            delete (payload as any).password_confirm;
+            const { password_confirm: _omit, ...cleanPayload } = payload;
+            void _omit;
 
-            await teacherApi.students.create(payload);
+            await teacherApi.students.create(cleanPayload);
 
             // Success handling
             onSuccess();
@@ -155,9 +159,9 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                 username: "", password: "", password_confirm: "", consent_media: true, equity_flag: false, pathway_ids: [], school_id: ""
             });
             toast.success("Student added successfully.", "Saved");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to add student:", error);
-            const data = error?.response?.data;
+            const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
             toast.error(getErrorMessage(data), "Add Student Failed");
         } finally {
             setIsSubmitting(false);

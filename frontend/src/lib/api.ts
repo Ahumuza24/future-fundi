@@ -365,6 +365,8 @@ export const authApi = {
   },
   deleteAvatar: () =>
     api.delete(`${AUTH_BASE_URL}/user/avatar/`),
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.post(`${AUTH_BASE_URL}/user/change-password/`, data),
 };
 
 // Course API

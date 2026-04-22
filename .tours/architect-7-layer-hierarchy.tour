@@ -1,0 +1,61 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Future Fundi 7-Layer Learning Hierarchy Architecture",
+  "description": "Architecture tour focusing on the 7-layer learning hierarchy design patterns and relationships",
+  "ref": "main",
+  "steps": [
+    {
+      "directory": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core",
+      "title": "Core Apps Structure",
+      "description": "Situation: The core app contains all domain models and business logic. Mechanism: Separates concerns by keeping models, gates, signals, and admin configurations together. Implication: Follows Django best practices of keeping related functionality cohesive. Gotcha: Watch for circular imports between models and gates - they're avoided by using string references where needed.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 10,
+      "title": "Pathway Model (Layer 1)",
+      "description": "Situation: Examining the Pathway model which replaced Course. Mechanism: Shows how Pathway serves as the top-level container for Tracks, with fields for title, description, status, and timestamps. Implication: Represents the broadest learning container - equivalent to a subject area or curriculum. Gotcha: The Course property alias allows existing code to work without changes while new code uses Pathway.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 60,
+      "title": "Track Model (Layer 2)",
+      "description": "Situation: Looking at the Track model that belongs to a Pathway. Mechanism: Demonstrates foreign key relationship to Pathway with CASCADE deletion. Implication: Tracks represent specializations or focus areas within a Pathway. Gotcha: Includes sequence_order field for manual ordering within pathway.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 120,
+      "title": "Program Model (Layer 3)",
+      "description": "Situation: Examining the Program model that belongs to a Track. Mechanism: Shows Program foreign key to Track with CASCADE deletion, plus outcome_statement and duration_sessions fields. Implication: Programs are structured learning experiences within tracks that have measurable outcomes. Gotcha: Duration_sessions helps estimate time commitment for learners.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 180,
+      "title": "Module Model (Layer 4)",
+      "description": "Situation: Examining the Module model updated to belong to Program. Mechanism: Shows the Module model with program foreign key, outcome_statement, duration_sessions, teacher_notes, unlock_gate, sequence_order, and status fields. Implication: Modules contain Units and are gated by unlock_gate which references previous module completion. Gotcha: The unlock_gate field implements prerequisite checking - a module can't start until its unlock_gate module is completed.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 240,
+      "title": "Unit Model (Layer 5)",
+      "description": "Situation: Looking at the Unit model that belongs to Module. Mechanism: Shows Unit foreign key to Module with CASCADE deletion, plus title, description, and sequence_order. Implication: Units are thematic groupings of Lessons within a Module. Gotcha: Sequence_order allows for manual ordering of units within modules.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 290,
+      "title": "Lesson Model (Layer 6)",
+      "description": "Situation: Examining the Lesson model that belongs to Unit. Mechanism: Shows Lesson foreign key to Unit with CASCADE deletion, plus content fields and sequence_order. Implication: Lessons contain the actual learning content and LearningTasks. Gotcha: Lessons are where LearningTasks (the actual activities) live.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/models.py",
+      "line": 340,
+      "title": "LearningTask Model (Layer 7)",
+      "description": "Situation: Looking at the LearningTask model that belongs to Lesson. Mechanism: Shows LearningTask foreign key to Lesson with CASCADE deletion, plus task_type, instructions, and resource fields. Implication: This is the atomic unit of learning - the actual activities learners complete. Gotcha: Different task_types allow for varied activity formats (quiz, video, reading, etc.).",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/backend/apps/core/gates.py",
+      "line": 50,
+      "title": "Gate Service Implementation",
+      "description": "Situation: Examining how GateService.check() implements the 7-layer progression rules. Mechanism: Shows the dispatch mechanism that routes different model types to specific check methods. Implication: Centralizes all progression logic in one place preventing duplication. Gotcha: Each layer has specific rules - e.g., Module.check() looks at unlock_gate, Lesson.check() looks at previous lesson completion, etc.",
+    }
+  ]
+}

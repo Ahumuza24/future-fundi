@@ -11,7 +11,7 @@ export const CredentialList = ({ credentials }: CredentialListProps) => (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
-        <GraduationCap className="h-5 w-5" style={{ color: 'var(--fundi-purple)' }} />
+        <GraduationCap className="h-5 w-5 text-fundi-purple" />
         Microcredentials
       </CardTitle>
       <CardDescription>Completed certifications</CardDescription>
@@ -28,8 +28,7 @@ export const CredentialList = ({ credentials }: CredentialListProps) => (
               className="flex items-center gap-4 p-4 rounded-lg border-2 border-purple-200 bg-purple-50"
             >
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: 'var(--fundi-purple)' }}
+                className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-fundi-purple"
               >
                 <CheckCircle className="h-6 w-6 text-white" />
               </div>

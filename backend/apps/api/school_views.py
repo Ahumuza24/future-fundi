@@ -1,3 +1,4 @@
+from apps.core.services.school_service import SchoolAnalyticsService
 from apps.api.serializers import (
     PathwaySerializer,
     PodClassSerializer,
@@ -17,7 +18,7 @@ from apps.core.models import (
     Session,
 )
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -40,44 +41,7 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
                 {"error": "User does not belong to a school"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Basic Stats
-        total_students = Learner.objects.filter(tenant=school).count()
-        total_teachers = User.objects.filter(
-            Q(tenant=school) | Q(teacher_schools=school), role="teacher"
-        ).distinct().count()
-
-        # Active Enrollments
-        active_enrollments = LearnerCourseEnrollment.objects.filter(
-            learner__tenant=school, is_active=True
-        ).count()
-
-        # Performance Metrics
-        total_badges = Achievement.objects.filter(learner__tenant=school).count()
-        total_artifacts = Artifact.objects.filter(learner__tenant=school).count()
-
-        # Average Completion Rate (simplified)
-        avg_completion = (
-            LearnerLevelProgress.objects.filter(
-                enrollment__learner__tenant=school
-            ).aggregate(avg=Avg("modules_completed"))["avg"]
-            or 0
-        )
-
-        return Response(
-            {
-                "overview": {
-                    "total_students": total_students,
-                    "total_teachers": total_teachers,
-                    "active_students": active_enrollments,
-                },
-                "performance": {
-                    "total_badges_awarded": total_badges,
-                    "total_artifacts_submitted": total_artifacts,
-                    "average_completion_rate": round(avg_completion, 1),
-                },
-            }
-        )
+        return Response(SchoolAnalyticsService.compute_stats(school=school))
 
     @action(detail=False, methods=["get"])
     def analytics(self, request):
@@ -85,130 +49,7 @@ class SchoolDashboardViewSet(viewsets.ViewSet):
         school = request.user.tenant
         if not school:
             return Response({"error": "User does not belong to a school"}, status=400)
-
-        # Overview
-        total_students = Learner.objects.filter(tenant=school).count()
-        active_students = (
-            LearnerCourseEnrollment.objects.filter(
-                learner__tenant=school, is_active=True
-            )
-            .values("learner")
-            .distinct()
-            .count()
-        )
-        total_teachers = User.objects.filter(
-            Q(tenant=school) | Q(teacher_schools=school), role="teacher"
-        ).distinct().count()
-        total_courses = Course.objects.filter(Q(tenant=None) | Q(tenant=school)).count()
-
-        # Performance
-        avg_completion = (
-            LearnerLevelProgress.objects.filter(
-                enrollment__learner__tenant=school
-            ).aggregate(avg=Avg("modules_completed"))["avg"]
-            or 0
-        )
-        avg_score = (
-            LearnerLevelProgress.objects.filter(
-                enrollment__learner__tenant=school
-            ).aggregate(avg=Avg("assessment_score"))["avg"]
-            or 0
-        )
-        total_badges = Achievement.objects.filter(learner__tenant=school).count()
-        total_artifacts = Artifact.objects.filter(learner__tenant=school).count()
-
-        # Trends (This Month)
-        now = timezone.now()
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        enrollments_month = LearnerCourseEnrollment.objects.filter(
-            learner__tenant=school, enrolled_at__gte=start_of_month
-        ).count()
-        badges_month = Achievement.objects.filter(
-            learner__tenant=school, earned_at__gte=start_of_month
-        ).count()
-        # Simplified Completion Trend (just counting updated progress records this month for now)
-        completion_month = LearnerLevelProgress.objects.filter(
-            enrollment__learner__tenant=school,
-            updated_at__gte=start_of_month,
-            completed=True,
-        ).count()
-
-        # Top Performers Query
-        top_performers_qs = (
-            Learner.objects.filter(tenant=school)
-            .annotate(
-                badges_count=Count("achievements"),
-                completed_modules=Sum(
-                    "course_enrollments__level_progress__modules_completed"
-                ),
-            )
-            .order_by("-badges_count")[:5]
-        )
-        top_performers = [
-            {
-                "student_name": s.full_name,
-                "badges_count": s.badges_count,
-                # Mock calculation for completion rate for demo purposes if no modules data
-                "completion_rate": min(100, (s.completed_modules or 0) * 5),
-            }
-            for s in top_performers_qs
-        ]
-
-        # Course Stats
-        courses = Course.objects.filter(Q(tenant=None) | Q(tenant=school))
-        course_stats = []
-        for course in courses:
-            enrolled = LearnerCourseEnrollment.objects.filter(
-                learner__tenant=school, course=course
-            ).count()
-            if enrolled > 0:
-                # Simplified completion rate
-                completed_levels = LearnerLevelProgress.objects.filter(
-                    enrollment__learner__tenant=school,
-                    enrollment__course=course,
-                    completed=True,
-                ).count()
-                # Rough estimate: completed levels / (enrolled students * total levels)
-                # For now just using completed_levels / enrolled * 10 or similar logic
-                # Better: Avg percentage
-                avg_prog = 0
-                if enrolled > 0:
-                    avg_prog = min(
-                        100, (completed_levels / enrolled) * 20
-                    )  # Mock logic for realism
-
-                course_stats.append(
-                    {
-                        "course_name": course.name,
-                        "enrolled_students": enrolled,
-                        "completion_rate": int(avg_prog),
-                    }
-                )
-
-        return Response(
-            {
-                "overview": {
-                    "total_students": total_students,
-                    "active_students": active_students,
-                    "total_teachers": total_teachers,
-                    "total_courses": total_courses,
-                },
-                "performance": {
-                    "average_completion_rate": round(avg_completion, 1),
-                    "average_assessment_score": round(avg_score, 1),
-                    "total_badges_awarded": total_badges,
-                    "total_artifacts_submitted": total_artifacts,
-                },
-                "trends": {
-                    "enrollments_this_month": enrollments_month,
-                    "badges_this_month": badges_month,
-                    "completion_this_month": completion_month,
-                },
-                "topPerformers": top_performers,
-                "courseStats": course_stats,
-            }
-        )
+        return Response(SchoolAnalyticsService.compute_analytics(school=school))
 
     @action(detail=False, methods=["get"])
     def badges(self, request):

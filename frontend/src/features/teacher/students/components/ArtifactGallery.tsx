@@ -7,8 +7,7 @@ const formatDateTime = (value?: string) => {
   if (!value) return 'Unknown date';
   try {
     return new Date(value).toLocaleString();
-  } catch (error) {
-    console.warn('Failed to format date', error);
+  } catch {
     return value;
   }
 };

@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { ROLES } from "@/lib/roles";
 import PageLayout from "@/components/PageLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import HomePage from "@/pages/HomePage";
@@ -71,7 +72,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "student",
         element: (
-          <ProtectedRoute allowedRoles={['learner', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
             <StudentDashboard />
           </ProtectedRoute>
         ),
@@ -79,7 +80,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "student/pathway/:enrollmentId",
         element: (
-          <ProtectedRoute allowedRoles={['learner', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
             <PathwayLearning />
           </ProtectedRoute>
         ),
@@ -88,7 +89,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "parent",
         element: (
-          <ProtectedRoute allowedRoles={['parent', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.PARENT, ROLES.ADMIN]}>
             <ParentPortal />
           </ProtectedRoute>
         ),
@@ -96,7 +97,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "parent/children",
         element: (
-          <ProtectedRoute allowedRoles={['parent', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.PARENT, ROLES.ADMIN]}>
             <ParentMyChildren />
           </ProtectedRoute>
         ),
@@ -104,7 +105,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "parent/updates",
         element: (
-          <ProtectedRoute allowedRoles={['parent', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.PARENT, ROLES.ADMIN]}>
             <ParentWeeklyUpdates />
           </ProtectedRoute>
         ),
@@ -113,7 +114,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/select-school",
         element: (
-          <ProtectedRoute allowedRoles={['teacher']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
             <TeacherSchoolSelect />
           </ProtectedRoute>
         ),
@@ -121,7 +122,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherDashboard />
           </ProtectedRoute>
         ),
@@ -129,7 +130,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/students",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherStudents />
           </ProtectedRoute>
         ),
@@ -137,7 +138,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/students/:id",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <StudentDetail />
           </ProtectedRoute>
         ),
@@ -145,7 +146,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/pathways",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherPathways />
           </ProtectedRoute>
         ),
@@ -154,7 +155,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/mark-attendance/:sessionId",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherAttendance />
           </ProtectedRoute>
         ),
@@ -162,7 +163,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/attendance",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherAttendanceHub />
           </ProtectedRoute>
         ),
@@ -170,7 +171,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/attendance/:sessionId",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherAttendance />
           </ProtectedRoute>
         ),
@@ -178,7 +179,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/capture-artifact",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherArtifactCapture />
           </ProtectedRoute>
         ),
@@ -186,7 +187,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/classes",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherClasses />
           </ProtectedRoute>
         ),
@@ -194,7 +195,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/student/:id",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <StudentDetail />
           </ProtectedRoute>
         ),
@@ -202,7 +203,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/assessments",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherAssessments />
           </ProtectedRoute>
         ),
@@ -210,7 +211,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/learner/:learnerId",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherLearnerPortfolio />
           </ProtectedRoute>
         ),
@@ -218,7 +219,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/communication",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherCommunication />
           </ProtectedRoute>
         ),
@@ -226,7 +227,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/sessions",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherSessions />
           </ProtectedRoute>
         ),
@@ -234,7 +235,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/tasks",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherTasks />
           </ProtectedRoute>
         ),
@@ -242,7 +243,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "teacher/review-pending",
         element: (
-          <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER, ROLES.ADMIN]}>
             <TeacherReviewSubmissions />
           </ProtectedRoute>
         ),
@@ -251,7 +252,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "leader",
         element: (
-          <ProtectedRoute allowedRoles={['leader', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.LEADER, ROLES.ADMIN]}>
             <LeaderDashboard />
           </ProtectedRoute>
         ),
@@ -260,7 +261,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolDashboard />
           </ProtectedRoute>
         ),
@@ -268,7 +269,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/students",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolStudents />
           </ProtectedRoute>
         ),
@@ -276,7 +277,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/students/:id",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolStudentDetail />
           </ProtectedRoute>
         ),
@@ -284,7 +285,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/teachers",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolTeachers />
           </ProtectedRoute>
         ),
@@ -292,7 +293,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/pathways",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolPathways />
           </ProtectedRoute>
         ),
@@ -300,7 +301,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/progress",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolProgress />
           </ProtectedRoute>
         ),
@@ -308,7 +309,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/badges",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolBadges />
           </ProtectedRoute>
         ),
@@ -316,7 +317,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "school/analytics",
         element: (
-          <ProtectedRoute allowedRoles={['school', 'admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.SCHOOL, ROLES.ADMIN]}>
             <SchoolAnalytics />
           </ProtectedRoute>
         ),
@@ -334,7 +335,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <AdminDashboard />
           </ProtectedRoute>
         ),
@@ -342,7 +343,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/courses",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <AdminCourseManagement />
           </ProtectedRoute>
         ),
@@ -350,7 +351,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/curriculum-entry",
         element: (
-          <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DATA_ENTRY]}>
             <CurriculumDataEntry />
           </ProtectedRoute>
         ),
@@ -358,7 +359,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/activities",
         element: (
-          <ProtectedRoute allowedRoles={['admin', 'data_entry']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DATA_ENTRY]}>
             <ActivityManagement />
           </ProtectedRoute>
         ),
@@ -366,7 +367,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/users",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <UserManagement />
           </ProtectedRoute>
         ),
@@ -374,7 +375,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/schools",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <SchoolManagement />
           </ProtectedRoute>
         ),
@@ -382,7 +383,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/monitor",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <AdminMonitor />
           </ProtectedRoute>
         ),
@@ -390,7 +391,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/analytics",
         element: (
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <AdminAnalytics />
           </ProtectedRoute>
         ),

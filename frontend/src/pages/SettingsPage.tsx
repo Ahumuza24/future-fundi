@@ -17,7 +17,7 @@ interface UserData {
 
 const SettingsPage = () => {
   const user = getCurrentUser() as UserData | null;
-  const setUser = useAuthStore((state: any) => state.setUser);
+  const setUser = useAuthStore((state) => state.setUser);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -53,8 +53,8 @@ const SettingsPage = () => {
           email: profile.email || "",
         }));
         setAvatarUrl(profile.avatar_url);
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
+      } catch {
+        showMessage("error", "Failed to load profile");
       }
     };
     fetchProfile();
@@ -78,8 +78,9 @@ const SettingsPage = () => {
         localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
-    } catch (error: any) {
-      showMessage("error", error.response?.data?.error || "Failed to upload avatar");
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      showMessage("error", msg || "Failed to upload avatar");
     } finally {
       setAvatarUploading(false);
     }
@@ -124,8 +125,9 @@ const SettingsPage = () => {
         localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
-    } catch (error: any) {
-      showMessage("error", error.response?.data?.detail || "Failed to update profile");
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showMessage("error", msg || "Failed to update profile");
     } finally {
       setSaving(false);
     }
@@ -137,14 +139,30 @@ const SettingsPage = () => {
       showMessage("error", "Passwords don't match!");
       return;
     }
-    // TODO: Implement password change API call
-    showMessage("success", "Password updated successfully!");
-    setFormData(prev => ({
-      ...prev,
-      current_password: "",
-      new_password: "",
-      confirm_password: "",
-    }));
+    setSaving(true);
+    try {
+      await authApi.changePassword({
+        current_password: formData.current_password,
+        new_password: formData.new_password,
+      });
+      showMessage("success", "Password updated successfully!");
+      setFormData(prev => ({
+        ...prev,
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      }));
+    } catch (error: unknown) {
+      const apiErr = error as { response?: { data?: { current_password?: string; new_password?: string; detail?: string } } };
+      const msg =
+        apiErr?.response?.data?.current_password ||
+        apiErr?.response?.data?.new_password ||
+        apiErr?.response?.data?.detail ||
+        "Failed to update password";
+      showMessage("error", msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fullName = `${formData.first_name} ${formData.last_name}`.trim();
@@ -152,7 +170,7 @@ const SettingsPage = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold heading-font mb-2" style={{ color: 'var(--fundi-black)' }}>
+        <h1 className="text-3xl font-bold heading-font mb-2 text-fundi-black">
           Settings
         </h1>
         <p className="text-gray-600">Manage your account settings and preferences</p>
@@ -184,8 +202,8 @@ const SettingsPage = () => {
         {/* Profile Picture */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0, 175, 235, 0.1)' }}>
-              <Camera className="h-5 w-5" style={{ color: 'var(--fundi-cyan)' }} />
+            <div className="p-2 rounded-lg bg-fundi-cyan/10">
+              <Camera className="h-5 w-5 text-fundi-cyan" />
             </div>
             <h2 className="text-xl font-bold heading-font">Profile Picture</h2>
           </div>
@@ -206,8 +224,7 @@ const SettingsPage = () => {
               <div className="flex gap-3">
                 <label
                   htmlFor="avatar-upload-btn"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold cursor-pointer transition-all hover:shadow-lg"
-                  style={{ backgroundColor: 'var(--fundi-cyan)' }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold cursor-pointer transition-all hover:shadow-lg bg-fundi-cyan"
                 >
                   <Camera className="h-4 w-4" />
                   {avatarUrl ? "Change Photo" : "Upload Photo"}
@@ -244,8 +261,8 @@ const SettingsPage = () => {
         {/* Profile Information */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(240, 87, 34, 0.1)' }}>
-              <User className="h-5 w-5" style={{ color: 'var(--fundi-orange)' }} />
+            <div className="p-2 rounded-lg bg-fundi-orange/10">
+              <User className="h-5 w-5 text-fundi-orange" />
             </div>
             <h2 className="text-xl font-bold heading-font">Profile Information</h2>
           </div>
@@ -253,7 +270,7 @@ const SettingsPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+                <label className="block text-sm font-semibold mb-2 text-fundi-black">
                   Sir Name
                 </label>
                 <input
@@ -265,7 +282,7 @@ const SettingsPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+                <label className="block text-sm font-semibold mb-2 text-fundi-black">
                   Other Name
                 </label>
                 <input
@@ -278,7 +295,7 @@ const SettingsPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+              <label className="block text-sm font-semibold mb-2 text-fundi-black">
                 Email Address
               </label>
               <input
@@ -299,8 +316,7 @@ const SettingsPage = () => {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all hover:shadow-lg disabled:opacity-50"
-              style={{ backgroundColor: 'var(--fundi-orange)' }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all hover:shadow-lg disabled:opacity-50 bg-fundi-orange"
             >
               {saving ? (
                 <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -315,15 +331,15 @@ const SettingsPage = () => {
         {/* Security Settings */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(233, 30, 37, 0.1)' }}>
-              <Lock className="h-5 w-5" style={{ color: 'var(--fundi-red)' }} />
+            <div className="p-2 rounded-lg bg-fundi-red/10">
+              <Lock className="h-5 w-5 text-fundi-red" />
             </div>
             <h2 className="text-xl font-bold heading-font">Security</h2>
           </div>
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+              <label className="block text-sm font-semibold mb-2 text-fundi-black">
                 Current Password
               </label>
               <input
@@ -337,7 +353,7 @@ const SettingsPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+                <label className="block text-sm font-semibold mb-2 text-fundi-black">
                   New Password
                 </label>
                 <input
@@ -350,7 +366,7 @@ const SettingsPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--fundi-black)' }}>
+                <label className="block text-sm font-semibold mb-2 text-fundi-black">
                   Confirm Password
                 </label>
                 <input
@@ -365,10 +381,14 @@ const SettingsPage = () => {
 
             <button
               type="submit"
-              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
-              style={{ backgroundColor: 'var(--fundi-red)' }}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all hover:shadow-lg disabled:opacity-50 bg-fundi-red"
             >
-              <Shield className="h-4 w-4" />
+              {saving ? (
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
               Update Password
             </button>
           </form>
@@ -377,8 +397,8 @@ const SettingsPage = () => {
         {/* Notification Preferences */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(254, 220, 0, 0.1)' }}>
-              <Bell className="h-5 w-5" style={{ color: 'var(--fundi-yellow)' }} />
+            <div className="p-2 rounded-lg bg-fundi-yellow/10">
+              <Bell className="h-5 w-5 text-fundi-yellow" />
             </div>
             <h2 className="text-xl font-bold heading-font">Notifications</h2>
           </div>
@@ -386,43 +406,40 @@ const SettingsPage = () => {
           <div className="space-y-4">
             <label className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
               <div>
-                <p className="font-semibold" style={{ color: 'var(--fundi-black)' }}>Email Updates</p>
+                <p className="font-semibold text-fundi-black">Email Updates</p>
                 <p className="text-sm text-gray-600">Receive email notifications about your progress</p>
               </div>
               <input
                 type="checkbox"
                 checked={notifications.email_updates}
                 onChange={(e) => setNotifications({ ...notifications, email_updates: e.target.checked })}
-                className="w-5 h-5 rounded"
-                style={{ accentColor: 'var(--fundi-orange)' }}
+                className="w-5 h-5 rounded accent-fundi-orange"
               />
             </label>
 
             <label className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
               <div>
-                <p className="font-semibold" style={{ color: 'var(--fundi-black)' }}>Weekly Reports</p>
+                <p className="font-semibold text-fundi-black">Weekly Reports</p>
                 <p className="text-sm text-gray-600">Get weekly summary of your activities</p>
               </div>
               <input
                 type="checkbox"
                 checked={notifications.weekly_reports}
                 onChange={(e) => setNotifications({ ...notifications, weekly_reports: e.target.checked })}
-                className="w-5 h-5 rounded"
-                style={{ accentColor: 'var(--fundi-orange)' }}
+                className="w-5 h-5 rounded accent-fundi-orange"
               />
             </label>
 
             <label className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
               <div>
-                <p className="font-semibold" style={{ color: 'var(--fundi-black)' }}>Achievement Alerts</p>
+                <p className="font-semibold text-fundi-black">Achievement Alerts</p>
                 <p className="text-sm text-gray-600">Get notified when you earn new achievements</p>
               </div>
               <input
                 type="checkbox"
                 checked={notifications.achievement_alerts}
                 onChange={(e) => setNotifications({ ...notifications, achievement_alerts: e.target.checked })}
-                className="w-5 h-5 rounded"
-                style={{ accentColor: 'var(--fundi-orange)' }}
+                className="w-5 h-5 rounded accent-fundi-orange"
               />
             </label>
           </div>

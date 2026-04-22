@@ -1,4 +1,11 @@
 from django.urls import include, path
+from .gate_views import (
+    AdminOverrideCreateView,
+    AdminOverrideListView,
+    GateCheckView,
+    GrowthProfileView,
+    ModuleProgressDetailView,
+)
 from rest_framework import routers
 
 from .admin_monitor_views import (
@@ -125,4 +132,10 @@ urlpatterns = [
     # Other custom views
     path("dashboard/kpis/", DashboardKpisView.as_view(), name="dashboard-kpis"),
     path("health/", health_check, name="health-check"),
+    # Gate engine (Phase 3)
+    path("gate/check/", GateCheckView.as_view(), name="gate-check"),
+    path("gate/override/", AdminOverrideCreateView.as_view(), name="gate-override-create"),
+    path("gate/overrides/", AdminOverrideListView.as_view(), name="gate-override-list"),
+    path("gate/growth-profile/", GrowthProfileView.as_view(), name="gate-growth-profile"),
+    path("gate/module-progress/<uuid:pk>/", ModuleProgressDetailView.as_view(), name="gate-module-progress"),
 ]

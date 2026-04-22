@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 from apps.core.models import Artifact, Attendance, Learner, School, Session
 from apps.core.scope import get_user_allowed_school_ids
-from django.db.models import Count, Prefetch, Q
+from apps.core.services.artifact_service import ArtifactService
+from apps.core.services.dashboard_service import TeacherDashboardService
+from apps.core.services.enrollment_service import EnrollmentResult, EnrollmentService
+from django.db.models import Count, Q, QuerySet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .serializers import (
@@ -19,7 +24,7 @@ from .serializers import (
 class IsTeacher(permissions.BasePermission):
     """Permission class to check if user is a teacher."""
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: Any) -> bool:
         return request.user.is_authenticated and request.user.role == "teacher"
 
 
@@ -30,7 +35,7 @@ class TeacherSchoolContextMixin:
         super().initial(request, *args, **kwargs)
         self._resolve_school_context(request)
 
-    def _requested_school_id(self, request) -> str | None:
+    def _requested_school_id(self, request: Request) -> str | None:
         school_id = request.headers.get("X-School-ID") or request.query_params.get(
             "school_id"
         )
@@ -42,7 +47,7 @@ class TeacherSchoolContextMixin:
         return value or None
 
     def _set_request_school(
-        self, request, school, allowed_school_ids: list[str]
+        self, request: Request, school: School | None, allowed_school_ids: list[str]
     ) -> None:
         school_id = str(school.id) if school else None
         request.school = school
@@ -55,7 +60,7 @@ class TeacherSchoolContextMixin:
             raw_request.school_id = school_id
             raw_request.allowed_school_ids = allowed_school_ids
 
-    def _resolve_school_context(self, request):
+    def _resolve_school_context(self, request: Request) -> School | None:
         if getattr(request, "_school_context_resolved", False):
             return getattr(request, "school", None)
 
@@ -316,110 +321,14 @@ class TeacherSessionViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
         )
 
     @action(detail=False, methods=["get"], url_path="dashboard")
-    def dashboard(self, request):
+    def dashboard(self, request: Request) -> Response:
         """Get teacher dashboard data with real stats."""
-        from datetime import timedelta
-
-        today = date.today()
-        # Calculate current week (Monday to Sunday)
-        week_start = today - timedelta(days=today.weekday())  # Monday
-        week_end = week_start + timedelta(days=6)  # Sunday
-
-        scoped_sessions = self.get_queryset()
-
-        # Today's sessions
-        today_sessions = scoped_sessions.filter(date=today)
-
-        # Pending tasks — sessions with attendance not yet marked
-        sessions_without_attendance = scoped_sessions.filter(
-            date__lte=today,
-            attendance_marked=False,
-            status__in=["in_progress", "completed"],
-        ).count()
-
-        # Pending student artifact submissions
-        from apps.core.models import Artifact
         school = self._resolve_school_context(request)
-        pending_student_submissions = 0
-        if school:
-            pending_student_submissions = Artifact.objects.filter(
-                uploaded_by_student=True,
-                tenant=school,
-                status=Artifact.STATUS_PENDING,
-            ).count()
-
-        # Sessions needing artifacts (completed this month, zero artifacts captured that day)
-        sessions_needing_artifacts = (
-            scoped_sessions.filter(
-                status="completed",
-                date__gte=date.today().replace(day=1),  # This month
-            )
-            .annotate(
-                artifact_count=Count(
-                    "learners__artifacts",
-                    filter=Q(learners__artifacts__submitted_at__date=today),
-                )
-            )
-            .filter(artifact_count=0)
-            .count()
+        data = TeacherDashboardService.compute(
+            scoped_sessions=self.get_queryset(),
+            school=school,
         )
-
-        # This-week sessions (Monday – Sunday inclusive)
-        sessions_this_week = scoped_sessions.filter(
-            date__gte=week_start,
-            date__lte=week_end,
-        ).count()
-
-        # This-month sessions (1st of month to last day)
-        import calendar
-
-        month_start = today.replace(day=1)
-        month_last_day = calendar.monthrange(today.year, today.month)[1]
-        month_end = today.replace(day=month_last_day)
-        sessions_this_month = scoped_sessions.filter(
-            date__gte=month_start,
-            date__lte=month_end,
-        ).count()
-        sessions_this_month_completed = scoped_sessions.filter(
-            date__gte=month_start,
-            date__lte=month_end,
-            status="completed",
-        ).count()
-
-        # All-time stats for the teacher
-        total_sessions_all_time = scoped_sessions.count()
-        total_completed = scoped_sessions.filter(status="completed").count()
-
-        return Response(
-            {
-                "today": {
-                    "date": today,
-                    "sessions": SessionSerializer(today_sessions, many=True).data,
-                    "total": today_sessions.count(),
-                    "completed": today_sessions.filter(status="completed").count(),
-                    "pending": today_sessions.filter(
-                        status__in=["scheduled", "in_progress"]
-                    ).count(),
-                },
-                "pending_tasks": {
-                    "attendance_needed": sessions_without_attendance,
-                    "artifacts_needed": sessions_needing_artifacts,
-                    "student_submissions": pending_student_submissions,
-                    "total": sessions_without_attendance + sessions_needing_artifacts + pending_student_submissions,
-                },
-                "quick_stats": {
-                    "sessions_this_week": sessions_this_week,
-                    "sessions_this_month": sessions_this_month,
-                    "sessions_this_month_completed": sessions_this_month_completed,
-                    "total_sessions": total_sessions_all_time,
-                    "total_completed": total_completed,
-                    "week_start": week_start,
-                    "week_end": week_end,
-                    "month_start": month_start,
-                    "month_end": month_end,
-                },
-            }
-        )
+        return Response(data)
 
 
 class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
@@ -455,128 +364,54 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
     #          links[] (JSON-encoded array of {url, label})
     # ------------------------------------------------------------------
     @action(detail=False, methods=["post"], url_path="capture")
-    def capture(self, request):
+    def capture(self, request: Request) -> Response:
         """Create an artifact and upload files in a single multipart request."""
         import json
-        import os
-        import uuid
 
-        from django.conf import settings
-        from django.core.files.storage import default_storage
-
-        # --- 1. Validate required fields ---
         learner_id = request.data.get("learner")
         title = request.data.get("title", "").strip()
+
         if not learner_id:
             return Response({"detail": "learner is required"}, status=status.HTTP_400_BAD_REQUEST)
         if not title:
             return Response({"detail": "title is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            from apps.core.models import Learner
             learner = Learner.objects.get(id=learner_id)
-        except (Learner.DoesNotExist, Exception):
+        except Learner.DoesNotExist:
             return Response({"detail": "Learner not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Enforce school/tenant scope (prevent cross-school writes)
-        allowed_school_ids = getattr(request, "allowed_school_ids", None)
-        if allowed_school_ids is None:
-            from apps.core.scope import get_user_allowed_school_ids
-            allowed_school_ids = get_user_allowed_school_ids(request.user)
-
-        if not allowed_school_ids or str(learner.tenant_id) not in allowed_school_ids:
+        if not self._learner_in_scope(request, learner):
             return Response(
                 {"detail": "You can only capture artifacts for learners in your school."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # --- 2. Create the artifact record first ---
-        reflection = request.data.get("reflection", "")
-        tenant = self._resolve_school_context(request) or getattr(learner, "tenant", None)
-        module_id = request.data.get("module")
-
-        from apps.core.models import Module
-        module_obj = None
-        if module_id:
-            try:
-                module_obj = Module.objects.get(id=module_id)
-            except (Module.DoesNotExist, ValueError):
-                pass
-
-        # Also store session/metrics in media_refs metadata if needed
-        session_id = request.data.get("session")
         try:
             metrics = json.loads(request.data.get("metrics", "[]"))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             metrics = []
 
-        initial_metadata = {}
-        if session_id:
-            initial_metadata["session_id"] = session_id
-        if metrics:
-            initial_metadata["metrics"] = metrics
+        module_obj = self._resolve_module(request.data.get("module"))
+        tenant = self._resolve_school_context(request) or getattr(learner, "tenant", None)
 
-        artifact = Artifact.objects.create(
-            learner=learner,
-            title=title,
-            reflection=reflection,
-            created_by=request.user,
-            tenant=tenant,
-            media_refs=[initial_metadata] if initial_metadata else [],
-            module=module_obj,
-        )
-
-        # --- 3. Save uploaded files ---
-        media_refs = [initial_metadata] if initial_metadata else []
-        uploaded_files = request.FILES.getlist("files")
-
-        for f in uploaded_files:
-            if f.size > settings.MAX_UPLOAD_SIZE_BYTES:
-                return Response(
-                    {"detail": f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Build safe path: media/artifacts/<artifact_id>/<uuid>_<filename>
-            safe_original_name = os.path.basename(f.name) or "upload"
-            safe_name = f"{uuid.uuid4().hex}_{safe_original_name}"
-            rel_path = f"artifacts/{artifact.id}/{safe_name}"
-            saved_path = default_storage.save(rel_path, f)
-
-            # Build the full public URL
-            request_obj = request._request if hasattr(request, "_request") else request
-            base = getattr(settings, "MEDIA_URL", "/media/")
-            # Full absolute URL
-            file_url = request_obj.build_absolute_uri(f"{base}{saved_path}")
-
-            media_refs.append({
-                "type": f.content_type or "file",
-                "url": file_url,
-                "filename": f.name,
-                "size": f.size,
-                "path": saved_path,
-            })
-
-        # --- 4. Append any link refs passed as JSON ---
-        raw_links = request.data.get("links", "[]")
         try:
-            links = json.loads(raw_links) if isinstance(raw_links, str) else raw_links
-            if isinstance(links, list):
-                for lnk in links:
-                    if isinstance(lnk, dict) and lnk.get("url"):
-                        media_refs.append({
-                            "type": "link",
-                            "url": lnk["url"],
-                            "label": lnk.get("label", lnk["url"]),
-                        })
-        except Exception:
-            pass
+            artifact = ArtifactService.capture(
+                learner=learner,
+                title=title,
+                reflection=request.data.get("reflection", ""),
+                created_by=request.user,
+                tenant=tenant,
+                module=module_obj,
+                session_id=request.data.get("session"),
+                metrics=metrics,
+                uploaded_files=request.FILES.getlist("files"),
+                raw_links=request.data.get("links", "[]"),
+                request=request,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # --- 5. Save media_refs back to artifact ---
-        artifact.media_refs = media_refs
-        artifact.save(update_fields=["media_refs"])
-
-        from .serializers import QuickArtifactSerializer
         return Response(
             {
                 "detail": "Artifact captured successfully",
@@ -584,6 +419,23 @@ class QuickArtifactViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+    def _learner_in_scope(self, request: Request, learner: Learner) -> bool:
+        allowed = getattr(request, "allowed_school_ids", None)
+        if allowed is None:
+            allowed = get_user_allowed_school_ids(request.user)
+        return bool(allowed) and str(learner.tenant_id) in allowed
+
+    @staticmethod
+    def _resolve_module(module_id: str | None) -> Any:
+        if not module_id:
+            return None
+        from apps.core.models import Module
+
+        try:
+            return Module.objects.get(id=module_id)
+        except (Module.DoesNotExist, ValueError):
+            return None
 
     @action(detail=False, methods=["get"], url_path="pending")
     def pending(self, request):
@@ -1029,7 +881,7 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
         )
 
     @action(detail=False, methods=["post"], url_path="enroll")
-    def enroll_student(self, request):
+    def enroll_student(self, request: Request) -> Response:
         """Enroll a student in a course.
 
         Expected payload:
@@ -1039,12 +891,7 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
             "level_id": "uuid" (optional - defaults to first level)
         }
         """
-        from apps.core.models import (
-            Course,
-            CourseLevel,
-            LearnerCourseEnrollment,
-            LearnerLevelProgress,
-        )
+        from apps.core.models import Course, CourseLevel
 
         from .serializers import StudentEnrollmentSerializer
 
@@ -1058,68 +905,34 @@ class StudentManagementViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        school = self._resolve_school_context(request)
+        if school is None:
+            return Response(
+                {"detail": "Select a school before enrolling students."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         try:
-            school = self._resolve_school_context(request)
-            if school is None:
-                return Response(
-                    {"detail": "Select a school before enrolling students."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
             learner = Learner.objects.get(id=learner_id, tenant=school)
-            course = Course.objects.get(id=course_id)
-
-            # Get or create enrollment
-            enrollment, created = LearnerCourseEnrollment.objects.get_or_create(
+            result: EnrollmentResult = EnrollmentService.enroll(
                 learner=learner,
-                course=course,
-                defaults={
-                    "is_active": True,
-                    "current_level": (
-                        CourseLevel.objects.get(id=level_id, course=course)
-                        if level_id
-                        else course.levels.order_by("level_number").first()
-                    ),
-                },
+                course_id=course_id,
+                level_id=level_id,
             )
-
-            if not created:
-                # Reactivate if was inactive
-                enrollment.is_active = True
-                enrollment.save()
-
-            # Ensure progress record exists for current level
-            if enrollment.current_level:
-                LearnerLevelProgress.objects.get_or_create(
-                    enrollment=enrollment, level=enrollment.current_level
-                )
-
-            serializer = StudentEnrollmentSerializer(enrollment)
-
-            return Response(
-                {
-                    "detail": (
-                        "Student enrolled successfully"
-                        if created
-                        else "Enrollment reactivated"
-                    ),
-                    "enrollment": serializer.data,
-                },
-                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
-            )
-
         except Learner.DoesNotExist:
-            return Response(
-                {"detail": "Student not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
         except Course.DoesNotExist:
-            return Response(
-                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
         except CourseLevel.DoesNotExist:
-            return Response(
-                {"detail": "Level not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Level not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            {
+                "detail": "Student enrolled successfully" if result.created else "Enrollment reactivated",
+                "enrollment": StudentEnrollmentSerializer(result.enrollment).data,
+            },
+            status=status.HTTP_201_CREATED if result.created else status.HTTP_200_OK,
+        )
 
 
 class CredentialManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):

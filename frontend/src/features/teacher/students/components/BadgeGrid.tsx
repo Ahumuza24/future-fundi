@@ -11,7 +11,7 @@ export const BadgeGrid = ({ badges }: BadgeGridProps) => (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
-        <Medal className="h-5 w-5" style={{ color: 'var(--fundi-orange)' }} />
+        <Medal className="h-5 w-5 text-fundi-orange" />
         Badges Earned
       </CardTitle>
       <CardDescription>Recognition and achievements</CardDescription>
@@ -29,8 +29,7 @@ export const BadgeGrid = ({ badges }: BadgeGridProps) => (
             >
               <div className="flex items-start gap-3">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'var(--fundi-orange)' }}
+                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-fundi-orange"
                 >
                   <Award className="h-6 w-6 text-white" />
                 </div>

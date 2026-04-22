@@ -18,7 +18,7 @@ const inferUrl = (media: PathwayModuleMedia): string | undefined => {
   return candidate;
 };
 
-const inferFlags = (url: string | undefined, media: PathwayModuleMedia) => {
+const inferFlags = (url: string | undefined, media: PathwayModuleMedia): { isImage: boolean; isVideo: boolean } => {
   const type = media.type || media.content_type || '';
   const lower = type.toLowerCase();
   const urlLower = url?.toLowerCase() ?? '';

@@ -56,7 +56,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 export const getIconComponent = (iconName: string): React.ElementType =>
-  ICON_MAP[iconName] || GraduationCap;
+  ICON_MAP[iconName] ?? GraduationCap;
 
 export const resolveUrl = (raw: string): string => {
   if (!raw) return '';
@@ -66,7 +66,7 @@ export const resolveUrl = (raw: string): string => {
   return `${MEDIA_BASE_URL}/${raw.replace(/^\.?\//, '')}`;
 };
 
-export const mediaIcon = (ref: StudentArtifactMediaRef) => {
+export const mediaIcon = (ref: StudentArtifactMediaRef): { icon: React.ElementType; label: string; color: string } => {
   const type = (ref.type || '').toLowerCase();
   const name = (ref.filename || ref.name || ref.label || '').toLowerCase();
 

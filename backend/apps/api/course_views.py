@@ -6,6 +6,9 @@ Provides endpoints for:
 - Teachers: Update learner progress within levels
 """
 
+from __future__ import annotations
+
+from apps.core.services.dashboard_service import MediaService
 from apps.api.serializers import (
     AchievementSerializer,
     CareerSerializer,
@@ -182,73 +185,23 @@ class ModuleViewSet(viewsets.ModelViewSet):
         return Module.objects.all()
 
     @action(detail=True, methods=["post"], url_path="upload-media")
-    def upload_media(self, request, pk=None):
+    def upload_media(self, request, pk=None) -> Response:
         """Upload media files (images/videos) to a module."""
-        import os
-        import uuid
-
-        from django.conf import settings
-        from django.core.files.storage import default_storage
-
         module = self.get_object()
         uploaded_file = request.FILES.get("file")
 
         if not uploaded_file:
             return Response({"error": "No file provided"}, status=400)
 
-        # Validate file type
-        allowed_types = [
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-            "video/mp4",
-            "video/webm",
-            "video/quicktime",
-        ]
-        content_type = uploaded_file.content_type
-        if content_type not in allowed_types:
-            return Response(
-                {"error": "File type not allowed. Allowed: images and videos"},
-                status=400,
-            )
-
-        if uploaded_file.size > settings.MAX_UPLOAD_SIZE_BYTES:
-            return Response(
-                {"error": f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB"},
-                status=400,
-            )
-
-        # Generate unique filename
-        ext = os.path.splitext(uploaded_file.name)[1]
-        unique_name = f"{uuid.uuid4().hex}{ext}"
-        file_path = f"modules/{module.id}/{unique_name}"
-
-        # Save file
-        saved_path = default_storage.save(file_path, uploaded_file)
-        file_url = default_storage.url(saved_path)
-
-        # Determine file type
-        file_type = "image" if content_type.startswith("image/") else "video"
-
-        # Add to module's media_files
-        media_entry = {
-            "id": uuid.uuid4().hex[:8],
-            "type": file_type,
-            "name": uploaded_file.name,
-            "url": file_url,
-            "content_type": content_type,
-        }
-
-        if module.media_files is None:
-            module.media_files = []
-        module.media_files.append(media_entry)
-        module.save()
+        try:
+            entry = MediaService.upload(module=module, uploaded_file=uploaded_file)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
 
         return Response(
             {
                 "message": "File uploaded successfully",
-                "file": media_entry,
+                "file": entry,
                 "media_files": module.media_files,
             }
         )
@@ -256,38 +209,14 @@ class ModuleViewSet(viewsets.ModelViewSet):
     @action(
         detail=True, methods=["delete"], url_path="delete-media/(?P<media_id>[^/.]+)"
     )
-    def delete_media(self, request, pk=None, media_id=None):
+    def delete_media(self, request, pk=None, media_id=None) -> Response:
         """Delete a media file from a module."""
-        from django.core.files.storage import default_storage
-
         module = self.get_object()
 
-        if not module.media_files:
-            return Response({"error": "No media files"}, status=404)
-
-        # Find and remove the media entry
-        media_to_delete = None
-        for media in module.media_files:
-            if media.get("id") == media_id:
-                media_to_delete = media
-                break
-
-        if not media_to_delete:
-            return Response({"error": "Media not found"}, status=404)
-
-        # Try to delete the actual file
         try:
-            url = media_to_delete.get("url", "")
-            if url.startswith("/media/"):
-                file_path = url.replace("/media/", "")
-                if default_storage.exists(file_path):
-                    default_storage.delete(file_path)
-        except Exception:
-            # File might already be deleted or storage error
-            pass
-
-        module.media_files.remove(media_to_delete)
-        module.save()
+            MediaService.delete(module=module, media_id=media_id)
+        except LookupError as exc:
+            return Response({"error": str(exc)}, status=404)
 
         return Response({"message": "Media deleted", "media_files": module.media_files})
 

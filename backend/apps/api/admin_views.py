@@ -12,17 +12,14 @@ import csv
 from datetime import datetime, timedelta
 from io import StringIO
 
-from apps.api.permissions import IsLeader
+from apps.core.services.admin_service import AdminBulkImportService, AdminDashboardService
 from apps.api.serializers import (
-    CourseSerializer,
-    LearnerSerializer,
     TenantSerializer,
     UserSerializer,
 )
 from apps.core.models import (
     Activity,
     Artifact,
-    Attendance,
     Course,
     Learner,
     LearnerCourseEnrollment,
@@ -32,8 +29,7 @@ from apps.core.models import (
 )
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Avg, Count, DateField, Q
-from django.db.models.functions import TruncDate
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -156,64 +152,11 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            decoded_file = csv_file.read().decode("utf-8")
-            io_string = StringIO(decoded_file)
-            reader = csv.DictReader(io_string)
-
-            created_count = 0
-            errors = []
-
-            with transaction.atomic():
-                for row_num, row in enumerate(reader, start=2):
-                    try:
-                        # Validate required fields
-                        required_fields = ["username", "email", "role"]
-                        missing_fields = [f for f in required_fields if not row.get(f)]
-                        if missing_fields:
-                            errors.append(
-                                f"Row {row_num}: Missing fields {missing_fields}"
-                            )
-                            continue
-
-                        # Create user
-                        user_data = {
-                            "username": row["username"],
-                            "email": row["email"],
-                            "first_name": row.get("first_name", ""),
-                            "last_name": row.get("last_name", ""),
-                            "role": row["role"],
-                        }
-
-                        school_id = row.get("school_id") or row.get("tenant_id")
-                        if school_id:
-                            try:
-                                tenant = School.objects.get(id=school_id)
-                                user_data["tenant"] = tenant
-                            except School.DoesNotExist:
-                                errors.append(
-                                    f"Row {row_num}: School {school_id} not found"
-                                )
-                                continue
-
-                        user = User.objects.create_user(**user_data)
-
-                        # Set password if provided
-                        if row.get("password"):
-                            user.set_password(row["password"])
-                            user.save()
-
-                        created_count += 1
-
-                    except Exception as e:
-                        errors.append(f"Row {row_num}: {str(e)}")
-
+            result = AdminBulkImportService.import_users(csv_file)
+            return Response(result)
+        except (UnicodeDecodeError, csv.Error) as exc:
             return Response(
-                {"success": True, "created": created_count, "errors": errors}
-            )
-
-        except Exception as e:
-            return Response(
-                {"error": f"Failed to process file: {str(e)}"},
+                {"error": f"Failed to process file: {exc}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -559,198 +502,8 @@ class AdminAnalyticsViewSet(viewsets.ViewSet):
         """
         try:
             days = int(request.query_params.get("days", 30))
-            days = max(1, min(days, 365))  # clamp: 1-365
+            days = max(1, min(days, 365))
         except (ValueError, TypeError):
             days = 30
 
-        end_dt = timezone.now()
-        start_dt = end_dt - timedelta(days=days)
-        today = end_dt.date()
-        start_date = start_dt.date()
-
-        # ── KPI snapshot (5 queries total) ────────────────────────────────────
-        total_users = User.objects.count()
-        active_users = User.objects.filter(is_active=True).count()
-        new_users = User.objects.filter(date_joined__gte=start_dt).count()
-        total_schools = School.objects.count()
-
-        total_sessions = Session.objects.count()
-        new_sessions = Session.objects.filter(created_at__gte=start_dt).count()
-        completed_sessions = Session.objects.filter(status="completed").count()
-
-        total_enrollments = LearnerCourseEnrollment.objects.filter(
-            is_active=True
-        ).count()
-        new_enrollments = LearnerCourseEnrollment.objects.filter(
-            enrolled_at__gte=start_dt
-        ).count()
-
-        total_attendance = Attendance.objects.count()
-        present_attendance = Attendance.objects.filter(status="present").count()
-        attendance_rate = (
-            round(present_attendance / total_attendance * 100, 1)
-            if total_attendance
-            else 0
-        )
-
-        # ── User growth — 1 query via GROUP BY date ───────────────────────────
-        _user_days = (
-            User.objects.filter(date_joined__date__gte=start_date)
-            .annotate(day=TruncDate("date_joined"))
-            .values("day")
-            .annotate(new_users=Count("id"))
-        )
-        _enroll_days = (
-            LearnerCourseEnrollment.objects.filter(enrolled_at__date__gte=start_date)
-            .annotate(day=TruncDate("enrolled_at"))
-            .values("day")
-            .annotate(new_enrollments=Count("id"))
-        )
-        user_by_day = {r["day"]: r["new_users"] for r in _user_days}
-        enroll_by_day = {r["day"]: r["new_enrollments"] for r in _enroll_days}
-        cur = start_date
-        user_growth = []
-        while cur <= today:
-            user_growth.append(
-                {
-                    "date": cur.isoformat(),
-                    "new_users": user_by_day.get(cur, 0),
-                    "new_enrollments": enroll_by_day.get(cur, 0),
-                }
-            )
-            cur += timedelta(days=1)
-
-        # ── Session trends — 2 queries (total + status breakdown) ─────────────
-        _sess_days = (
-            Session.objects.filter(date__gte=start_date)
-            .annotate(day=TruncDate("date"))
-            .values("day", "status")
-            .annotate(cnt=Count("id"))
-        )
-        sess_map: dict = {}  # day -> {total, completed, scheduled}
-        for row in _sess_days:
-            d = row["day"]
-            if d not in sess_map:
-                sess_map[d] = {"total": 0, "completed": 0, "scheduled": 0}
-            sess_map[d]["total"] += row["cnt"]
-            if row["status"] == "completed":
-                sess_map[d]["completed"] = row["cnt"]
-            elif row["status"] == "scheduled":
-                sess_map[d]["scheduled"] = row["cnt"]
-        cur = start_date
-        session_trend = []
-        while cur <= today:
-            entry = sess_map.get(cur, {"total": 0, "completed": 0, "scheduled": 0})
-            session_trend.append({"date": cur.isoformat(), **entry})
-            cur += timedelta(days=1)
-
-        # ── Role distribution (pie) — 1 query ─────────────────────────────────
-        role_distribution = list(
-            User.objects.values("role").annotate(count=Count("id")).order_by("-count")
-        )
-
-        # ── School performance (bar) — 1 query ────────────────────────────────
-        school_perf_raw = School.objects.annotate(
-            learner_count=Count("learner", distinct=True),
-            session_count=Count("session", distinct=True),
-        ).order_by("-learner_count")[:10]
-        school_performance = [
-            {
-                "school": s.name,
-                "learners": s.learner_count,
-                "sessions": s.session_count,
-            }
-            for s in school_perf_raw
-        ]
-
-        # ── Top teachers (by sessions) — 1 query ──────────────────────────────
-        top_teachers = list(
-            Session.objects.filter(created_at__gte=start_dt)
-            .values("teacher__first_name", "teacher__last_name", "teacher__username")
-            .annotate(
-                sessions=Count("id"),
-                completed=Count("id", filter=Q(status="completed")),
-            )
-            .order_by("-sessions")[:8]
-        )
-        for t in top_teachers:
-            full = f"{t['teacher__first_name']} {t['teacher__last_name']}".strip()
-            t["name"] = full or t["teacher__username"]
-            del (
-                t["teacher__first_name"],
-                t["teacher__last_name"],
-                t["teacher__username"],
-            )
-
-        # ── Attendance breakdown — 1 query via GROUP BY date+status ───────────
-        _att_rows = (
-            Attendance.objects.filter(session__date__gte=start_date)
-            .values("session__date", "status")
-            .annotate(cnt=Count("id"))
-        )
-        att_map: dict = {}
-        for row in _att_rows:
-            d = row["session__date"]
-            if d not in att_map:
-                att_map[d] = {"present": 0, "absent": 0, "late": 0, "total": 0}
-            st = row["status"]
-            att_map[d]["total"] += row["cnt"]
-            if st in ("present", "absent", "late"):
-                att_map[d][st] += row["cnt"]
-        cur = start_date
-        att_by_day = []
-        while cur <= today:
-            a = att_map.get(cur, {"present": 0, "absent": 0, "late": 0, "total": 0})
-            total_d = a["total"]
-            att_by_day.append(
-                {
-                    "date": cur.isoformat(),
-                    "rate": round(a["present"] / total_d * 100, 1) if total_d else 0,
-                    "present": a["present"],
-                    "absent": a["absent"],
-                    "late": a["late"],
-                }
-            )
-            cur += timedelta(days=1)
-
-        # ── Top pathways by enrollment — 1 query ──────────────────────────────
-        top_courses = list(
-            LearnerCourseEnrollment.objects.filter(is_active=True)
-            .values("course__name")
-            .annotate(count=Count("id"))
-            .order_by("-count")[:8]
-        )
-
-        return Response(
-            {
-                "meta": {
-                    "days": days,
-                    "start_date": start_date.isoformat(),
-                    "end_date": today.isoformat(),
-                },
-                "kpis": {
-                    "total_users": total_users,
-                    "active_users": active_users,
-                    "new_users": new_users,
-                    "total_schools": total_schools,
-                    "total_sessions": total_sessions,
-                    "new_sessions": new_sessions,
-                    "completed_sessions": completed_sessions,
-                    "total_enrollments": total_enrollments,
-                    "new_enrollments": new_enrollments,
-                    "attendance_rate": attendance_rate,
-                    "session_completion_rate": (
-                        round(completed_sessions / total_sessions * 100, 1)
-                        if total_sessions
-                        else 0
-                    ),
-                },
-                "user_growth": user_growth,
-                "session_trend": session_trend,
-                "role_distribution": role_distribution,
-                "school_performance": school_performance,
-                "top_teachers": top_teachers,
-                "attendance_trend": att_by_day,
-                "top_courses": top_courses,
-            }
-        )
+        return Response(AdminDashboardService.compute(days=days))

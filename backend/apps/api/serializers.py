@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from apps.core.models import (
     Achievement,
     Activity,
@@ -1469,7 +1471,7 @@ class BadgeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "awarded_by", "awarded_at"]
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict[str, Any]) -> Any:
         # Set awarded_by from request user
         request = self.context.get("request")
         if request and hasattr(request, "user"):
@@ -1807,3 +1809,83 @@ class SchoolStudentCreateSerializer(serializers.ModelSerializer):
                 continue
 
         return learner
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Gate engine serializers
+# ---------------------------------------------------------------------------
+
+class GateCheckSerializer(serializers.Serializer):
+    """Input for GET /gate/check/?layer=module&ref_id=<uuid>"""
+
+    LAYER_CHOICES = ["pathway", "track", "program", "module", "unit", "lesson", "task"]
+
+    layer = serializers.ChoiceField(choices=LAYER_CHOICES)
+    ref_id = serializers.UUIDField()
+
+
+class GateResultSerializer(serializers.Serializer):
+    """Read-only output of a gate check."""
+
+    is_open = serializers.BooleanField()
+    reason = serializers.CharField()
+    detail = serializers.CharField()
+
+
+class AdminOverrideCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        from apps.core.models import AdminOverride as _M
+        model = _M
+        fields = ["learner", "layer", "layer_ref_id", "reason"]
+
+    def validate_reason(self, value: str) -> str:
+        if not value or not value.strip():
+            raise serializers.ValidationError("A non-empty reason is required.")
+        return value.strip()
+
+    def create(self, validated_data: dict[str, Any]) -> Any:
+        from apps.core.gates import GateService
+
+        return GateService.apply_override(
+            actor=self.context["request"].user,
+            learner=validated_data["learner"],
+            layer=validated_data["layer"],
+            layer_ref_id=validated_data["layer_ref_id"],
+            reason=validated_data["reason"],
+        )
+
+
+class AdminOverrideSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        from apps.core.models import AdminOverride as _M
+        model = _M
+        fields = ["id", "actor", "actor_name", "learner", "layer", "layer_ref_id", "reason", "timestamp"]
+        read_only_fields = fields
+
+    def get_actor_name(self, obj: Any) -> str:
+        return str(obj.actor)
+
+
+class GrowthProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        from apps.core.models import GrowthProfile as _M
+        model = _M
+        fields = [
+            "id", "learner", "roots_score", "trunk_score", "branches",
+            "leaves_count", "fruit_count", "updated_at",
+        ]
+        read_only_fields = ["leaves_count", "fruit_count", "updated_at"]
+
+
+class ModuleProgressSerializer(serializers.ModelSerializer):
+    class Meta:
+        from apps.core.models import ModuleProgress as _M
+        model = _M
+        fields = [
+            "id", "learner", "module", "units_completed", "units_total",
+            "attendance_count", "artifact_submitted", "reflection_submitted",
+            "teacher_verified", "quiz_passed", "microcredential_eligible",
+            "completion_status",
+        ]

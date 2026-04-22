@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/lib/toast";
+import { schoolApi } from "@/lib/api";
 import {
     GraduationCap, Search, UserPlus, Eye, Edit, Trash2, ArrowLeft, Mail, Users, BookOpen
 } from "lucide-react";
@@ -23,169 +25,128 @@ interface Teacher {
     phone_number: string;
 }
 
-export default function SchoolTeachers() {
+interface TeacherFormState {
+    first_name: string;
+    last_name: string;
+    email: string;
+    subject_specialization: string;
+    phone_number: string;
+}
+
+const EMPTY_FORM: TeacherFormState = {
+    first_name: "",
+    last_name: "",
+    email: "",
+    subject_specialization: "",
+    phone_number: "",
+};
+
+export default function SchoolTeachers(): JSX.Element {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+
     const [searchTerm, setSearchTerm] = useState("");
-    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(
+        searchParams.get("action") === "add"
+    );
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [teacherForm, setTeacherForm] = useState({
-        first_name: "",
-        last_name: "",
-        email: "",
-        subject_specialization: "",
-        phone_number: ""
+    const [teacherForm, setTeacherForm] = useState<TeacherFormState>(EMPTY_FORM);
+
+    /* ── Fetch teachers ─────────────────────────────────────────────────────── */
+    const { data: teachers = [], isLoading, isError } = useQuery<Teacher[]>({
+        queryKey: ["school-teachers"],
+        queryFn: async (): Promise<Teacher[]> => {
+            const res = await schoolApi.teachers.getAll();
+            return Array.isArray(res.data) ? res.data : res.data?.results ?? [];
+        },
     });
 
-    useEffect(() => {
-        fetchTeachers();
-        // Check if we should open add dialog
-        if (searchParams.get('action') === 'add') {
-            setIsAddDialogOpen(true);
-        }
-    }, [searchParams]);
-
-    const fetchTeachers = async () => {
-        try {
-            setLoading(true);
-            // TODO: Replace with actual API call
-            // const response = await schoolApi.teachers.getAll();
-            // setTeachers(response.data);
-
-            // Mock data for now
-            setTimeout(() => {
-                setTeachers([
-                    {
-                        id: "1",
-                        first_name: "Sarah",
-                        last_name: "Johnson",
-                        full_name: "Sarah Johnson",
-                        email: "sarah.johnson@school.com",
-                        subject_specialization: "Mathematics",
-                        students_count: 45,
-                        courses_count: 3,
-                        phone_number: "+254712345678"
-                    },
-                    {
-                        id: "2",
-                        first_name: "Michael",
-                        last_name: "Brown",
-                        full_name: "Michael Brown",
-                        email: "michael.brown@school.com",
-                        subject_specialization: "Science",
-                        students_count: 38,
-                        courses_count: 2,
-                        phone_number: "+254723456789"
-                    }
-                ]);
-                setLoading(false);
-            }, 500);
-        } catch (error) {
-            console.error("Failed to fetch teachers:", error);
-            setLoading(false);
-        }
-    };
-
-    const handleAddTeacher = async () => {
-        if (isSubmitting) return;
-        try {
-            setIsSubmitting(true);
-            // TODO: API call to add teacher
-            // await schoolApi.teachers.create(teacherForm);
-            console.log("Adding teacher:", teacherForm);
-
+    /* ── Add teacher ────────────────────────────────────────────────────────── */
+    const addMutation = useMutation({
+        mutationFn: (data: TeacherFormState) => schoolApi.teachers.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["school-teachers"] });
             setIsAddDialogOpen(false);
-            setTeacherForm({
-                first_name: "",
-                last_name: "",
-                email: "",
-                subject_specialization: "",
-                phone_number: ""
-            });
-            fetchTeachers();
+            setTeacherForm(EMPTY_FORM);
             toast.success("Teacher added successfully!", "Saved");
-        } catch (error) {
-            console.error("Failed to add teacher:", error);
+        },
+        onError: () => {
             toast.error("Failed to add teacher. Please try again.", "Save Failed");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        },
+    });
 
-    const handleEditTeacher = async () => {
-        if (!selectedTeacher || isSubmitting) return;
-
-        try {
-            setIsSubmitting(true);
-            // TODO: API call to update teacher
-            // await schoolApi.teachers.update(selectedTeacher.id, teacherForm);
-            console.log("Updating teacher:", selectedTeacher.id, teacherForm);
-
+    /* ── Update teacher ─────────────────────────────────────────────────────── */
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: TeacherFormState }) =>
+            schoolApi.teachers.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["school-teachers"] });
             setIsEditDialogOpen(false);
             setSelectedTeacher(null);
-            setTeacherForm({
-                first_name: "",
-                last_name: "",
-                email: "",
-                subject_specialization: "",
-                phone_number: ""
-            });
-            fetchTeachers();
+            setTeacherForm(EMPTY_FORM);
             toast.success("Teacher updated successfully!", "Saved");
-        } catch (error) {
-            console.error("Failed to update teacher:", error);
+        },
+        onError: () => {
             toast.error("Failed to update teacher. Please try again.", "Update Failed");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        },
+    });
 
-    const handleDeleteTeacher = async (teacherId: string) => {
-        if (!confirm("Are you sure you want to delete this teacher?")) return;
-        if (isSubmitting) return;
-
-        try {
-            setIsSubmitting(true);
-            // TODO: API call to delete teacher
-            // await schoolApi.teachers.delete(teacherId);
-            console.log("Deleting teacher:", teacherId);
-
-            fetchTeachers();
+    /* ── Delete teacher ─────────────────────────────────────────────────────── */
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => schoolApi.teachers.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["school-teachers"] });
             toast.success("Teacher deleted successfully!", "Deleted");
-        } catch (error) {
-            console.error("Failed to delete teacher:", error);
+        },
+        onError: () => {
             toast.error("Failed to delete teacher. Please try again.", "Delete Failed");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        },
+    });
 
-    const openEditDialog = (teacher: Teacher) => {
+    const openEditDialog = (teacher: Teacher): void => {
         setSelectedTeacher(teacher);
         setTeacherForm({
             first_name: teacher.first_name,
             last_name: teacher.last_name,
             email: teacher.email,
             subject_specialization: teacher.subject_specialization,
-            phone_number: teacher.phone_number
+            phone_number: teacher.phone_number,
         });
         setIsEditDialogOpen(true);
     };
 
-    const filteredTeachers = teachers.filter(teacher =>
+    const handleDeleteTeacher = (teacherId: string): void => {
+        if (!confirm("Are you sure you want to delete this teacher?")) return;
+        deleteMutation.mutate(teacherId);
+    };
+
+    const filteredTeachers = teachers.filter((teacher) =>
         teacher.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         teacher.subject_specialization.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) {
+    const isMutating =
+        addMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-lime)] border-t-transparent rounded-full"></div>
+                <div className="animate-spin h-12 w-12 border-4 border-fundi-lime border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+                <GraduationCap className="h-16 w-16 text-gray-400" />
+                <p className="text-gray-600 text-lg font-semibold">Failed to load teachers</p>
+                <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["school-teachers"] })}>
+                    Retry
+                </Button>
             </div>
         );
     }
@@ -196,15 +157,11 @@ export default function SchoolTeachers() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate("/school")}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => navigate("/school")}>
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                         <div>
-                            <h1 className="heading-font text-3xl md:text-4xl font-bold" style={{ color: "var(--fundi-black)" }}>
+                            <h1 className="heading-font text-3xl md:text-4xl font-bold text-fundi-black">
                                 Teacher Management
                             </h1>
                             <p className="text-gray-600">Manage your school's teachers</p>
@@ -212,8 +169,7 @@ export default function SchoolTeachers() {
                     </div>
                     <Button
                         onClick={() => setIsAddDialogOpen(true)}
-                        style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
-                        className="flex items-center gap-2"
+                        className="bg-fundi-lime text-white flex items-center gap-2"
                     >
                         <UserPlus className="h-5 w-5" />
                         Add Teacher
@@ -239,7 +195,7 @@ export default function SchoolTeachers() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <GraduationCap className="h-5 w-5" style={{ color: "var(--fundi-lime)" }} />
+                            <GraduationCap className="h-5 w-5 text-fundi-lime" />
                             All Teachers ({filteredTeachers.length})
                         </CardTitle>
                         <CardDescription>View and manage teacher information</CardDescription>
@@ -266,8 +222,7 @@ export default function SchoolTeachers() {
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                                                            style={{ backgroundColor: "var(--fundi-lime)" }}>
+                                                        <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-fundi-lime">
                                                             {teacher.first_name[0]}{teacher.last_name[0]}
                                                         </div>
                                                         <div>
@@ -310,7 +265,7 @@ export default function SchoolTeachers() {
                                                             size="sm"
                                                             onClick={() => handleDeleteTeacher(teacher.id)}
                                                             className="text-red-600 hover:bg-red-50"
-                                                            disabled={isSubmitting}
+                                                            disabled={isMutating}
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-1" />
                                                             Delete
@@ -389,8 +344,12 @@ export default function SchoolTeachers() {
                             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={handleAddTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }} disabled={isSubmitting}>
-                                {isSubmitting ? "Saving..." : "Add Teacher"}
+                            <Button
+                                onClick={() => addMutation.mutate(teacherForm)}
+                                className="bg-fundi-lime text-white"
+                                disabled={addMutation.isPending}
+                            >
+                                {addMutation.isPending ? "Saving..." : "Add Teacher"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -454,8 +413,16 @@ export default function SchoolTeachers() {
                             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={handleEditTeacher} style={{ backgroundColor: "var(--fundi-lime)", color: "white" }} disabled={isSubmitting}>
-                                {isSubmitting ? "Saving..." : "Save Changes"}
+                            <Button
+                                onClick={() => {
+                                    if (selectedTeacher) {
+                                        updateMutation.mutate({ id: selectedTeacher.id, data: teacherForm });
+                                    }
+                                }}
+                                className="bg-fundi-lime text-white"
+                                disabled={updateMutation.isPending}
+                            >
+                                {updateMutation.isPending ? "Saving..." : "Save Changes"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

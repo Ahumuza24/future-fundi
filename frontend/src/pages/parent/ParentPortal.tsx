@@ -196,8 +196,7 @@ const ParentPortal = () => {
           </p>
           <Button
             onClick={() => setShowManagement(true)}
-            style={{ backgroundColor: "var(--fundi-orange)" }}
-            className="text-white text-lg px-8 py-6 rounded-xl hover:opacity-90 transition-opacity"
+            className="bg-fundi-orange text-white text-lg px-8 py-6 rounded-xl hover:opacity-90 transition-opacity"
           >
             + Add Your First Child
           </Button>

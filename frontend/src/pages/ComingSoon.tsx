@@ -14,7 +14,7 @@ export default function ComingSoon() {
                         <Construction className="h-10 w-10 text-blue-600" />
                     </div>
 
-                    <h1 className="heading-font text-2xl font-bold mb-2" style={{ color: "var(--fundi-black)" }}>
+                    <h1 className="heading-font text-2xl font-bold mb-2 text-fundi-black">
                         Coming Soon!
                     </h1>
 
@@ -24,8 +24,7 @@ export default function ComingSoon() {
 
                     <Button
                         onClick={() => navigate(-1)}
-                        className="w-full"
-                        style={{ backgroundColor: "var(--fundi-cyan)" }}
+                        className="w-full bg-fundi-cyan"
                     >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Go Back

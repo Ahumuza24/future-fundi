@@ -1,0 +1,58 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Future Fundi Frontend Architecture and State Management",
+  "description": "Architecture tour covering frontend structure, React/Vite setup, Zustand state management, and React Query usage",
+  "ref": "main",
+  "steps": [
+    {
+      "directory": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src",
+      "title": "Frontend Source Structure",
+      "description": "Situation: This directory contains all frontend code built with React 19, TypeScript, Vite 7, and Tailwind CSS 4. Mechanism: Organized by feature/domain with components, pages, hooks, lib, and state management separation. Implication: Follows modern frontend best practices of separating concerns and organizing by feature rather than file type. Gotcha: The structure reflects deliberate choices around scalability and maintainability as the platform grows.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/main.tsx",
+      "line": 1,
+      "title": "Application Entry Point",
+      "description": "Situation: Examining the React application entry point. Mechanism: Shows React 18 strict mode wrapping, Provider components for Zustand store and React Query, and Router configuration. Implication: Sets up global state management, data fetching, and routing foundations. Gotcha: The order of providers matters - Router should be inside providers for proper navigation state access.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/App.tsx",
+      "line": 1,
+      "title": "Main Application Router",
+      "description": "Situation: Looking at the main App component that defines application routes. Mechanism: Shows how routes are organized by role (student, teacher, parent, etc.) using nested route structures. Implication: Centralizes route definitions and enables role-based access control at the routing level. Gotcha: Route guards should be implemented to prevent unauthorized access to role-specific paths.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/lib/store.ts",
+      "line": 1,
+      "title": "Zustand State Management",
+      "description": "Situation: Examining the global state store using Zustand. Mechanism: Shows how global UI state (like sidebar collapse, theme preferences, modal states) is managed outside of React Query server state. Implication: Separates client-side UI state from server state to prevent unnecessary re-fetches. Gotcha: Only put truly global UI state here - avoid duplicating server state or putting frequently changing data.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/lib/api.ts",
+      "line": 1,
+      "title": "React Query API Client",
+      "description": "Situation: Looking at the API client built with React Query and axios. Mechanism: Shows request/response interceptors for JWT token handling, error normalization, and query key organization. Implication: Centralizes data fetching, caching, background updates, and optimistic updates. Gotcha: Query keys should be structured hierarchically to enable proper cache invalidation and refetching.",
+    },
+    {
+      "directory": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/hooks",
+      "title": "Custom Hooks Collection",
+      "description": "Situation: Examining custom React hooks that encapsulate reusable logic. Mechanism: Shows examples like useAsync for loading states, useScrollProgress for scrollytelling, and domain-specific hooks. Implication: Encapsulates complex logic in reusable units following React best practices. Gotcha: Custom hooks should follow the Rules of Hooks and avoid breaking React's rendering assumptions.",
+    },
+    {
+      "directory": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/components/ui",
+      "title": "Primitive UI Components (shadcn/ui)",
+      "description": "Situation: Looking at the Radix-based primitive UI components from shadcn/ui. Mechanism: Shows accessible, unstyled components like Button, Input, Dialog, etc. that are composed with Tailwind classes. Implication: Provides accessible building blocks that can be customized while maintaining accessibility. Gotcha: These primitives should be extended with application-specific variants rather than modified directly.",
+    },
+    {
+      "directory": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/components",
+      "title": "Application-Specific Components",
+      "description": "Situation: Examining how primitive components are composed into application-specific UI. Mechanism: Shows components like ChildManagement, SettingsModal, ArtifactGallery, etc. that combine primitives with business logic. Implication: Demonstrates component composition patterns and separation of concerns. Gotcha: Application components should handle data fetching and state management, delegating presentation to primitives where appropriate.",
+    },
+    {
+      "file": "/Users/cedricahumuza/Desktop/future-fundi/frontend/src/pages/admin/AdminCourseManagement.tsx",
+      "line": 1,
+      "title": "Role-Based Page Example",
+      "description": "Situation: Looking at an admin-specific page for course/pathway management. Mechanism: Shows how admin pages use API hooks, handle authorization, and present role-appropriate interfaces. Implication: Each role directory contains pages tailored to that user type's permissions and workflows. Gotcha: Authorization should be checked at both API and UI levels - never rely solely on UI hiding for security."
+    }
+  ]
+}

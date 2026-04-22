@@ -4,6 +4,23 @@
 
 @import "tailwindcss";
 
+/* Register Fundi brand colors as Tailwind 4 theme tokens.
+   This makes text-fundi-*, bg-fundi-*, border-fundi-*, etc. available. */
+@theme {
+  --color-fundi-orange: #f05722;
+  --color-fundi-orange-dark: #c74419;
+  --color-fundi-orange-light: #ff8555;
+  --color-fundi-red: #e91e25;
+  --color-fundi-red-dark: #b8181d;
+  --color-fundi-yellow: #fedc00;
+  --color-fundi-yellow-dark: #d4b800;
+  --color-fundi-black: #000000;
+  --color-fundi-cyan: #15bddb;
+  --color-fundi-lime: #9ecb3a;
+  --color-fundi-purple: #9a459a;
+  --color-fundi-pink: #ea3d96;
+}
+
 @layer base {
   :root {
     /* Tailwind theme tokens (kept for base semantics) */

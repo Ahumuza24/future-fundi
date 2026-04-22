@@ -41,7 +41,7 @@ export const getModuleIndex = (
   moduleId: string | null
 ): number => (moduleId ? modules.findIndex((module) => module.id === moduleId) : -1);
 
-export const getModuleProgressSummary = (levels: PathwayLevel[]) => {
+export const getModuleProgressSummary = (levels: PathwayLevel[]): { totalModules: number; completedModules: number } => {
   const modules = dedupeModules(flattenModules(levels));
   const completedModules = modules.filter((module) => {
     const level = getModuleLevel(levels, module.id);

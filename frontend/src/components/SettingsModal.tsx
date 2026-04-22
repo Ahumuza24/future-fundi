@@ -30,7 +30,7 @@ interface SettingsModalProps {
 
 export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     const user = getCurrentUser() as UserData | null;
-    const setUser = useAuthStore((state: any) => state.setUser);
+    const setUser = useAuthStore((state) => state.setUser);
 
     const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
     const [avatarUploading, setAvatarUploading] = useState(false);
@@ -93,8 +93,9 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 localStorage.setItem("user", JSON.stringify(updatedUser));
                 setUser(updatedUser);
             }
-        } catch (error: any) {
-            showMessage("error", error.response?.data?.error || "Failed to upload avatar");
+        } catch (error: unknown) {
+            const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+            showMessage("error", msg || "Failed to upload avatar");
         } finally {
             setAvatarUploading(false);
         }
@@ -139,8 +140,9 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 localStorage.setItem("user", JSON.stringify(updatedUser));
                 setUser(updatedUser);
             }
-        } catch (error: any) {
-            showMessage("error", error.response?.data?.detail || "Failed to update profile");
+        } catch (error: unknown) {
+            const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+            showMessage("error", msg || "Failed to update profile");
         } finally {
             setSaving(false);
         }
@@ -152,14 +154,30 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             showMessage("error", "Passwords don't match!");
             return;
         }
-        // TODO: Implement password change API call
-        showMessage("success", "Password updated successfully!");
-        setFormData(prev => ({
-            ...prev,
-            current_password: "",
-            new_password: "",
-            confirm_password: "",
-        }));
+        setSaving(true);
+        try {
+            await authApi.changePassword({
+                current_password: formData.current_password,
+                new_password: formData.new_password,
+            });
+            showMessage("success", "Password updated successfully!");
+            setFormData(prev => ({
+                ...prev,
+                current_password: "",
+                new_password: "",
+                confirm_password: "",
+            }));
+        } catch (error: unknown) {
+            const apiErr = error as { response?: { data?: { current_password?: string; new_password?: string; detail?: string } } };
+            const msg =
+                apiErr?.response?.data?.current_password ||
+                apiErr?.response?.data?.new_password ||
+                apiErr?.response?.data?.detail ||
+                "Failed to update password";
+            showMessage("error", msg);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const fullName = `${formData.first_name} ${formData.last_name}`.trim();
@@ -203,7 +221,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     {/* Profile Picture */}
                     <section className="bg-gray-50/50 rounded-lg p-5 border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
-                            <Camera className="h-5 w-5 text-[var(--fundi-cyan)]" />
+                            <Camera className="h-5 w-5 text-fundi-cyan" />
                             <h3 className="text-lg font-bold">Profile Picture</h3>
                         </div>
 
@@ -220,7 +238,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                 <div className="flex flex-wrap gap-3">
                                     <label
                                         htmlFor="avatar-modal-upload"
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold cursor-pointer transition-all hover:shadow-lg bg-[var(--fundi-cyan)] hover:opacity-90 text-sm"
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold cursor-pointer transition-all hover:shadow-lg bg-fundi-cyan hover:opacity-90 text-sm"
                                     >
                                         <Camera className="h-4 w-4" />
                                         {avatarUrl ? "Change Photo" : "Upload Photo"}
@@ -256,7 +274,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     {/* Profile Information */}
                     <section className="bg-gray-50/50 rounded-lg p-5 border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
-                            <User className="h-5 w-5 text-[var(--fundi-orange)]" />
+                            <User className="h-5 w-5 text-fundi-orange" />
                             <h3 className="text-lg font-bold">Profile Information</h3>
                         </div>
 
@@ -270,7 +288,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                         type="text"
                                         value={formData.first_name}
                                         onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-orange"
                                     />
                                 </div>
 
@@ -282,7 +300,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                         type="text"
                                         value={formData.last_name}
                                         onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-orange"
                                     />
                                 </div>
                             </div>
@@ -295,7 +313,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                     type="email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-orange)]"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-orange"
                                 />
                             </div>
 
@@ -303,7 +321,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                 <Button
                                     type="submit"
                                     disabled={saving}
-                                    className="bg-[var(--fundi-orange)] hover:bg-[var(--fundi-orange-dark)] gap-2"
+                                    className="bg-fundi-orange hover:opacity-90 gap-2"
                                 >
                                     {saving ? (
                                         <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -319,7 +337,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     {/* Security Settings */}
                     <section className="bg-gray-50/50 rounded-lg p-5 border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
-                            <Lock className="h-5 w-5 text-[var(--fundi-red)]" />
+                            <Lock className="h-5 w-5 text-fundi-red" />
                             <h3 className="text-lg font-bold">Security</h3>
                         </div>
 
@@ -332,7 +350,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                     type="password"
                                     value={formData.current_password}
                                     onChange={(e) => setFormData({ ...formData, current_password: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-red)]"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-red"
                                     placeholder="Enter current password"
                                 />
                             </div>
@@ -346,7 +364,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                         type="password"
                                         value={formData.new_password}
                                         onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-red)]"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-red"
                                         placeholder="Enter new password"
                                     />
                                 </div>
@@ -359,7 +377,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                                         type="password"
                                         value={formData.confirm_password}
                                         onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--fundi-red)]"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-fundi-red"
                                         placeholder="Confirm new password"
                                     />
                                 </div>
@@ -368,7 +386,8 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                             <div className="flex justify-end pt-2">
                                 <Button
                                     type="submit"
-                                    className="bg-[var(--fundi-red)] hover:opacity-90 gap-2"
+                                    disabled={saving}
+                                    className="bg-fundi-red hover:opacity-90 gap-2"
                                 >
                                     <Shield className="h-4 w-4" />
                                     Update Password
