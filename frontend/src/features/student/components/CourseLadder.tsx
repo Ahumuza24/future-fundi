@@ -112,7 +112,7 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
 
     if (loading) {
         return (
-            <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-purple)" }}>
+            <Card className="border-l-4 border-l-fundi-purple">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-purple-100">
@@ -133,7 +133,7 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
     }
 
     return (
-        <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-purple)" }}>
+        <Card className="border-l-4 border-l-fundi-purple">
             <CardHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-purple-100">

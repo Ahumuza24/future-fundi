@@ -148,7 +148,7 @@ const ParentPortal = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-orange)] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin h-12 w-12 border-4 border-fundi-orange border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your portal...</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ const ParentPortal = () => {
       <div className="min-h-screen p-4 md:p-8 bg-gray-50/50">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="heading-font text-3xl font-bold text-[var(--fundi-black)]">
+            <h1 className="heading-font text-3xl font-bold text-fundi-black">
               Manage Children
             </h1>
             <Button
@@ -185,10 +185,10 @@ const ParentPortal = () => {
     return (
       <div className="min-h-screen p-8 flex items-center justify-center bg-gray-50/50">
         <Card className="max-w-2xl w-full text-center p-12 shadow-xl border-dashed border-4 border-gray-200">
-          <div className="w-24 h-24 bg-[var(--fundi-orange)]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Users className="h-12 w-12 text-[var(--fundi-orange)]" />
+          <div className="w-24 h-24 bg-fundi-orange/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Users className="h-12 w-12 text-fundi-orange" />
           </div>
-          <h2 className="heading-font text-3xl font-bold mb-4 text-[var(--fundi-black)]">
+          <h2 className="heading-font text-3xl font-bold mb-4 text-fundi-black">
             Welcome to Future Fundi!
           </h2>
           <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
@@ -235,7 +235,7 @@ const ParentPortal = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="heading-font text-3xl md:text-4xl font-bold text-[var(--fundi-black)]">
+            <h1 className="heading-font text-3xl md:text-4xl font-bold text-fundi-black">
               Parent Portal
             </h1>
             <p className="text-gray-600 mt-1">Foundations for the future.</p>
@@ -251,7 +251,7 @@ const ParentPortal = () => {
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-medium transition-all",
                     selectedChildId === child.id
-                      ? "bg-[var(--fundi-orange)] text-white shadow-sm"
+                      ? "bg-fundi-orange text-white shadow-sm"
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
@@ -278,10 +278,10 @@ const ParentPortal = () => {
             <div className="lg:col-span-4 space-y-8">
 
               {/* Child Profile Card */}
-              <Card className="border-t-4 border-t-[var(--fundi-cyan)] shadow-sm overflow-hidden">
+              <Card className="border-t-4 border-t-fundi-cyan shadow-sm overflow-hidden">
                 <CardContent className="p-6 text-center">
-                  <div className="w-24 h-24 bg-[var(--fundi-cyan)]/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[var(--fundi-cyan)]">
-                    <span className="heading-font text-3xl text-[var(--fundi-cyan)]">
+                  <div className="w-24 h-24 bg-fundi-cyan/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-fundi-cyan">
+                    <span className="heading-font text-3xl text-fundi-cyan">
                       {dashboardData.child.first_name[0]}
                     </span>
                   </div>
@@ -298,7 +298,7 @@ const ParentPortal = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Zap className="h-4 w-4 text-[var(--fundi-yellow)]" />
+                      <Zap className="h-4 w-4 text-fundi-yellow" />
                       <span>{dashboardData.subscription.tier} Plan</span>
                     </div>
                   </div>
@@ -308,7 +308,7 @@ const ParentPortal = () => {
               {/* Enrolled Pathways */}
               <div>
                 <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                  <BookOpen className="h-5 w-5 text-[var(--fundi-purple)]" />
+                  <BookOpen className="h-5 w-5 text-fundi-purple" />
                   Current Learning Pathways
                 </h3>
                 <div className="space-y-4">
@@ -467,7 +467,7 @@ const ParentPortal = () => {
                     <div className="text-center p-6 bg-white rounded-xl border border-dashed">
                       <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">No active pathways</p>
-                      <Button variant="ghost" onClick={() => setShowManagement(true)} className="text-[var(--fundi-orange)] hover:bg-orange-50 underline">
+                      <Button variant="ghost" onClick={() => setShowManagement(true)} className="text-fundi-orange hover:bg-orange-50 underline">
                         Enroll in a pathway
                       </Button>
                     </div>
@@ -478,7 +478,7 @@ const ParentPortal = () => {
               {/* Upcoming Activities */}
               <div>
                 <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                  <Calendar className="h-5 w-5 text-[var(--fundi-orange)]" />
+                  <Calendar className="h-5 w-5 text-fundi-orange" />
                   Upcoming Activities
                 </h3>
                 <Card className="border-0 shadow-sm bg-white">
@@ -494,7 +494,7 @@ const ParentPortal = () => {
                             }}
                             className="p-4 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group"
                           >
-                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-[var(--fundi-orange)]/10 text-[var(--fundi-orange)] rounded-lg flex-shrink-0 group-hover:bg-[var(--fundi-orange)] group-hover:text-white transition-colors">
+                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-fundi-orange/10 text-fundi-orange rounded-lg flex-shrink-0 group-hover:bg-fundi-orange group-hover:text-white transition-colors">
                               <span className="text-xs font-bold uppercase">
                                 {formatActivityDate(activity.date, 'MMM', '--')}
                               </span>
@@ -503,7 +503,7 @@ const ParentPortal = () => {
                               </span>
                             </div>
                             <div className="flex-1">
-                              <h5 className="font-bold text-gray-900 group-hover:text-[var(--fundi-orange)] transition-colors">{activity.title}</h5>
+                              <h5 className="font-bold text-gray-900 group-hover:text-fundi-orange transition-colors">{activity.title}</h5>
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
@@ -515,7 +515,7 @@ const ParentPortal = () => {
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center text-gray-300 group-hover:text-[var(--fundi-orange)]">
+                            <div className="flex items-center text-gray-300 group-hover:text-fundi-orange">
                               <Zap className="h-4 w-4 rotate-90" />
                             </div>
                           </div>
@@ -538,7 +538,7 @@ const ParentPortal = () => {
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
-                    <Award className="h-5 w-5 text-[var(--fundi-yellow)]" />
+                    <Award className="h-5 w-5 text-fundi-yellow" />
                     Earned Badges
                   </h3>
                   <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border">
@@ -554,7 +554,7 @@ const ParentPortal = () => {
                         whileHover={{ scale: 1.05 }}
                         className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3"
                       >
-                        <div className="w-16 h-16 rounded-full bg-[var(--fundi-yellow)]/20 flex items-center justify-center p-3">
+                        <div className="w-16 h-16 rounded-full bg-fundi-yellow/20 flex items-center justify-center p-3">
                           <Award className="w-8 h-8 text-[var(--fundi-yellow-dark)]" />
                         </div>
                         <div>
@@ -576,10 +576,10 @@ const ParentPortal = () => {
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
-                    <Star className="h-5 w-5 text-[var(--fundi-lime)]" />
+                    <Star className="h-5 w-5 text-fundi-lime" />
                     Recent Artifacts
                   </h3>
-                  <Button variant="ghost" size="sm" className="text-[var(--fundi-lime)] hover:text-green-700 hover:bg-green-50">
+                  <Button variant="ghost" size="sm" className="text-fundi-lime hover:text-green-700 hover:bg-green-50">
                     View All
                   </Button>
                 </div>
@@ -646,7 +646,7 @@ const ParentPortal = () => {
                 {/* Teachers & Contact */}
                 <section>
                   <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                    <MessageSquare className="h-5 w-5 text-[var(--fundi-red)]" />
+                    <MessageSquare className="h-5 w-5 text-fundi-red" />
                     Your Teachers
                   </h3>
                   <Card className="border-0 shadow-sm bg-white">
@@ -662,7 +662,7 @@ const ParentPortal = () => {
                               <p className="text-xs text-gray-500">{teacher.role}</p>
                             </div>
                           </div>
-                          <Button size="icon" variant="ghost" className="text-[var(--fundi-red)] bg-red-50 hover:bg-red-100 rounded-full h-8 w-8">
+                          <Button size="icon" variant="ghost" className="text-fundi-red bg-red-50 hover:bg-red-100 rounded-full h-8 w-8">
                             <MessageSquare className="h-4 w-4" />
                           </Button>
                         </div>
@@ -683,8 +683,8 @@ const ParentPortal = () => {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-[var(--fundi-orange)]/10 rounded-lg">
-                  <Calendar className="h-6 w-6 text-[var(--fundi-orange)]" />
+                <div className="p-2 bg-fundi-orange/10 rounded-lg">
+                  <Calendar className="h-6 w-6 text-fundi-orange" />
                 </div>
                 <div className="flex flex-col text-left">
                   <DialogTitle>{selectedActivity?.title}</DialogTitle>

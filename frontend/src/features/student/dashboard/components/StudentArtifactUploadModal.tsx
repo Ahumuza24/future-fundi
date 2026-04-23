@@ -129,28 +129,27 @@ export function StudentArtifactUploadModal({
       setSelectedPathwayId("");
       setSelectedModuleId("");
       onSuccess();
-    } catch (err: any) {
-      // Handle validation errors from the backend
-      const responseData = err.response?.data;
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: Record<string, unknown> }; message?: string };
+      const responseData = e.response?.data;
       if (responseData) {
-        // Check for specific field errors
-        if (responseData.title) {
-          setError(`Title: ${responseData.title}`);
-        } else if (responseData.reflection) {
-          setError(`Reflection: ${responseData.reflection}`);
-        } else if (responseData.error) {
-          setError(responseData.error);
-        } else if (responseData.detail) {
-          setError(responseData.detail);
+        const { title, reflection, error, detail } = responseData;
+        if (title) {
+          setError(`Title: ${title}`);
+        } else if (reflection) {
+          setError(`Reflection: ${reflection}`);
+        } else if (error) {
+          setError(String(error));
+        } else if (detail) {
+          setError(String(detail));
         } else {
-          // Handle generic validation errors object
           const errorMessages = Object.entries(responseData)
             .map(([key, value]) => `${key}: ${value}`)
             .join(', ');
           setError(errorMessages || "Failed to upload artifact. Please try again.");
         }
       } else {
-        setError(err.message || "Failed to upload artifact. Please try again.");
+        setError(e.message || "Failed to upload artifact. Please try again.");
       }
     } finally {
       setLoading(false);

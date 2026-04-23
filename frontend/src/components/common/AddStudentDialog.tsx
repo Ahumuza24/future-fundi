@@ -288,7 +288,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                             <input
                                 type="checkbox"
                                 id="t-consent"
-                                className="h-4 w-4 text-[var(--fundi-purple)] rounded"
+                                className="h-4 w-4 accent-fundi-purple rounded"
                                 checked={studentForm.consent_media}
                                 onChange={(e) => setStudentForm({ ...studentForm, consent_media: e.target.checked })}
                             />
@@ -308,7 +308,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
                                         id={`tpw-${c.id}`}
                                         checked={studentForm.pathway_ids.includes(c.id)}
                                         onChange={() => handlePathwayToggle(c.id)}
-                                        className="h-4 w-4 text-[var(--fundi-purple)] rounded"
+                                        className="h-4 w-4 accent-fundi-purple rounded"
                                     />
                                     <Label htmlFor={`tpw-${c.id}`} className="flex-1 cursor-pointer">
                                         {c.name}
@@ -321,7 +321,7 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, courses }: Add
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={handleAddStudent} disabled={isSubmitting} style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}>
+                    <Button onClick={handleAddStudent} disabled={isSubmitting} className="bg-fundi-cyan text-white">
                         {isSubmitting ? "Saving..." : "Add Student"}
                     </Button>
                 </DialogFooter>

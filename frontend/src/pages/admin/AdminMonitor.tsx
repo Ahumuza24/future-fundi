@@ -5,7 +5,8 @@ import {
     CalendarDays, ListTodo, Users, RefreshCw, Filter,
     CheckCircle2, Clock, AlertCircle, BarChart3,
     BookOpen, GraduationCap, School, ChevronDown,
-    TrendingUp, CheckCheck, XCircle, Loader2
+    TrendingUp, CheckCheck, XCircle, Loader2,
+    type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,9 +52,25 @@ const ATT_STATUS: Record<string, string> = {
     late: "bg-amber-100 text-amber-700",
 };
 
+/* ─── Summary shapes ─────────────────────────────────────────────────────── */
+interface SessionsSummary {
+    today: number;
+    this_month: number;
+    attendance_pending: number;
+}
+interface TasksSummary {
+    by_status: { todo: number; in_progress: number; done: number };
+    overdue: number;
+}
+interface AttSummary {
+    overall_attendance_rate: number;
+    by_status: { present: number; absent: number; late: number };
+    this_month: number;
+}
+
 /* ─── Stat card ───────────────────────────────────────────────────────────── */
 function StatCard({ label, value, sub, color, icon: Icon }:
-    { label: string; value: number | string; sub?: string; color: string; icon: any }) {
+    { label: string; value: number | string; sub?: string; color: string; icon: LucideIcon }) {
     return (
         <Card className="border-l-4" style={{ borderLeftColor: color }}>
             <CardContent className="p-5 flex items-center justify-between">
@@ -73,9 +90,9 @@ export default function AdminMonitor() {
     const [tab, setTab] = useState<Tab>("sessions");
 
     /* summary data */
-    const [sessionsSummary, setSessionsSummary] = useState<any>(null);
-    const [tasksSummary, setTasksSummary] = useState<any>(null);
-    const [attSummary, setAttSummary] = useState<any>(null);
+    const [sessionsSummary, setSessionsSummary] = useState<SessionsSummary | null>(null);
+    const [tasksSummary, setTasksSummary] = useState<TasksSummary | null>(null);
+    const [attSummary, setAttSummary] = useState<AttSummary | null>(null);
 
     /* table data */
     const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -117,20 +134,20 @@ export default function AdminMonitor() {
         setLoadingTable(true);
         try {
             if (tab === "sessions") {
-                const p: any = { page_size: 100 };
+                const p: Record<string, string | number> = { page_size: 100 };
                 if (sessionStatus) p.status = sessionStatus;
                 if (dateFrom) p.date_from = dateFrom;
                 if (dateTo) p.date_to = dateTo;
                 const res = await adminApi.monitor.sessions.list(p);
                 setSessions(res.data.results ?? []);
             } else if (tab === "tasks") {
-                const p: any = { page_size: 100 };
+                const p: Record<string, string | number> = { page_size: 100 };
                 if (taskStatus) p.status = taskStatus;
                 if (taskPriority) p.priority = taskPriority;
                 const res = await adminApi.monitor.tasks.list(p);
                 setTasks(res.data.results ?? []);
             } else {
-                const p: any = { page_size: 100 };
+                const p: Record<string, string | number> = { page_size: 100 };
                 if (attStatus) p.status = attStatus;
                 if (dateFrom) p.date_from = dateFrom;
                 if (dateTo) p.date_to = dateTo;
@@ -144,7 +161,7 @@ export default function AdminMonitor() {
     useEffect(() => { fetchTable(); }, [fetchTable]);
 
     /* tabs config */
-    const tabs: { id: Tab; label: string; icon: any; color: string }[] = [
+    const tabs: { id: Tab; label: string; icon: LucideIcon; color: string }[] = [
         { id: "sessions", label: "Teacher Sessions", icon: CalendarDays, color: "var(--fundi-cyan)" },
         { id: "tasks", label: "Teacher Tasks", icon: ListTodo, color: "var(--fundi-purple)" },
         { id: "attendance", label: "Student Attendance", icon: Users, color: "var(--fundi-lime)" },
@@ -158,7 +175,7 @@ export default function AdminMonitor() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="heading-font text-3xl font-bold" style={{ color: "var(--fundi-black)" }}>
+                        <h1 className="heading-font text-3xl font-bold text-fundi-black">
                             Activity Monitor
                         </h1>
                         <p className="text-gray-500 mt-1">
@@ -280,7 +297,7 @@ export default function AdminMonitor() {
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-lg">
-                                            <CalendarDays className="h-5 w-5" style={{ color: "var(--fundi-cyan)" }} />
+                                            <CalendarDays className="h-5 w-5 text-fundi-cyan" />
                                             Teacher Sessions
                                             <span className="ml-auto text-sm font-normal text-gray-500">{sessions.length} records</span>
                                         </CardTitle>
@@ -349,7 +366,7 @@ export default function AdminMonitor() {
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-lg">
-                                            <ListTodo className="h-5 w-5" style={{ color: "var(--fundi-purple)" }} />
+                                            <ListTodo className="h-5 w-5 text-fundi-purple" />
                                             Teacher Tasks
                                             <span className="ml-auto text-sm font-normal text-gray-500">{tasks.length} records</span>
                                         </CardTitle>
@@ -425,7 +442,7 @@ export default function AdminMonitor() {
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-lg">
-                                            <Users className="h-5 w-5" style={{ color: "var(--fundi-lime)" }} />
+                                            <Users className="h-5 w-5 text-fundi-lime" />
                                             Student Attendance Records
                                             <span className="ml-auto text-sm font-normal text-gray-500">{attendance.length} records</span>
                                         </CardTitle>

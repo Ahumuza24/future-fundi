@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Award, Star, Trophy, Zap, Medal, Target } from "lucide-react";
+import { Award, Star, Trophy, Zap, Medal, Target, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { achievementApi } from "@/lib/api";
@@ -49,7 +49,7 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
     }, [learnerId]);
 
     const getIcon = (iconName: string) => {
-        const icons: Record<string, any> = {
+        const icons: Record<string, LucideIcon> = {
             star: Star,
             zap: Zap,
             trophy: Trophy,
@@ -74,7 +74,7 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
 
     if (loading) {
         return (
-            <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-orange)" }}>
+            <Card className="border-l-4 border-l-fundi-orange">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-orange-100">
@@ -95,7 +95,7 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
     }
 
     return (
-        <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-orange)" }}>
+        <Card className="border-l-4 border-l-fundi-orange">
             <CardHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-orange-100">
