@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { CheckCircle, Lock, Star, Sparkles, BookOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { enrollmentApi, courseApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 
 interface Level {
     id: string;
@@ -43,6 +45,14 @@ interface CourseLadderProps {
     learnerId?: string;
 }
 
+const LEVEL_COLOR_CLASSES = [
+    { border: "border-fundi-orange", text: "text-fundi-orange" },
+    { border: "border-fundi-cyan", text: "text-fundi-cyan" },
+    { border: "border-fundi-purple", text: "text-fundi-purple" },
+    { border: "border-fundi-lime", text: "text-fundi-lime" },
+    { border: "border-fundi-red", text: "text-fundi-red" },
+];
+
 export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderProps) {
     const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
     const [levels, setLevels] = useState<Level[]>([]);
@@ -54,30 +64,27 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
                 setLoading(true);
 
                 if (enrollmentId) {
-                    // Fetch specific enrollment
                     const response = await enrollmentApi.getById(enrollmentId);
                     setEnrollment(response.data);
                     if (response.data.course?.levels) {
                         setLevels(response.data.course.levels);
                     }
                 } else {
-                    // Fetch first enrollment for demo
                     const response = await enrollmentApi.getAll();
                     const enrollments = response.data.results || response.data;
                     if (enrollments.length > 0) {
                         const firstEnrollment = enrollments[0];
                         setEnrollment(firstEnrollment);
 
-                        // Fetch course details with levels
                         if (firstEnrollment.course) {
                             const courseResponse = await courseApi.getById(firstEnrollment.course);
                             setLevels(courseResponse.data.levels || []);
                         }
                     }
                 }
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error("Failed to fetch course data:", error);
-                // Fall back to static data
+                toast.error("Could not load course progress. Showing placeholder data.");
                 setLevels([
                     { id: '1', level_number: 1, name: "Curiosity", description: "Discovering new ideas", learning_outcomes: [], required_modules_count: 4, required_artifacts_count: 6, required_assessment_score: 70 },
                     { id: '2', level_number: 2, name: "Explorer", description: "Asking questions", learning_outcomes: [], required_modules_count: 4, required_artifacts_count: 6, required_assessment_score: 70 },
@@ -97,17 +104,6 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
         if (enrollment.completed_levels_count >= levelNumber) return 'completed';
         if (enrollment.current_level_number === levelNumber) return 'current';
         return 'locked';
-    };
-
-    const getLevelColor = (index: number) => {
-        const colors = [
-            'var(--fundi-orange)',
-            'var(--fundi-cyan)',
-            'var(--fundi-purple)',
-            'var(--fundi-lime)',
-            'var(--fundi-pink)',
-        ];
-        return colors[index % colors.length];
     };
 
     if (loading) {
@@ -149,7 +145,6 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
             </CardHeader>
             <CardContent>
                 <div className="relative">
-                    {/* Vertical Line */}
                     <div className="absolute left-[19px] top-6 bottom-6 w-1 bg-gray-200" />
 
                     <div className="space-y-6">
@@ -158,7 +153,7 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
                             const isCompleted = status === 'completed';
                             const isCurrent = status === 'current';
                             const isLocked = status === 'locked';
-                            const color = getLevelColor(index);
+                            const colorClasses = LEVEL_COLOR_CLASSES[index % LEVEL_COLOR_CLASSES.length];
 
                             return (
                                 <motion.div
@@ -168,16 +163,15 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
                                     transition={{ delay: index * 0.1 }}
                                     className="relative flex items-start gap-4"
                                 >
-                                    {/* Icon Node */}
                                     <div
-                                        className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-4 transition-all flex-shrink-0 ${isCompleted ? "bg-white shadow-sm" :
-                                                isCurrent ? "bg-white scale-110 shadow-lg" :
-                                                    "bg-gray-100 border-gray-300"
-                                            }`}
-                                        style={{
-                                            borderColor: isLocked ? undefined : color,
-                                            color: isLocked ? '#9ca3af' : color
-                                        }}
+                                        className={cn(
+                                            "relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-4 transition-all flex-shrink-0",
+                                            isLocked
+                                                ? "bg-gray-100 border-gray-300 text-gray-400"
+                                                : isCompleted
+                                                ? cn("bg-white shadow-sm", colorClasses.border, colorClasses.text)
+                                                : cn("bg-white scale-110 shadow-lg", colorClasses.border, colorClasses.text)
+                                        )}
                                     >
                                         {isCompleted ? (
                                             <CheckCircle className="h-5 w-5" />
@@ -188,14 +182,19 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
                                         )}
                                     </div>
 
-                                    {/* Content */}
-                                    <div className={`flex-1 p-4 rounded-xl border-2 transition-all ${isCurrent ? "bg-purple-50 border-purple-200 shadow-md" :
-                                            isLocked ? "bg-gray-50 border-transparent opacity-60" :
-                                                "bg-white border-gray-100 hover:border-gray-200"
-                                        }`}>
+                                    <div className={cn(
+                                        "flex-1 p-4 rounded-xl border-2 transition-all",
+                                        isCurrent ? "bg-purple-50 border-purple-200 shadow-md" :
+                                        isLocked ? "bg-gray-50 border-transparent opacity-60" :
+                                        "bg-white border-gray-100 hover:border-gray-200"
+                                    )}>
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className={`font-bold ${isCurrent ? "text-lg" : "text-base"}`} style={{ color: isLocked ? '#6b7280' : color }}>
+                                                <h3 className={cn(
+                                                    "font-bold",
+                                                    isCurrent ? "text-lg" : "text-base",
+                                                    isLocked ? "text-gray-500" : colorClasses.text
+                                                )}>
                                                     Level {level.level_number}: {level.name}
                                                 </h3>
                                                 <p className="text-sm text-gray-600 mt-1">{level.description}</p>
@@ -212,7 +211,6 @@ export default function CourseLadder({ enrollmentId, learnerId }: CourseLadderPr
                                             )}
                                         </div>
 
-                                        {/* Progress info for current level */}
                                         {isCurrent && enrollment?.current_progress && (
                                             <div className="mt-3 pt-3 border-t border-purple-200">
                                                 <div className="grid grid-cols-3 gap-2 text-xs">

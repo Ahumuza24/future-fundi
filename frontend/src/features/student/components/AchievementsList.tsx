@@ -3,6 +3,8 @@ import { Award, Star, Trophy, Zap, Medal, Target, type LucideIcon } from "lucide
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { achievementApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 
 interface Achievement {
     id: string;
@@ -19,6 +21,24 @@ interface AchievementsListProps {
     learnerId?: string;
 }
 
+const TYPE_COLOR_CLASSES: Record<string, { bg: string; text: string }> = {
+    level_complete: { bg: "bg-fundi-orange/10", text: "text-fundi-orange" },
+    course_complete: { bg: "bg-fundi-purple/10", text: "text-fundi-purple" },
+    skill_mastery: { bg: "bg-fundi-cyan/10", text: "text-fundi-cyan" },
+    participation: { bg: "bg-fundi-lime/10", text: "text-fundi-lime" },
+    special: { bg: "bg-fundi-red/10", text: "text-fundi-red" },
+};
+
+const FALLBACK_COLOR_CLASSES = [
+    { bg: "bg-fundi-orange/10", text: "text-fundi-orange" },
+    { bg: "bg-fundi-cyan/10", text: "text-fundi-cyan" },
+    { bg: "bg-fundi-purple/10", text: "text-fundi-purple" },
+    { bg: "bg-fundi-lime/10", text: "text-fundi-lime" },
+];
+
+const getColorClasses = (type: string, index: number): { bg: string; text: string } =>
+    TYPE_COLOR_CLASSES[type] ?? FALLBACK_COLOR_CLASSES[index % FALLBACK_COLOR_CLASSES.length];
+
 export default function AchievementsList({ learnerId }: AchievementsListProps) {
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,9 +52,9 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
                     : await achievementApi.getAll();
                 const data = response.data.results || response.data || [];
                 setAchievements(data);
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error("Failed to fetch achievements:", error);
-                // Fallback to static data
+                toast.error("Could not load achievements. Showing sample data.");
                 setAchievements([
                     { id: '1', name: "First Steps", description: "Completed 3 modules", achievement_type: 'level_complete', icon: 'star', earned_at: new Date().toISOString() },
                     { id: '2', name: "Tech Whiz", description: "Built 5 artifacts", achievement_type: 'skill_mastery', icon: 'zap', earned_at: new Date().toISOString() },
@@ -58,18 +78,6 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
             target: Target,
         };
         return icons[iconName?.toLowerCase()] || Award;
-    };
-
-    const getColor = (type: string, index: number) => {
-        const typeColors: Record<string, string> = {
-            'level_complete': 'var(--fundi-orange)',
-            'course_complete': 'var(--fundi-purple)',
-            'skill_mastery': 'var(--fundi-cyan)',
-            'participation': 'var(--fundi-lime)',
-            'special': 'var(--fundi-pink)',
-        };
-        const fallbackColors = ['var(--fundi-orange)', 'var(--fundi-cyan)', 'var(--fundi-purple)', 'var(--fundi-lime)'];
-        return typeColors[type] || fallbackColors[index % fallbackColors.length];
     };
 
     if (loading) {
@@ -117,7 +125,7 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {achievements.map((achievement, index) => {
                             const Icon = getIcon(achievement.icon);
-                            const color = getColor(achievement.achievement_type, index);
+                            const colorClasses = getColorClasses(achievement.achievement_type, index);
 
                             return (
                                 <motion.div
@@ -127,11 +135,8 @@ export default function AchievementsList({ learnerId }: AchievementsListProps) {
                                     transition={{ delay: index * 0.1 }}
                                     className="flex flex-col items-center text-center p-3 rounded-xl border-2 border-gray-100 hover:shadow-md hover:border-orange-100 transition-all bg-white"
                                 >
-                                    <div
-                                        className="p-3 rounded-full mb-2"
-                                        style={{ backgroundColor: `${color}20` }}
-                                    >
-                                        <Icon className="h-6 w-6" style={{ color }} />
+                                    <div className={cn("p-3 rounded-full mb-2", colorClasses.bg)}>
+                                        <Icon className={cn("h-6 w-6", colorClasses.text)} />
                                     </div>
                                     <h4 className="font-bold text-sm mb-1">{achievement.name}</h4>
                                     <p className="text-xs text-gray-500 line-clamp-2">{achievement.description}</p>

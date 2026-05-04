@@ -127,7 +127,7 @@ const ParentPortal = () => {
       if (childrenArray.length > 0 && !selectedChildId) {
         setSelectedChildId(childrenArray[0].id);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch children:", err);
       setChildren([]);
     } finally {
@@ -139,7 +139,7 @@ const ParentPortal = () => {
     try {
       const response = await childApi.getDashboard(childId);
       setDashboardData(response.data);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch dashboard:", err);
     }
   };
@@ -205,13 +205,13 @@ const ParentPortal = () => {
     );
   }
 
-  const COLORS = [
-    "var(--fundi-orange)",
-    "var(--fundi-cyan)",
-    "var(--fundi-lime)",
-    "var(--fundi-purple)",
-    "var(--fundi-pink)",
-    "var(--fundi-yellow)"
+  const ARTIFACT_BG_CLASSES = [
+    "bg-fundi-orange",
+    "bg-fundi-cyan",
+    "bg-fundi-lime",
+    "bg-fundi-purple",
+    "bg-fundi-red",
+    "bg-fundi-yellow",
   ];
 
   const formatActivityDate = (value: string, pattern: string, fallback: string) => {
@@ -315,13 +315,16 @@ const ParentPortal = () => {
                   {dashboardData.pathways.length > 0 ? (
                     dashboardData.pathways.map((pathway, i) => {
                       const isExpanded = expandedPathway === pathway.id;
-                      const pathwayColor = i === 0 ? 'var(--fundi-purple)' : 'var(--fundi-pink)';
+                      const pathwayColorClass = {
+                        border: i === 0 ? "border-l-fundi-purple" : "border-l-fundi-cyan",
+                        bg: i === 0 ? "bg-fundi-purple" : "bg-fundi-cyan",
+                        text: i === 0 ? "text-fundi-purple" : "text-fundi-cyan",
+                      };
 
                       return (
                         <Card
                           key={pathway.id}
-                          className="border-l-4 hover:shadow-md transition-all"
-                          style={{ borderLeftColor: pathwayColor }}
+                          className={cn("border-l-4 hover:shadow-md transition-all", pathwayColorClass.border)}
                         >
                           <CardContent className="p-5">
                             {/* Header - Always Visible */}
@@ -356,11 +359,8 @@ const ParentPortal = () => {
                               {/* Progress Bar */}
                               <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
                                 <div
-                                  className="h-2 rounded-full transition-all"
-                                  style={{
-                                    width: `${pathway.progress}%`,
-                                    backgroundColor: pathwayColor
-                                  }}
+                                  className={cn("h-2 rounded-full transition-all", pathwayColorClass.bg)}
+                                  style={{ width: `${pathway.progress}%` }}
                                 ></div>
                               </div>
                               <div className="flex justify-between items-center text-xs">
@@ -392,7 +392,7 @@ const ParentPortal = () => {
                                     {/* Micro-credentials Section */}
                                     <div>
                                       <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
-                                        <Star className="h-4 w-4" style={{ color: pathwayColor }} />
+                                        <Star className={cn("h-4 w-4", pathwayColorClass.text)} />
                                         Micro-credentials ({pathway.modules.length})
                                       </h5>
                                       {pathway.modules.length > 0 ? (
@@ -429,7 +429,7 @@ const ParentPortal = () => {
                                     {/* Careers Section */}
                                     <div>
                                       <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
-                                        <Briefcase className="h-4 w-4" style={{ color: pathwayColor }} />
+                                        <Briefcase className={cn("h-4 w-4", pathwayColorClass.text)} />
                                         Potential Career Paths ({pathway.careers.length})
                                       </h5>
                                       {pathway.careers.length > 0 ? (
@@ -555,7 +555,7 @@ const ParentPortal = () => {
                         className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3"
                       >
                         <div className="w-16 h-16 rounded-full bg-fundi-yellow/20 flex items-center justify-center p-3">
-                          <Award className="w-8 h-8 text-[var(--fundi-yellow-dark)]" />
+                          <Award className="w-8 h-8 text-fundi-yellow" />
                         </div>
                         <div>
                           <h4 className="font-bold text-sm text-gray-900 leading-tight mb-1">{badge.name}</h4>
@@ -591,8 +591,7 @@ const ParentPortal = () => {
                         <div className="h-32 bg-gray-100 relative group">
                           {/* Placeholder for real image since we don't have URLs in this specific payload yet */}
                           <div
-                            className="absolute inset-0 flex items-center justify-center text-white font-bold text-4xl opacity-30"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                            className={cn("absolute inset-0 flex items-center justify-center text-white font-bold text-4xl opacity-30", ARTIFACT_BG_CLASSES[i % ARTIFACT_BG_CLASSES.length])}
                           >
                             {artifact.title[0]}
                           </div>
@@ -616,7 +615,7 @@ const ParentPortal = () => {
                 {/* Micro Lessons (Parents) */}
                 <section>
                   <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                    <Zap className="h-5 w-5 text-[var(--fundi-pink)]" />
+                    <Zap className="h-5 w-5 text-fundi-purple" />
                     Micro Lessons for You
                   </h3>
                   <Card className="border-0 shadow-sm bg-white overflow-hidden">
@@ -632,7 +631,7 @@ const ParentPortal = () => {
                               <p className="text-xs text-gray-500">{lesson.category} • {lesson.duration}</p>
                             </div>
                           </div>
-                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 text-[var(--fundi-pink)]">
+                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 text-fundi-purple">
                             Start
                           </Button>
                         </div>
