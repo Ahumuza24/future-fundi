@@ -1,22 +1,12 @@
 import { useState, useEffect } from "react";
-import { User, Mail, Lock, Bell, Shield, Save, Camera, Trash2, CheckCircle, AlertCircle } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
+import { User as UserIcon, Mail, Lock, Bell, Shield, Save, Camera, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
 import { Avatar, EditableAvatar } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface UserData {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  avatar_url?: string | null;
-  tenant_name?: string;
-}
-
 const SettingsPage = () => {
-  const user = getCurrentUser() as UserData | null;
+  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
@@ -262,7 +252,7 @@ const SettingsPage = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-fundi-orange/10">
-              <User className="h-5 w-5 text-fundi-orange" />
+              <UserIcon className="h-5 w-5 text-fundi-orange" />
             </div>
             <h2 className="text-xl font-bold heading-font">Profile Information</h2>
           </div>
