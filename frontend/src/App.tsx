@@ -42,6 +42,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import UserManagement from "@/pages/admin/UserManagement";
 import SchoolManagement from "@/pages/admin/SchoolManagement";
 import CurriculumDataEntry from "@/pages/admin/CurriculumDataEntry";
+import CurriculumDesigner from "@/pages/admin/CurriculumDesigner";
 import ActivityManagement from "@/pages/admin/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -353,6 +354,14 @@ const router = sentryCreateBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DATA_ENTRY]}>
             <CurriculumDataEntry />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin/curriculum-designer",
+        element: (
+          <ProtectedRoute allowedRoles={[ROLES.CURRICULUM_DESIGNER, ROLES.ADMIN]}>
+            <CurriculumDesigner />
           </ProtectedRoute>
         ),
       },

@@ -635,3 +635,59 @@ export const schoolApi = {
     getAll: () => api.get('/api/school/dashboard/sessions/'),
   },
 };
+
+export const cmsApi = {
+  pathways: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/pathways/', { params }),
+    getById: (id: string) => api.get(`/api/cms/pathways/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/pathways/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/pathways/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/pathways/${id}/`),
+  },
+  tracks: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/tracks/', { params }),
+    getById: (id: string) => api.get(`/api/cms/tracks/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/tracks/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/tracks/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/tracks/${id}/`),
+  },
+  programs: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/programs/', { params }),
+    getById: (id: string) => api.get(`/api/cms/programs/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/programs/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/programs/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/programs/${id}/`),
+  },
+  modules: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/modules/', { params }),
+    getById: (id: string) => api.get(`/api/cms/modules/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/modules/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/modules/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/modules/${id}/`),
+    submitForReview: (id: string) => api.post(`/api/cms/modules/${id}/submit-for-review/`),
+    approveReview: (id: string) => api.post(`/api/cms/modules/${id}/approve-review/`),
+    publish: (id: string) => api.post(`/api/cms/modules/${id}/publish/`),
+    peerReviewQueue: () => api.get('/api/cms/modules/peer-review-queue/'),
+  },
+  units: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/units/', { params }),
+    getById: (id: string) => api.get(`/api/cms/units/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/units/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/units/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/units/${id}/`),
+  },
+  lessons: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/lessons/', { params }),
+    getById: (id: string) => api.get(`/api/cms/lessons/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/lessons/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/lessons/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/lessons/${id}/`),
+  },
+  tasks: {
+    getAll: (params?: Record<string, string>) => api.get('/api/cms/tasks/', { params }),
+    getById: (id: string) => api.get(`/api/cms/tasks/${id}/`),
+    create: (data: unknown) => api.post('/api/cms/tasks/', data),
+    update: (id: string, data: unknown) => api.patch(`/api/cms/tasks/${id}/`, data),
+    delete: (id: string) => api.delete(`/api/cms/tasks/${id}/`),
+  },
+};

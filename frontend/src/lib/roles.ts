@@ -21,6 +21,7 @@ export const ROLES = {
   ADMIN: 'admin',
   DATA_ENTRY: 'data_entry',
   SCHOOL: 'school',
+  CURRICULUM_DESIGNER: 'curriculum_designer',
 } as const satisfies Record<string, UserRole>;
 
 // ── Role sets (for permission checks) ────────────────────────────────────────
@@ -68,6 +69,7 @@ export const ROLE_DASHBOARD: Record<UserRole, string> = {
   [ROLES.ADMIN]: '/admin/dashboard',
   [ROLES.DATA_ENTRY]: '/admin/dashboard',
   [ROLES.SCHOOL]: '/school/dashboard',
+  [ROLES.CURRICULUM_DESIGNER]: '/admin/curriculum-designer',
 };
 
 // ── Human-readable labels ─────────────────────────────────────────────────────
@@ -80,4 +82,5 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   [ROLES.ADMIN]: 'Admin',
   [ROLES.DATA_ENTRY]: 'Data Entry',
   [ROLES.SCHOOL]: 'School Admin',
+  [ROLES.CURRICULUM_DESIGNER]: 'Curriculum Designer',
 };

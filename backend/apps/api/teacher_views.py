@@ -8,7 +8,7 @@ from apps.core.scope import get_user_allowed_school_ids
 from apps.core.services.artifact_service import ArtifactService
 from apps.core.services.dashboard_service import TeacherDashboardService
 from apps.core.services.enrollment_service import EnrollmentResult, EnrollmentService
-from django.db.models import Count, Q, QuerySet
+from django.db.models import Count, Prefetch, Q, QuerySet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request

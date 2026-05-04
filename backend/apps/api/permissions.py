@@ -100,7 +100,7 @@ class IsLeader(permissions.BasePermission):
         if request.user.role == UserRole.LEADER:
             school = getattr(request, "school", None)
             return _same_school(request.user, obj, getattr(school, "id", None))
-        return True  # Allow if no tenant check needed
+        return False  # Deny when no tenant scope can be resolved
 
 
 class IsTeacherOrLeader(permissions.BasePermission):
@@ -175,3 +175,21 @@ class IsSchoolAdmin(permissions.BasePermission):
 
         school = getattr(request, "school", None)
         return _same_school(request.user, obj, getattr(school, "id", None))
+
+
+class IsCurriculumDesigner(permissions.BasePermission):
+    """Only curriculum designers (and superusers) may create or edit content objects.
+
+    Safe methods (GET, HEAD, OPTIONS) are open to any authenticated user so
+    that teachers and admins can browse the hierarchy without write access.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return (
+            request.user.is_superuser
+            or request.user.role == UserRole.CURRICULUM_DESIGNER
+        )

@@ -3,7 +3,7 @@
  */
 import * as Sentry from "@sentry/react";
 
-export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry' | 'school';
+export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry' | 'school' | 'curriculum_designer';
 
 export interface User {
   id: string;
@@ -122,8 +122,9 @@ export const getDashboardRoute = (role: UserRole): string => {
     school: '/school',
     admin: '/admin',
     data_entry: '/admin/curriculum-entry',
+    curriculum_designer: '/admin/curriculum-designer',
   };
-  
+
   return dashboardMap[role] || '/student';
 };
 
@@ -136,9 +137,10 @@ export const canAccessRoute = (userRole: UserRole, routePath: string): boolean =
     teacher: ['/teacher', '/'],
     parent: ['/parent', '/'],
     leader: ['/leader', '/'],
-    school: ['/school', '/leader', '/'], // School admin can access school dashboard
-    admin: ['/admin', '/leader', '/teacher', '/parent', '/student', '/'], // Admin can access all
+    school: ['/school', '/leader', '/'],
+    admin: ['/admin', '/leader', '/teacher', '/parent', '/student', '/'],
     data_entry: ['/admin/curriculum-entry', '/'],
+    curriculum_designer: ['/admin/curriculum-designer', '/'],
   };
   
   const allowedRoutes = roleRoutes[userRole] || [];
@@ -157,6 +159,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     school: 'School Admin',
     admin: 'Administrator',
     data_entry: 'Data Entry',
+    curriculum_designer: 'Curriculum Designer',
   };
   
   return roleNames[role] || 'User';

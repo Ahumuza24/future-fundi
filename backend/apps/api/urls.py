@@ -6,6 +6,15 @@ from .gate_views import (
     GrowthProfileView,
     ModuleProgressDetailView,
 )
+from .cms_views import (
+    LearningTaskCMSViewSet,
+    LessonCMSViewSet,
+    ModuleCMSViewSet,
+    PathwayCMSViewSet,
+    ProgramCMSViewSet,
+    TrackCMSViewSet,
+    UnitCMSViewSet,
+)
 from rest_framework import routers
 
 from .admin_monitor_views import (
@@ -109,6 +118,15 @@ router.register(
     AdminAttendanceMonitorViewSet,
     basename="admin-monitor-attendance",
 )
+
+# CMS endpoints (Curriculum Designer portal — Phase 4)
+router.register(r"cms/pathways", PathwayCMSViewSet, basename="cms-pathways")
+router.register(r"cms/tracks", TrackCMSViewSet, basename="cms-tracks")
+router.register(r"cms/programs", ProgramCMSViewSet, basename="cms-programs")
+router.register(r"cms/modules", ModuleCMSViewSet, basename="cms-modules")
+router.register(r"cms/units", UnitCMSViewSet, basename="cms-units")
+router.register(r"cms/lessons", LessonCMSViewSet, basename="cms-lessons")
+router.register(r"cms/tasks", LearningTaskCMSViewSet, basename="cms-tasks")
 
 # Course & Progress endpoints
 router.register(r"courses", CourseViewSet, basename="courses")

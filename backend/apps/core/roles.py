@@ -13,6 +13,7 @@ class UserRole(models.TextChoices):
     ADMIN = "admin", "Admin"
     DATA_ENTRY = "data_entry", "Data Entry"
     SCHOOL = "school", "School Admin"
+    CURRICULUM_DESIGNER = "curriculum_designer", "Curriculum Designer"
 
 
 SCHOOL_STAFF_ROLES = {

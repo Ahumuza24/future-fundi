@@ -25,7 +25,7 @@ if not SENTRY_DSN:
 
 sentry_sdk.init(
     dsn=SENTRY_DSN,
-    send_default_pii=True,
+    send_default_pii=False,  # Never send PII (IPs, cookies, user data) to third-party servers
     integrations=[DjangoIntegration()],
 )
 
@@ -57,9 +57,9 @@ MIDDLEWARE = [
     "apps.api.middleware.logging.RequestLoggingMiddleware",  # Request logging
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Serve static files in production
     "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",  # Must precede CsrfViewMiddleware
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -188,6 +188,14 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
 if not DEBUG and (not SECRET_KEY or SECRET_KEY == "replace-this-in-prod"):
     raise RuntimeError("DJANGO_SECRET_KEY must be set securely in production.")
 
+# Prefer Argon2 (memory-hard); fall back to PBKDF2 for existing hashes.
+# Requires: pip install argon2-cffi
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+
 # Password validation — enforce strong passwords at the Django level
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -195,7 +203,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {"min_length": 8},
+        "OPTIONS": {"min_length": 12},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -206,14 +214,22 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Security
+# SSL redirect: opt-in. Set SECURE_SSL_REDIRECT=true in production only if Django terminates TLS
+# directly. Leave unset when a load balancer/reverse proxy handles TLS upstream (Heroku, Railway,
+# Nginx) — enabling it there causes redirect loops and CORS preflight failures on HTTP origins.
 SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "false").lower() == "true"
 SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 
 # CORS
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(

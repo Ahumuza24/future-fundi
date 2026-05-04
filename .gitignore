@@ -10,8 +10,16 @@ venv/
 # Django
 *.log
 local_settings.py
-# Django DB
 backend/db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# macOS
+.DS_Store
+
+# Build artifacts
+*.backup
+frontend/build_log*.txt
 
 # Node
 node_modules/
