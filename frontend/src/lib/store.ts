@@ -106,7 +106,7 @@ interface Artifact {
   title: string;
   reflection: string;
   submitted_at: string;
-  media_refs: any[];
+  media_refs: unknown[];
 }
 
 interface ArtifactState {

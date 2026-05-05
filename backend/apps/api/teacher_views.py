@@ -8,6 +8,7 @@ from apps.core.scope import get_user_allowed_school_ids
 from apps.core.services.artifact_service import ArtifactService
 from apps.core.services.dashboard_service import TeacherDashboardService
 from apps.core.services.enrollment_service import EnrollmentResult, EnrollmentService
+from django.shortcuts import get_object_or_404
 from django.db.models import Count, Prefetch, Q, QuerySet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -651,6 +652,35 @@ class BadgeManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewSet):
             "module_id": "uuid" (optional)
         }
         """
+        if request.data.get("badge_template_id"):
+            from apps.core.models import BadgeTemplate, Evidence
+            from apps.core.services.recognition import BadgeIssuanceService
+
+            learner_id = request.data.get("learner_id") or request.data.get("learner")
+            learner = self._teacher_learners_queryset().filter(id=learner_id).first()
+            if learner is None:
+                return Response(
+                    {"detail": "You can only award badges to your own students."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            template = get_object_or_404(BadgeTemplate, id=request.data.get("badge_template_id"))
+            evidence = Evidence.objects.filter(id__in=request.data.get("evidence_ids", []))
+            record = BadgeIssuanceService.issue(
+                template=template,
+                learner=learner,
+                issuer=request.user,
+                evidence=evidence,
+                verification_ref=request.data.get("verification_ref", ""),
+            )
+            return Response(
+                {
+                    "detail": "Badge awarded successfully",
+                    "badge_record_id": str(record.id),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         from .serializers import BadgeSerializer
 
         serializer = BadgeSerializer(data=request.data, context={"request": request})
@@ -980,6 +1010,43 @@ class CredentialManagementViewSet(TeacherSchoolContextMixin, viewsets.ModelViewS
             "issued_at": "2026-02-10" (optional, defaults to today)
         }
         """
+        if request.data.get("microcredential_template_id"):
+            from apps.core.models import BadgeRecord, Evidence, MicrocredentialTemplate
+            from apps.core.services.recognition import MicrocredentialIssuanceService
+
+            learner_id = request.data.get("learner_id") or request.data.get("learner")
+            learner = self._teacher_learners_queryset().filter(id=learner_id).first()
+            if learner is None:
+                return Response(
+                    {"detail": "You can only award credentials to your own students."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            template = get_object_or_404(
+                MicrocredentialTemplate,
+                id=request.data.get("microcredential_template_id"),
+            )
+            evidence = Evidence.objects.filter(id__in=request.data.get("evidence_ids", []))
+            badge_records = BadgeRecord.objects.filter(
+                id__in=request.data.get("badge_record_ids", []),
+                learner=learner,
+                status=BadgeRecord.STATUS_ISSUED,
+            )
+            record = MicrocredentialIssuanceService.issue(
+                template=template,
+                learner=learner,
+                issuer=request.user,
+                evidence=evidence,
+                badge_records=badge_records,
+            )
+            return Response(
+                {
+                    "detail": "Credential awarded successfully",
+                    "microcredential_record_id": str(record.id),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         from datetime import date
 
         from .serializers import CredentialSerializer

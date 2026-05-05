@@ -44,7 +44,11 @@ export default function SchoolProgress() {
     }, []);
 
     useEffect(() => {
-        fetchProgressData();
+        const timer = window.setTimeout(() => {
+            void fetchProgressData();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [fetchProgressData]);
 
     const getStatusColor = (status: string) => {

@@ -5,13 +5,13 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .permissions import IsLeader
+from .permissions import IsProgramManager
 
 
 class ProgramManagerDashboardViewSet(viewsets.ViewSet):
-    """Aggregate analytics endpoints for program managers and leaders."""
+    """Aggregate analytics endpoints for program managers."""
 
-    permission_classes = [IsLeader]
+    permission_classes = [IsProgramManager]
 
     @action(detail=False, methods=["get"], url_path="pathway-demand")
     def pathway_demand(self, request):

@@ -20,7 +20,7 @@ class User(AbstractUser):
     - learner: Student using the platform
     - teacher: L1/L2 teachers who capture artifacts and assessments
     - parent: Parents/guardians viewing their child's progress
-    - leader: School leaders with dashboard access
+    - program_manager: Program managers with cross-program dashboard access
     - admin: System administrators with full access
     """
 
@@ -78,8 +78,8 @@ class User(AbstractUser):
         return self.role == UserRole.PARENT
 
     @property
-    def is_leader(self) -> bool:
-        return self.role == UserRole.LEADER
+    def is_program_manager(self) -> bool:
+        return self.role == UserRole.PROGRAM_MANAGER
 
     @property
     def is_admin_user(self) -> bool:
@@ -109,7 +109,7 @@ class User(AbstractUser):
             UserRole.LEARNER: "/student",
             UserRole.TEACHER: "/teacher",
             UserRole.PARENT: "/parent",
-            UserRole.LEADER: "/leader",
+            UserRole.PROGRAM_MANAGER: "/program-manager",
             UserRole.ADMIN: "/admin",
             UserRole.DATA_ENTRY: "/admin/curriculum-entry",
             UserRole.SCHOOL: "/school",

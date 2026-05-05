@@ -162,11 +162,6 @@ export default function TeacherReviewSubmissions() {
     setIsDetailOpen(true);
   };
 
-  const closeDetailView = () => {
-    setIsDetailOpen(false);
-    setSelectedSubmission(null);
-  };
-
   const pendingCount = submissions.filter((s) => s.status === "pending").length;
 
   return (

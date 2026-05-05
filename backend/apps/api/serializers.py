@@ -973,6 +973,7 @@ class StudentArtifactUploadSerializer(serializers.ModelSerializer):
     """
 
     module_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
+    task_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Artifact
@@ -985,6 +986,7 @@ class StudentArtifactUploadSerializer(serializers.ModelSerializer):
             "status",
             "rejection_reason",
             "module_id",
+            "task_id",
         ]
         read_only_fields = ["id", "submitted_at", "status", "rejection_reason", "media_refs"]
 
@@ -1000,10 +1002,22 @@ class StudentArtifactUploadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Selected microcredential not found.")
         return None
 
+    def validate_task_id(self, value):
+        if value is None:
+            return None
+        from apps.core.models import LearningTask
+        try:
+            return LearningTask.objects.select_related("lesson__unit__module").get(id=value)
+        except LearningTask.DoesNotExist:
+            raise serializers.ValidationError("Selected learning task not found.")
+
     def create(self, validated_data):
         """Create artifact with module assignment."""
         # Extract module from validated data - it was validated as a Module object
         module = validated_data.pop('module_id', None)
+        task = validated_data.pop('task_id', None)
+        if task and module is None:
+            module = task.lesson.unit.module
         artifact = super().create(validated_data)
         if module:
             artifact.module = module

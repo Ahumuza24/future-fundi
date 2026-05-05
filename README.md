@@ -1,6 +1,6 @@
 # Future Fundi Dashboard
 
-> **An EdTech platform that brings together students, teachers, parents, and school leaders on a single, beautifully designed learning management system.**
+> **An EdTech platform that brings together students, teachers, parents, school admins, and program managers on a single learning management system.**
 
 Future Fundi tracks learner progress through structured pathways (courses), captures artifacts (project work), manages teaching sessions, awards badges/microcredentials, and surfaces live analytics for every stakeholder group — all behind a clean role-based access model.
 
@@ -21,8 +21,8 @@ Future Fundi tracks learner progress through structured pathways (courses), capt
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 19, TypeScript, Vite 7, Tailwind CSS 4, shadcn/ui (Radix), Framer Motion |
-| **Backend** | Django 5, Django REST Framework, SimpleJWT, Whitenoise |
+| **Frontend** | React 19, TypeScript, Vite 8, Tailwind CSS 4, shadcn/ui (Radix), Framer Motion |
+| **Backend** | Django 6, Django REST Framework, SimpleJWT, Whitenoise |
 | **Database** | SQLite (dev) → PostgreSQL (production) |
 | **Auth** | JWT (access 15 min / refresh 7 days, rotating + blacklisted) |
 | **Caching** | In-memory (dev) → Redis (production) |
@@ -110,7 +110,7 @@ pnpm dev
 | `learner` | `/student` | Own data only |
 | `teacher` | `/teacher` | Learners in their sessions |
 | `parent` | `/parent` | Linked child's data only |
-| `leader` | `/leader` | All data in their school |
+| `program_manager` | `/program-manager` | Cross-program analytics and impact reporting |
 | `school` | `/school` | School admin panel |
 | `admin` | `/admin` | Full platform access |
 | `data_entry` | `/admin/curriculum-entry` | Curriculum data only |

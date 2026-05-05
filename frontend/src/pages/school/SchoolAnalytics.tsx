@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { schoolApi } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-    BarChart3, ArrowLeft, Users, Award, TrendingUp, BookOpen, Target, Calendar
+    ArrowLeft, Users, Award, TrendingUp, BookOpen, Target, Calendar
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -43,21 +43,21 @@ export default function SchoolAnalytics() {
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchAnalytics();
-    }, []);
-
-    const fetchAnalytics = async () => {
+    const fetchAnalytics = useCallback(async () => {
         try {
             setLoading(true);
             const response = await schoolApi.analytics.get();
             setAnalytics(response.data);
-            setLoading(false);
         } catch (error) {
             console.error("Failed to fetch analytics:", error);
+        } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        void fetchAnalytics();
+    }, [fetchAnalytics]);
 
     if (loading) {
         return (

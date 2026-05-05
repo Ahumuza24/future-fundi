@@ -2,12 +2,14 @@
 
 from datetime import datetime, time
 
+from apps.core.gates import GateService
 from apps.core.services.learner_panel_service import LearnerPanelService
 
 from apps.core.models import (
     Achievement,
     Activity,
     Artifact,
+    Evidence,
     Learner,
     LearnerCourseEnrollment,
     Module as CourseModule,
@@ -473,6 +475,17 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             serializer = StudentArtifactUploadSerializer(data=data, context={'request': request, 'learner': learner})
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            task = serializer.validated_data.get("task_id")
+            module = serializer.validated_data.get("module_id")
+            gated_obj = task or module
+            if gated_obj is not None:
+                gate = GateService.check(learner, gated_obj)
+                if not gate.is_open:
+                    return Response(
+                        {"detail": gate.detail or "This content is locked."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
             
             # Allow learners without a formal school tenant to upload artifacts
             # The current_school field (text) captures the school name for display
@@ -514,6 +527,18 @@ class StudentDashboardViewSet(viewsets.ViewSet):
             if media_refs:
                 artifact.media_refs = media_refs
                 artifact.save(update_fields=["media_refs"])
+
+            if task or module:
+                resolved_module = module or task.lesson.unit.module
+                Evidence.objects.create(
+                    tenant=learner.tenant,
+                    learner=learner,
+                    artifact=artifact,
+                    task=task,
+                    unit=task.lesson.unit if task else None,
+                    module=resolved_module,
+                    verification_status=Evidence.STATUS_PENDING,
+                )
 
             return Response(
                 {
@@ -566,10 +591,10 @@ class LearnerDashboardViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="cohort-position")
     def cohort_position(self, request):
-        learner = self._get_learner(request)
-        if not learner:
-            return Response({"error": "Learner profile not found"}, status=404)
-        return Response(LearnerPanelService.cohort_position(learner))
+        return Response(
+            {"detail": "Cohort comparisons are not available to learner accounts."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     @action(detail=False, methods=["get"], url_path="certifications")
     def certifications(self, request):

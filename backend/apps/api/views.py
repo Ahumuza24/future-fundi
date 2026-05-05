@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import (
-    IsTeacherOrLeader,
+    IsTeacherOrProgramManager,
 )
 from .serializers import (
     ArtifactSerializer,
@@ -38,7 +38,7 @@ class LearnerViewSet(viewsets.ModelViewSet):
     - Learners: Can only view/edit their own profile
     - Teachers: Can view learners in their school
     - Parents: Can view their child's profile
-    - Leaders/School admins: Can view/edit all learners in their school
+    - Program managers/School admins: Can view/edit all learners in their school
     """
 
     permission_classes = [IsAuthenticatedUser]
@@ -337,7 +337,7 @@ class ArtifactViewSet(viewsets.ModelViewSet):
 class DashboardKpisView(APIView):
     """Dashboard KPIs - accessible by teachers and leaders only."""
 
-    permission_classes = [IsTeacherOrLeader]
+    permission_classes = [IsTeacherOrProgramManager]
 
     def get(self, request):
         # Placeholder aggregates; later implement real queries.

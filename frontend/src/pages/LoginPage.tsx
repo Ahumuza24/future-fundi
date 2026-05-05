@@ -59,8 +59,8 @@ const LoginPage = () => {
         } else {
           navigate("/teacher/select-school");
         }
-      } else if (role === "leader") {
-        navigate("/leader");
+      } else if (role === "program_manager") {
+        navigate("/program-manager");
       } else if (role === "admin") {
         navigate("/admin");
       } else if (role === "school") {
@@ -70,21 +70,25 @@ const LoginPage = () => {
       } else {
         navigate("/");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login failed:", err);
       let errorMessage = "Invalid username/email or password";
+      const axiosError = err as {
+        response?: { data?: { error?: { message?: string }; detail?: string } };
+        message?: string;
+      };
 
       // Standardized backend error?
-      if (err.response?.data?.error?.message) {
-        errorMessage = err.response.data.error.message;
+      if (axiosError.response?.data?.error?.message) {
+        errorMessage = axiosError.response.data.error.message;
       }
       // Fallback to old structure or detail
-      else if (err.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
+      else if (axiosError.response?.data?.detail) {
+        errorMessage = axiosError.response.data.detail;
       }
-      else if (err.message) {
+      else if (axiosError.message) {
         // Axios error message as last resort if no response
-        if (!err.response) errorMessage = "Network error. Please check your connection.";
+        if (!axiosError.response) errorMessage = "Network error. Please check your connection.";
       }
 
       setError(errorMessage);

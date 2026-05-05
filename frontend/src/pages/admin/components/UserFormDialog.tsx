@@ -117,7 +117,7 @@ export const UserFormDialog = ({
                                     <option value="learner">Learner</option>
                                     <option value="teacher">Teacher</option>
                                     <option value="parent">Parent</option>
-                                    <option value="leader">Leader</option>
+                                    <option value="program_manager">Program Manager</option>
                                     <option value="admin">Admin</option>
                                     <option value="data_entry">Data Entry</option>
                                 </select>

@@ -224,12 +224,12 @@ class GateService:
         if cls._is_module_complete(learner, prev_module):
             return _open(
                 PREVIOUS_COMPLETE,
-                f"Previous module '{prev_module.title}' is complete.",
+                f"Previous module '{prev_module.name}' is complete.",
             )
 
         return _closed(
             PREVIOUS_INCOMPLETE,
-            f"Complete module '{prev_module.title}' before accessing this one.",
+            f"Complete module '{prev_module.name}' before accessing this one.",
         )
 
     # ------------------------------------------------------------------

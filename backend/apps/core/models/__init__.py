@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .activity import Activity, Attendance, PodClass, Session, TeacherTask
-from .artifact import Artifact
+from .artifact import Artifact, Evidence
 from .assessment import (
     Assessment,
     Credential,
@@ -63,6 +63,7 @@ __all__ = [
     "ParentContact",
     # artifact
     "Artifact",
+    "Evidence",
     # progress
     "LearnerCourseEnrollment",
     "LearnerLevelProgress",

@@ -3,7 +3,15 @@
  */
 import * as Sentry from "@sentry/react";
 
-export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry' | 'school' | 'curriculum_designer';
+export type UserRole =
+  | "learner"
+  | "teacher"
+  | "parent"
+  | "program_manager"
+  | "admin"
+  | "data_entry"
+  | "school"
+  | "curriculum_designer";
 
 export interface User {
   id: string;
@@ -118,7 +126,7 @@ export const getDashboardRoute = (role: UserRole): string => {
     learner: '/student',
     teacher: '/teacher',
     parent: '/parent',
-    leader: '/leader',
+    program_manager: '/program-manager',
     school: '/school',
     admin: '/admin',
     data_entry: '/admin/curriculum-entry',
@@ -136,9 +144,9 @@ export const canAccessRoute = (userRole: UserRole, routePath: string): boolean =
     learner: ['/student', '/'],
     teacher: ['/teacher', '/'],
     parent: ['/parent', '/'],
-    leader: ['/leader', '/'],
-    school: ['/school', '/leader', '/'],
-    admin: ['/admin', '/leader', '/teacher', '/parent', '/student', '/'],
+    program_manager: ['/program-manager', '/'],
+    school: ['/school', '/'],
+    admin: ['/admin', '/program-manager', '/teacher', '/parent', '/student', '/'],
     data_entry: ['/admin/curriculum-entry', '/'],
     curriculum_designer: ['/admin/curriculum-designer', '/'],
   };
@@ -155,7 +163,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     learner: 'Student',
     teacher: 'Teacher',
     parent: 'Parent',
-    leader: 'Leader',
+    program_manager: 'Program Manager',
     school: 'School Admin',
     admin: 'Administrator',
     data_entry: 'Data Entry',

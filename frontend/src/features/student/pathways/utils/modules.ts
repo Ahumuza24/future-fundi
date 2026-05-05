@@ -1,4 +1,5 @@
 import type {
+  PathwayHierarchy,
   PathwayLevel,
   PathwayModuleWithLevel,
 } from '../types';
@@ -21,6 +22,33 @@ export const dedupeModules = (
     }
   });
   return Array.from(unique.values());
+};
+
+export const flattenHierarchyModules = (
+  hierarchy?: PathwayHierarchy
+): PathwayModuleWithLevel[] => {
+  if (!hierarchy) {
+    return [];
+  }
+
+  return hierarchy.tracks.flatMap((track) =>
+    track.programs.flatMap((program) =>
+      program.modules.map((module) => ({
+        id: module.id,
+        name: module.name,
+        description: module.outcome_statement,
+        content: "",
+        mediaFiles: [],
+        levelName: hierarchy.name,
+        trackTitle: track.title,
+        programTitle: program.title,
+        outcome_statement: module.outcome_statement,
+        gate: module.gate,
+        access: module.access,
+        units: module.units,
+      }))
+    )
+  );
 };
 
 export const selectInitialLevel = (
@@ -52,3 +80,10 @@ export const getModuleProgressSummary = (levels: PathwayLevel[]): { totalModules
     completedModules,
   };
 };
+
+export const getHierarchyProgressSummary = (
+  modules: PathwayModuleWithLevel[]
+): { totalModules: number; completedModules: number } => ({
+  totalModules: modules.length,
+  completedModules: modules.filter((module) => module.gate?.reason === "completed").length,
+});

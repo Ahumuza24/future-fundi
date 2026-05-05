@@ -6,7 +6,6 @@ import type {
   GrowthSummary,
   ModuleProgressData,
   EvidenceArtifact,
-  CohortPosition,
   CertificationsData,
   StudentDashboardData,
 } from "@/pages/student/learner-dashboard-types";
@@ -14,7 +13,6 @@ import { LEVEL_LABELS } from "@/pages/student/learner-dashboard-types";
 import GrowthTreePanel from "@/pages/student/components/GrowthTreePanel";
 import ModuleProgressPanel from "@/pages/student/components/ModuleProgressPanel";
 import EvidencePortfolioPanel from "@/pages/student/components/EvidencePortfolioPanel";
-import CohortPositionPanel from "@/pages/student/components/CohortPositionPanel";
 import RecognitionPanel from "@/pages/student/components/RecognitionPanel";
 import PathwaysPanel from "@/pages/student/components/PathwaysPanel";
 import UpcomingSessionsPanel from "@/pages/student/components/UpcomingSessionsPanel";
@@ -36,13 +34,6 @@ const EMPTY_GROWTH: GrowthSummary = {
 };
 
 const EMPTY_CERTS: CertificationsData = { issued: [], in_progress: [] };
-const EMPTY_COHORT: CohortPosition = {
-  level: "explorer",
-  peers_above: 0,
-  peers_same: 0,
-  peers_below: 0,
-  total_peers: 0,
-};
 
 function PanelSkeleton({ className = "h-64" }: { className?: string }) {
   return (
@@ -75,10 +66,6 @@ export default function StudentDashboard() {
     "learner-evidence",
     learnerDashboardApi.getEvidence
   );
-  const cohort = usePanel<CohortPosition>(
-    "learner-cohort",
-    learnerDashboardApi.getCohortPosition
-  );
   const certs = usePanel<CertificationsData>(
     "learner-certs",
     learnerDashboardApi.getCertifications
@@ -86,16 +73,15 @@ export default function StudentDashboard() {
 
   const growthData = growth.data ?? EMPTY_GROWTH;
   const certsData = certs.data ?? EMPTY_CERTS;
-  const cohortData = cohort.data ?? EMPTY_COHORT;
   const firstName = user?.first_name ?? "Fundi";
   const pathways = studentDashboard.data?.pathways ?? [];
   const upcomingLessons = studentDashboard.data?.upcomingLessons ?? [];
 
   return (
     <div className="bg-[#f6f6f6] min-h-screen p-6 md:p-8 space-y-6">
-      {/* Welcome banner + cohort rank */}
+      {/* Welcome banner */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 bg-white p-8 rounded-xl border-l-8 border-fundi-orange relative overflow-hidden shadow-[0_4px_24px_rgba(240,87,34,0.06)]">
+        <div className="lg:col-span-12 bg-white p-8 rounded-xl border-l-8 border-fundi-orange relative overflow-hidden shadow-[0_4px_24px_rgba(240,87,34,0.06)]">
           <div className="relative z-10">
             <p className="text-fundi-orange font-bold tracking-widest text-xs uppercase mb-2">
               My Learning Journey
@@ -120,14 +106,6 @@ export default function StudentDashboard() {
           <div className="absolute bottom-0 right-8 opacity-[0.05] pointer-events-none">
             <Rocket className="h-36 w-36" />
           </div>
-        </div>
-
-        <div className="lg:col-span-4">
-          {cohort.isLoading ? (
-            <PanelSkeleton className="h-full min-h-[200px]" />
-          ) : (
-            <CohortPositionPanel data={cohortData} />
-          )}
         </div>
       </div>
 

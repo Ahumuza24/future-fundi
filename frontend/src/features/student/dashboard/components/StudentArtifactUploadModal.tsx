@@ -28,12 +28,18 @@ interface StudentArtifactUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  moduleId?: string | null;
+  taskId?: string | null;
+  contextLabel?: string;
 }
 
 export function StudentArtifactUploadModal({
   isOpen,
   onClose,
   onSuccess,
+  moduleId,
+  taskId,
+  contextLabel,
 }: StudentArtifactUploadModalProps) {
   const [title, setTitle] = useState("");
   const [reflection, setReflection] = useState("");
@@ -49,10 +55,10 @@ export function StudentArtifactUploadModal({
 
   // Fetch pathways and modules when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !moduleId) {
       fetchModules();
     }
-  }, [isOpen]);
+  }, [isOpen, moduleId]);
 
   const fetchModules = async () => {
     setModulesLoading(true);
@@ -97,12 +103,13 @@ export function StudentArtifactUploadModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedModuleId = moduleId || selectedModuleId;
 
     if (!title.trim()) {
       setError("Please add a title for your artifact.");
       return;
     }
-    if (!selectedModuleId) {
+    if (!resolvedModuleId) {
       setError("Please select a pathway and microcredential for this artifact.");
       return;
     }
@@ -119,7 +126,8 @@ export function StudentArtifactUploadModal({
         title,
         reflection,
         files: files.length > 0 ? files : undefined,
-        module_id: selectedModuleId,
+        module_id: resolvedModuleId,
+        task_id: taskId || undefined,
       });
 
       // Reset form
@@ -174,6 +182,12 @@ export function StudentArtifactUploadModal({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+          {moduleId ? (
+            <div className="rounded-md border border-orange-100 bg-orange-50 px-3 py-2 text-sm text-orange-800">
+              {contextLabel ?? "Submitting evidence for this task"}
+            </div>
+          ) : (
+            <>
           {/* Pathway Selection - Using native select to avoid clipping issues */}
           <div className="space-y-2">
             <Label htmlFor="pathway">
@@ -236,6 +250,8 @@ export function StudentArtifactUploadModal({
               <p className="text-xs text-amber-600">No microcredentials available for this pathway.</p>
             )}
           </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>

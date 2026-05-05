@@ -72,9 +72,6 @@ const Sidebar = () => {
     return allNavItems.filter((item) => item.roles.includes(user.role));
   }, [user]);
 
-  const roleColorKey = navItems[0]?.colorKey ?? "orange";
-  const colors = COLOR_CLASSES[roleColorKey] ?? COLOR_CLASSES.orange;
-
   const handleLogout = async () => {
     const refreshToken = sessionStorage.getItem("refresh_token");
     if (refreshToken) {
@@ -89,7 +86,7 @@ const Sidebar = () => {
   };
 
   const isActive = (path: string) => {
-    const exactPaths = ["/student", "/parent", "/teacher", "/school", "/admin"];
+    const exactPaths = ["/student", "/parent", "/teacher", "/school", "/admin", "/program-manager"];
     if (exactPaths.includes(path)) return location.pathname === path;
     return location.pathname.startsWith(path);
   };

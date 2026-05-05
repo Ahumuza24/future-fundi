@@ -9,7 +9,14 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-const withSelectedSchool = <T extends Record<string, any>>(payload: T = {} as T): T & { school_id?: string } => {
+type ApiPayload = object;
+type ApiParams = object;
+type ApiErrorBody = {
+  error?: { message?: string };
+  detail?: string;
+};
+
+const withSelectedSchool = <T extends object>(payload: T = {} as T): T & { school_id?: string } => {
   if (typeof localStorage === 'undefined') {
     return payload;
   }
@@ -75,7 +82,7 @@ api.interceptors.response.use(
 
     // Normalize Error Response
     if (error.response?.data) {
-        const data = error.response.data as any;
+        const data = error.response.data as ApiErrorBody;
         // Check for new backend error format
         if (data.error && data.error.message) {
              error.message = data.error.message;
@@ -103,7 +110,7 @@ export const learnerApi = {
 export const artifactApi = {
   getAll: () => api.get('/api/artifacts/'),
   getById: (id: string) => api.get(`/api/artifacts/${id}/`),
-  create: (data: any) => api.post('/api/artifacts/', data),
+  create: (data: ApiPayload) => api.post('/api/artifacts/', data),
   uploadMedia: (id: string, formData: FormData) => 
     api.post(`/api/artifacts/${id}/upload-media/`, formData),
 };
@@ -123,11 +130,13 @@ export const studentApi = {
     reflection?: string;
     files?: File[];
     module_id?: string;
+    task_id?: string;
   }) => {
     const formData = new FormData();
     formData.append('title', data.title);
     if (data.reflection) formData.append('reflection', data.reflection);
     if (data.module_id) formData.append('module_id', data.module_id);
+    if (data.task_id) formData.append('task_id', data.task_id);
     (data.files || []).forEach(f => formData.append('files', f));
 
     return api.post('/api/student/upload-artifact/', formData, {
@@ -216,7 +225,7 @@ export const teacherApi = {
     notes?: string;
     status?: string;
   }) => api.post('/api/teacher/sessions/', withSelectedSchool(data)),
-  updateSession: (id: string, data: any) => api.patch(`/api/teacher/sessions/${id}/`, withSelectedSchool(data)),
+  updateSession: (id: string, data: ApiPayload) => api.patch(`/api/teacher/sessions/${id}/`, withSelectedSchool(data)),
   deleteSession: (id: string) => api.delete(`/api/teacher/sessions/${id}/`, { params: withSelectedSchool({}) }),
   startSession: (id: string) => api.post(`/api/teacher/sessions/${id}/start/`, withSelectedSchool({})),
   completeSession: (id: string) => api.post(`/api/teacher/sessions/${id}/complete/`, withSelectedSchool({})),
@@ -287,10 +296,24 @@ export const teacherApi = {
     }) => api.post('/api/teacher/badges/award/', withSelectedSchool(data)),
     awardBadge: (data: {
       learner_id: string;
+      badge_template_id: string;
+      evidence_ids: string[];
+      verification_ref?: string;
+    } | {
+      learner_id: string;
       badge_name: string;
       description?: string;
       module_id?: string;
     }) => {
+      if ('badge_template_id' in data) {
+        return api.post('/api/teacher/badges/award/', withSelectedSchool({
+          learner: data.learner_id,
+          learner_id: data.learner_id,
+          badge_template_id: data.badge_template_id,
+          evidence_ids: data.evidence_ids,
+          ...(data.verification_ref ? { verification_ref: data.verification_ref } : {}),
+        }));
+      }
       const payload = {
         learner: data.learner_id,
         badge_name: data.badge_name,
@@ -308,7 +331,7 @@ export const teacherApi = {
     getAll: (params?: { search?: string; course_id?: string }) =>
       api.get('/api/teacher/students/', { params: withSelectedSchool(params || {}) }),
     getById: (id: string) => api.get(`/api/teacher/students/${id}/`, { params: withSelectedSchool({}) }),
-    create: (data: any) => api.post('/api/teacher/students/', withSelectedSchool(data)),
+    create: (data: ApiPayload) => api.post('/api/teacher/students/', withSelectedSchool(data)),
     getSchools: () => api.get('/api/teacher/students/schools/', { params: withSelectedSchool({}) }),
     enroll: (data: {
       learner_id: string;
@@ -321,11 +344,27 @@ export const teacherApi = {
   credentials: {
     getAll: () => api.get('/api/teacher/credentials/', { params: withSelectedSchool({}) }),
     award: (data: {
+      learner_id: string;
+      microcredential_template_id: string;
+      evidence_ids: string[];
+      badge_record_ids?: string[];
+    } | {
       learner: string;
       name: string;
       issuer?: string;
       issued_at?: string;
-    }) => api.post('/api/teacher/credentials/award/', withSelectedSchool(data)),
+    }) => {
+      if ('microcredential_template_id' in data) {
+        return api.post('/api/teacher/credentials/award/', withSelectedSchool({
+          learner: data.learner_id,
+          learner_id: data.learner_id,
+          microcredential_template_id: data.microcredential_template_id,
+          evidence_ids: data.evidence_ids,
+          ...(data.badge_record_ids ? { badge_record_ids: data.badge_record_ids } : {}),
+        }));
+      }
+      return api.post('/api/teacher/credentials/award/', withSelectedSchool(data));
+    },
     getLearnerCredentials: (learnerId: string) =>
       api.get(`/api/teacher/credentials/learner/${learnerId}/`, { params: withSelectedSchool({}) }),
   },
@@ -342,7 +381,7 @@ export const teacherApi = {
       priority?: 'low' | 'medium' | 'high' | 'urgent';
       status?: 'todo' | 'in_progress' | 'done';
     }) => api.post('/api/teacher/tasks/', data),
-    update: (id: string, data: any) => api.patch(`/api/teacher/tasks/${id}/`, data),
+    update: (id: string, data: ApiPayload) => api.patch(`/api/teacher/tasks/${id}/`, data),
     delete: (id: string) => api.delete(`/api/teacher/tasks/${id}/`),
     toggle: (id: string) => api.post(`/api/teacher/tasks/${id}/toggle/`),
     getSummary: () => api.get('/api/teacher/tasks/summary/'),
@@ -416,7 +455,7 @@ export const courseApi = {
   }) => api.post('/api/courses/', data),
   
   // Admin: Update course
-  update: (id: string, data: any) => api.patch(`/api/courses/${id}/`, data),
+  update: (id: string, data: ApiPayload) => api.patch(`/api/courses/${id}/`, data),
   
   // Admin: Delete course
   delete: (id: string) => api.delete(`/api/courses/${id}/`),
@@ -426,8 +465,8 @@ export const courseApi = {
 export const moduleApi = {
   getAll: (courseId?: string) => api.get('/api/modules/', { params: { course: courseId } }),
   getById: (id: string) => api.get(`/api/modules/${id}/`),
-  create: (data: any) => api.post('/api/modules/', data),
-  update: (id: string, data: any) => api.patch(`/api/modules/${id}/`, data),
+  create: (data: ApiPayload) => api.post('/api/modules/', data),
+  update: (id: string, data: ApiPayload) => api.patch(`/api/modules/${id}/`, data),
   delete: (id: string) => api.delete(`/api/modules/${id}/`),
   uploadMedia: (moduleId: string, file: File) => {
     const formData = new FormData();
@@ -443,8 +482,8 @@ export const moduleApi = {
 // Career API
 export const careerApi = {
   getAll: (courseId?: string) => api.get('/api/careers/', { params: { course: courseId } }),
-  create: (data: any) => api.post('/api/careers/', data),
-  update: (id: string, data: any) => api.patch(`/api/careers/${id}/`, data),
+  create: (data: ApiPayload) => api.post('/api/careers/', data),
+  update: (id: string, data: ApiPayload) => api.patch(`/api/careers/${id}/`, data),
   delete: (id: string) => api.delete(`/api/careers/${id}/`),
 };
 
@@ -551,10 +590,10 @@ export const activityApi = {
 export const adminApi = {
   // User Management
   users: {
-    getAll: (params?: any) => api.get('/api/admin/users/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/admin/users/', { params }),
     getById: (id: string) => api.get(`/api/admin/users/${id}/`),
-    create: (data: any) => api.post('/api/admin/users/', data),
-    update: (id: string, data: any) => api.patch(`/api/admin/users/${id}/`, data),
+    create: (data: ApiPayload) => api.post('/api/admin/users/', data),
+    update: (id: string, data: ApiPayload) => api.patch(`/api/admin/users/${id}/`, data),
     delete: (id: string, params?: { permanent?: boolean }) => api.delete(`/api/admin/users/${id}/`, { params }),
     bulkImport: (file: File) => {
       const formData = new FormData();
@@ -563,7 +602,7 @@ export const adminApi = {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
     },
-    export: (params?: any) => api.get('/api/admin/users/export/', { 
+    export: (params?: ApiParams) => api.get('/api/admin/users/export/', { 
       params,
       responseType: 'blob'
     }),
@@ -572,10 +611,10 @@ export const adminApi = {
 
   // School/Tenant Management
   tenants: {
-    getAll: (params?: any) => api.get('/api/admin/tenants/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/admin/tenants/', { params }),
     getById: (id: string) => api.get(`/api/admin/tenants/${id}/`),
-    create: (data: any) => api.post('/api/admin/tenants/', data),
-    update: (id: string, data: any) => api.put(`/api/admin/tenants/${id}/`, data),
+    create: (data: ApiPayload) => api.post('/api/admin/tenants/', data),
+    update: (id: string, data: ApiPayload) => api.put(`/api/admin/tenants/${id}/`, data),
     delete: (id: string) => api.delete(`/api/admin/tenants/${id}/`),
     stats: (id: string) => api.get(`/api/admin/tenants/${id}/stats/`),
   },
@@ -583,24 +622,24 @@ export const adminApi = {
   // Analytics
   analytics: {
     overview:  () => api.get('/api/admin/analytics/overview/'),
-    users:     (params?: any) => api.get('/api/admin/analytics/users/', { params }),
-    enrollments: (params?: any) => api.get('/api/admin/analytics/enrollments/', { params }),
+    users:     (params?: ApiParams) => api.get('/api/admin/analytics/users/', { params }),
+    enrollments: (params?: ApiParams) => api.get('/api/admin/analytics/enrollments/', { params }),
     dashboard: (params?: { days?: number }) => api.get('/api/admin/analytics/dashboard/', { params }),
   },
 
   // Monitoring
   monitor: {
     sessions: {
-      list:    (params?: any) => api.get('/api/admin/monitor/sessions/', { params }),
-      summary: (params?: any) => api.get('/api/admin/monitor/sessions/summary/', { params }),
+      list:    (params?: ApiParams) => api.get('/api/admin/monitor/sessions/', { params }),
+      summary: (params?: ApiParams) => api.get('/api/admin/monitor/sessions/summary/', { params }),
     },
     tasks: {
-      list:    (params?: any) => api.get('/api/admin/monitor/tasks/', { params }),
-      summary: (params?: any) => api.get('/api/admin/monitor/tasks/summary/', { params }),
+      list:    (params?: ApiParams) => api.get('/api/admin/monitor/tasks/', { params }),
+      summary: (params?: ApiParams) => api.get('/api/admin/monitor/tasks/summary/', { params }),
     },
     attendance: {
-      list:    (params?: any) => api.get('/api/admin/monitor/attendance/', { params }),
-      summary: (params?: any) => api.get('/api/admin/monitor/attendance/summary/', { params }),
+      list:    (params?: ApiParams) => api.get('/api/admin/monitor/attendance/', { params }),
+      summary: (params?: ApiParams) => api.get('/api/admin/monitor/attendance/summary/', { params }),
     },
   },
 };
@@ -624,28 +663,28 @@ export const schoolApi = {
   },
 
   students: {
-    getAll: (params?: any) => api.get('/api/school/students/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/school/students/', { params }),
     getById: (id: string) => api.get(`/api/school/students/${id}/`),
-    create: (data: any) => api.post('/api/school/students/', data),
-    update: (id: string, data: any) => api.put(`/api/school/students/${id}/`, data),
+    create: (data: ApiPayload) => api.post('/api/school/students/', data),
+    update: (id: string, data: ApiPayload) => api.put(`/api/school/students/${id}/`, data),
     delete: (id: string) => api.delete(`/api/school/students/${id}/`),
   },
 
   teachers: {
-    getAll: (params?: any) => api.get('/api/school/teachers/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/school/teachers/', { params }),
     getById: (id: string) => api.get(`/api/school/teachers/${id}/`),
-    create: (data: any) => api.post('/api/school/teachers/', data),
-    update: (id: string, data: any) => api.put(`/api/school/teachers/${id}/`, data),
+    create: (data: ApiPayload) => api.post('/api/school/teachers/', data),
+    update: (id: string, data: ApiPayload) => api.put(`/api/school/teachers/${id}/`, data),
     delete: (id: string) => api.delete(`/api/school/teachers/${id}/`),
   },
 
   pathways: {
-    getAll: (params?: any) => api.get('/api/school/pathways/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/school/pathways/', { params }),
     getById: (id: string) => api.get(`/api/school/pathways/${id}/`),
   },
 
   classes: {
-    getAll: (params?: any) => api.get('/api/school/classes/', { params }),
+    getAll: (params?: ApiParams) => api.get('/api/school/classes/', { params }),
   },
 
   sessions: {
@@ -728,7 +767,6 @@ export const learnerDashboardApi = {
   getGrowth: () => api.get("/api/learner/dashboard/growth/"),
   getModuleProgress: () => api.get("/api/learner/dashboard/module-progress/"),
   getEvidence: () => api.get("/api/learner/dashboard/evidence/"),
-  getCohortPosition: () => api.get("/api/learner/dashboard/cohort-position/"),
   getCertifications: () => api.get("/api/learner/dashboard/certifications/"),
 };
 

@@ -793,9 +793,13 @@ function ModuleForm({ courseId, module, onClose, onSuccess, colors }: {
                 const res = await moduleApi.uploadMedia(module.id, file);
                 setMediaFiles(res.data.media_files || []);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            toast.error(err.response?.data?.error || 'Upload failed', 'Upload Failed');
+            const errorMessage =
+                err && typeof err === "object" && "response" in err
+                    ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+                    : undefined;
+            toast.error(errorMessage || 'Upload failed', 'Upload Failed');
         } finally {
             setUploading(false);
             e.target.value = '';

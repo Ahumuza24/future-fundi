@@ -4,8 +4,14 @@ from apps.core.models import (
     Learner,
     LearnerCourseEnrollment,
     LearnerLevelProgress,
+    LearningTask,
+    Lesson,
     Module,
+    Program,
+    Track,
+    Unit,
 )
+from apps.core.gates import GateService
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -181,5 +187,125 @@ class PathwayLearningViewSet(viewsets.ViewSet):
                     "totalLevels": total_levels,
                 },
                 "levels": levels_data,
+                "hierarchy": self._build_gate_hierarchy(learner, course),
             }
         )
+
+    def _gate_payload(self, learner: Learner, obj: object) -> dict:
+        result = GateService.check(learner, obj)
+        return {
+            "is_open": result.is_open,
+            "reason": result.reason,
+            "detail": result.detail,
+        }
+
+    def _access_payload(self, gate: dict, *, can_submit: bool = False) -> dict:
+        return {
+            "can_preview": True,
+            "can_open": gate["is_open"],
+            "can_submit": gate["is_open"] and can_submit,
+        }
+
+    def _build_gate_hierarchy(self, learner: Learner, pathway) -> dict:
+        pathway_gate = self._gate_payload(learner, pathway)
+        tracks = (
+            Track.objects.filter(pathway=pathway)
+            .prefetch_related("programs__modules__units__lessons__tasks")
+            .order_by("sequence_order")
+        )
+        return {
+            "id": str(pathway.id),
+            "name": pathway.name,
+            "gate": pathway_gate,
+            "access": self._access_payload(pathway_gate),
+            "tracks": [self._track_payload(learner, track) for track in tracks],
+        }
+
+    def _track_payload(self, learner: Learner, track: Track) -> dict:
+        gate = self._gate_payload(learner, track)
+        return {
+            "id": str(track.id),
+            "title": track.title,
+            "gate": gate,
+            "access": self._access_payload(gate),
+            "programs": [
+                self._program_payload(learner, program)
+                for program in track.programs.all().order_by("sequence_order")
+            ],
+        }
+
+    def _program_payload(self, learner: Learner, program: Program) -> dict:
+        gate = self._gate_payload(learner, program)
+        return {
+            "id": str(program.id),
+            "title": program.title,
+            "gate": gate,
+            "access": self._access_payload(gate),
+            "modules": [
+                self._module_payload(learner, module)
+                for module in program.modules.all().order_by("sequence_order")
+            ],
+        }
+
+    def _module_payload(self, learner: Learner, module: Module) -> dict:
+        gate = self._gate_payload(learner, module)
+        payload = {
+            "id": str(module.id),
+            "name": module.name,
+            "outcome_statement": module.outcome_statement,
+            "gate": gate,
+            "access": self._access_payload(gate),
+            "units": [
+                self._unit_payload(learner, unit)
+                for unit in module.units.all().order_by("sequence_order")
+            ],
+        }
+        return payload
+
+    def _unit_payload(self, learner: Learner, unit: Unit) -> dict:
+        gate = self._gate_payload(learner, unit)
+        payload = {
+            "id": str(unit.id),
+            "title": unit.title,
+            "learning_objectives": unit.learning_objectives,
+            "gate": gate,
+            "access": self._access_payload(gate),
+            "lessons": [
+                self._lesson_payload(learner, lesson)
+                for lesson in unit.lessons.all().order_by("sequence_order")
+            ],
+        }
+        return payload
+
+    def _lesson_payload(self, learner: Learner, lesson: Lesson) -> dict:
+        gate = self._gate_payload(learner, lesson)
+        payload = {
+            "id": str(lesson.id),
+            "title": lesson.title,
+            "duration_minutes": lesson.duration_minutes,
+            "learner_objectives": lesson.learner_objectives,
+            "gate": gate,
+            "access": self._access_payload(gate),
+            "tasks": [
+                self._task_payload(learner, task)
+                for task in lesson.tasks.all().order_by("sequence_order")
+            ],
+        }
+        if gate["is_open"]:
+            payload["learner_content"] = lesson.learner_content
+        return payload
+
+    def _task_payload(self, learner: Learner, task: LearningTask) -> dict:
+        gate = self._gate_payload(learner, task)
+        payload = {
+            "id": str(task.id),
+            "title": task.title,
+            "type": task.type,
+            "evidence_required": task.evidence_required,
+            "artifact_type": task.artifact_type,
+            "gate": gate,
+            "access": self._access_payload(gate, can_submit=task.evidence_required),
+        }
+        if gate["is_open"]:
+            payload["learner_instructions"] = task.learner_instructions
+        return payload

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { User as UserIcon, Mail, Lock, Bell, Shield, Save, Camera, Trash2, CheckCircle, AlertCircle } from "lucide-react";
+import { User as UserIcon, Lock, Shield, Save, Camera, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
-import { Avatar, EditableAvatar } from "@/components/ui/avatar";
+import { EditableAvatar } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Dialog,
@@ -33,12 +33,6 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         current_password: "",
         new_password: "",
         confirm_password: "",
-    });
-
-    const [notifications, setNotifications] = useState({
-        email_updates: true,
-        weekly_reports: true,
-        achievement_alerts: true,
     });
 
     const [saving, setSaving] = useState(false);
@@ -103,7 +97,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 localStorage.setItem("user", JSON.stringify(updatedUser));
                 setUser(updatedUser);
             }
-        } catch (error) {
+        } catch {
             showMessage("error", "Failed to remove avatar");
         }
     };

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { courseApi } from "@/lib/api";
 import {
-    Plus, Edit, Trash2, BookOpen, Users, Layers,
+    Plus, Edit, Trash2, BookOpen, Layers,
     ChevronDown, ChevronUp, Save, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

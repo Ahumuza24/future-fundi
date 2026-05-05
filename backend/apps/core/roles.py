@@ -9,7 +9,7 @@ class UserRole(models.TextChoices):
     LEARNER = "learner", "Learner"
     TEACHER = "teacher", "Teacher"
     PARENT = "parent", "Parent"
-    LEADER = "leader", "Leader"
+    PROGRAM_MANAGER = "program_manager", "Program Manager"
     ADMIN = "admin", "Admin"
     DATA_ENTRY = "data_entry", "Data Entry"
     SCHOOL = "school", "School Admin"
@@ -18,8 +18,7 @@ class UserRole(models.TextChoices):
 
 SCHOOL_STAFF_ROLES = {
     UserRole.TEACHER,
-    UserRole.LEADER,
+    UserRole.PROGRAM_MANAGER,
     UserRole.SCHOOL,
     UserRole.DATA_ENTRY,
 }
-

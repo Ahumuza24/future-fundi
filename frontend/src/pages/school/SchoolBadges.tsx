@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,11 +39,7 @@ export default function SchoolBadges() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const [badgesRes, artifactsRes] = await Promise.all([
@@ -56,9 +52,14 @@ export default function SchoolBadges() {
             setLoading(false);
         } catch (error) {
             console.error("Failed to fetch data:", error);
+        } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        void fetchData();
+    }, [fetchData]);
 
     const filteredBadges = badges.filter(badge =>
         badge.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

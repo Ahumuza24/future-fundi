@@ -1,4 +1,10 @@
-export type UserRole = 'learner' | 'teacher' | 'parent' | 'leader' | 'admin' | 'data_entry';
+export type UserRole =
+    | 'learner'
+    | 'teacher'
+    | 'parent'
+    | 'program_manager'
+    | 'admin'
+    | 'data_entry';
 
 export interface ManagedUser {
     id: string;
@@ -52,7 +58,7 @@ export const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
     learner: { bg: 'bg-blue-100', text: 'text-blue-700' },
     teacher: { bg: 'bg-green-100', text: 'text-green-700' },
     parent: { bg: 'bg-purple-100', text: 'text-purple-700' },
-    leader: { bg: 'bg-orange-100', text: 'text-orange-700' },
+    program_manager: { bg: 'bg-orange-100', text: 'text-orange-700' },
     admin: { bg: 'bg-red-100', text: 'text-red-700' },
     data_entry: { bg: 'bg-cyan-100', text: 'text-cyan-700' },
 };

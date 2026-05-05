@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { adminApi } from "@/lib/api";
 import {
     LineChart, Line, AreaChart, Area,
@@ -6,10 +6,10 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
-    Users, School, CalendarDays, BarChart3,
+    Users, School, CalendarDays,
     TrendingUp, CheckCircle2, UserPlus, RefreshCw,
     Loader2, AlertCircle, GraduationCap, Award,
-    Activity,
+    type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ const ROLE_COLORS: Record<string, string> = {
     parent: C.purple,
     admin: C.red,
     school: C.teal,
-    leader: C.lime,
+    program_manager: C.lime,
     data_entry: C.indigo,
 };
 
@@ -61,7 +61,7 @@ function Kpi({
     label, value, sub, icon: Icon, color, fmt = String,
 }: {
     label: string; value: number | string; sub?: string;
-    icon: any; color: string;
+    icon: LucideIcon; color: string;
     fmt?: (v: number | string) => string;
 }) {
     return (
@@ -85,8 +85,16 @@ function Kpi({
     );
 }
 
+interface SectionProps {
+    title: string;
+    desc?: string;
+    icon: LucideIcon;
+    color: string;
+    children: ReactNode;
+}
+
 /* ─── Section card ───────────────────────────────────────────────────────── */
-function Section({ title, desc, icon: Icon, color, children }: any) {
+function Section({ title, desc, icon: Icon, color, children }: SectionProps) {
     return (
         <Card className="overflow-hidden">
             <CardHeader className="pb-2">
@@ -101,13 +109,25 @@ function Section({ title, desc, icon: Icon, color, children }: any) {
     );
 }
 
+interface ChartPayload {
+    name: string;
+    value: number | string;
+    color?: string;
+}
+
+interface ChartTipProps {
+    active?: boolean;
+    payload?: ChartPayload[];
+    label?: string;
+}
+
 /* ─── Custom tooltip ─────────────────────────────────────────────────────── */
-function ChartTip({ active, payload, label }: any) {
+function ChartTip({ active, payload, label }: ChartTipProps) {
     if (!active || !payload?.length) return null;
     return (
         <div className="bg-white border border-gray-100 rounded-lg shadow-lg p-3 text-xs">
             <p className="font-semibold text-gray-700 mb-1">{label}</p>
-            {payload.map((p: any) => (
+            {payload.map((p) => (
                 <div key={p.name} className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
                     <span className="text-gray-500 capitalize">{p.name.replace("_", " ")}:</span>
@@ -131,8 +151,8 @@ export default function AdminAnalytics() {
         try {
             const res = await adminApi.analytics.dashboard({ days });
             setData(res.data);
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to load analytics");
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Failed to load analytics");
         } finally {
             setLoading(false);
         }
@@ -141,11 +161,6 @@ export default function AdminAnalytics() {
     useEffect(() => { fetch(); }, [fetch]);
 
     const kpis = data?.kpis ?? {};
-
-    /* trim daily series so sparse charts don't look flat */
-    const trimmedUserGrowth = data?.user_growth.filter(d => d.new_users > 0 || d.new_enrollments > 0) ?? [];
-    const trimmedSessionTrend = data?.session_trend.filter(d => d.total > 0) ?? [];
-    const trimmedAttendance = data?.attendance_trend.filter(d => d.present + d.absent + d.late > 0) ?? [];
 
     /* show ALL points but still format them */
     const userGrowthData = (data?.user_growth ?? []).map(d => ({ ...d, date: fmtDate(d.date) }));
@@ -332,7 +347,7 @@ export default function AdminAnalytics() {
                                                 />
                                             ))}
                                         </Pie>
-                                        <Tooltip formatter={(v: any, name: any) => [v, name]} />
+                                        <Tooltip formatter={(value, name) => [value, name]} />
                                         <Legend
                                             wrapperStyle={{ fontSize: 10 }}
                                             formatter={v => v.replace("_", " ")}

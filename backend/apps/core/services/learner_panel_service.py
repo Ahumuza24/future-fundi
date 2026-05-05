@@ -100,22 +100,33 @@ class LearnerPanelService:
     def evidence_portfolio(learner: Learner) -> list[dict]:
         artifacts = (
             Artifact.objects.filter(learner=learner)
-            .select_related("module")
+            .select_related("module", "evidence_record", "evidence_record__task")
             .order_by("-submitted_at")[:20]
         )
-        return [
-            {
-                "id": str(a.id),
-                "title": a.title,
-                "status": a.status,
-                "submitted_at": _fmt_date(a.submitted_at),
-                "module": a.module.name if a.module else "",
-                "uploaded_by_student": a.uploaded_by_student,
-                "reflection": a.reflection,
-                "media_refs": a.media_refs or [],
-            }
-            for a in artifacts
-        ]
+        rows = []
+        for artifact in artifacts:
+            evidence = getattr(artifact, "evidence_record", None)
+            evidence_status = None
+            if evidence is not None:
+                evidence_status = evidence.verification_status
+            elif artifact.status == Artifact.STATUS_APPROVED:
+                evidence_status = "verified"
+            else:
+                evidence_status = artifact.status
+
+            rows.append({
+                "id": str(artifact.id),
+                "title": artifact.title,
+                "status": artifact.status,
+                "evidence_status": evidence_status,
+                "submitted_at": _fmt_date(artifact.submitted_at),
+                "module": artifact.module.name if artifact.module else "",
+                "task": evidence.task.title if evidence and evidence.task else "",
+                "uploaded_by_student": artifact.uploaded_by_student,
+                "reflection": artifact.reflection,
+                "media_refs": artifact.media_refs or [],
+            })
+        return rows
 
     @staticmethod
     def cohort_position(learner: Learner) -> dict:

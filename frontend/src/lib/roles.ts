@@ -17,7 +17,7 @@ export const ROLES = {
   LEARNER: 'learner',
   TEACHER: 'teacher',
   PARENT: 'parent',
-  LEADER: 'leader',
+  PROGRAM_MANAGER: 'program_manager',
   ADMIN: 'admin',
   DATA_ENTRY: 'data_entry',
   SCHOOL: 'school',
@@ -32,7 +32,11 @@ export const ADMIN_ROLES: ReadonlySet<UserRole> = new Set([ROLES.ADMIN]);
 /** Roles that can manage school-level data. */
 export const SCHOOL_ROLES: ReadonlySet<UserRole> = new Set([
   ROLES.SCHOOL,
-  ROLES.LEADER,
+]);
+
+/** Roles that can access cross-program analytics. */
+export const PROGRAM_MANAGER_ROLES: ReadonlySet<UserRole> = new Set([
+  ROLES.PROGRAM_MANAGER,
 ]);
 
 /** Roles that can deliver sessions and capture artifacts. */
@@ -65,7 +69,7 @@ export const ROLE_DASHBOARD: Record<UserRole, string> = {
   [ROLES.LEARNER]: '/student/dashboard',
   [ROLES.TEACHER]: '/teacher/dashboard',
   [ROLES.PARENT]: '/parent/portal',
-  [ROLES.LEADER]: '/leader/dashboard',
+  [ROLES.PROGRAM_MANAGER]: '/program-manager',
   [ROLES.ADMIN]: '/admin/dashboard',
   [ROLES.DATA_ENTRY]: '/admin/dashboard',
   [ROLES.SCHOOL]: '/school/dashboard',
@@ -78,7 +82,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   [ROLES.LEARNER]: 'Student',
   [ROLES.TEACHER]: 'Teacher',
   [ROLES.PARENT]: 'Parent',
-  [ROLES.LEADER]: 'Leader',
+  [ROLES.PROGRAM_MANAGER]: 'Program Manager',
   [ROLES.ADMIN]: 'Admin',
   [ROLES.DATA_ENTRY]: 'Data Entry',
   [ROLES.SCHOOL]: 'School Admin',

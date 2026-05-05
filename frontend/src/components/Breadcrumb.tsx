@@ -32,7 +32,7 @@ const routeLabels: Record<string, string> = {
   schools: "School Management",
   courses: "Course Management",
   monitor: "Activity Monitor",
-  leader: "Dashboard",
+  "program-manager": "Program Manager",
   reports: "Reports",
   settings: "Settings",
   login: "Login",

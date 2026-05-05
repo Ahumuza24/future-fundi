@@ -25,6 +25,7 @@ export interface PendingBadgeAward {
   unit_title: string;
   module_title: string;
   module_id: string;
+  evidence_ids: string[];
 }
 
 export interface RecentBadge {
@@ -44,6 +45,9 @@ export interface EligibleLearner {
   module: string;
   module_id: string;
   microcredential_template: string;
+  microcredential_template_id: string | null;
+  evidence_ids: string[];
+  badge_record_ids: string[];
   artifact_submitted: boolean;
   reflection_submitted: boolean;
   teacher_verified: boolean;

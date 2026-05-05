@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { activityApi, courseApi } from "@/lib/api";
 import { Plus, Calendar, Clock, MapPin, Image, BookOpen, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
@@ -19,14 +19,12 @@ export default function ActivityManagement() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    useEffect(() => { fetchActivities(); fetchCourses(); }, [statusFilter]);
-
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
         setTimeout(() => setMessage(null), 3000);
     };
 
-    const fetchActivities = async () => {
+    const fetchActivities = useCallback(async () => {
         setLoading(true);
         try {
             const params = statusFilter !== 'all' ? { status: statusFilter } : {};
@@ -37,16 +35,18 @@ export default function ActivityManagement() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [statusFilter]);
 
-    const fetchCourses = async () => {
+    const fetchCourses = useCallback(async () => {
         try {
             const res = await courseApi.getAll();
             setCourses(Array.isArray(res.data) ? res.data : (res.data.results ?? []));
         } catch {
             // Courses are optional context; silently ignore
         }
-    };
+    }, []);
+
+    useEffect(() => { void fetchActivities(); void fetchCourses(); }, [fetchActivities, fetchCourses]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -54,7 +54,7 @@ export default function ActivityManagement() {
             await activityApi.delete(id);
             showMessage('success', 'Activity deleted successfully');
             setExpandedId(null);
-            fetchActivities();
+            void fetchActivities();
         } catch {
             showMessage('error', 'Failed to delete activity');
         }
@@ -104,7 +104,7 @@ export default function ActivityManagement() {
                                 onSuccess={() => {
                                     setIsCreating(false);
                                     showMessage('success', 'Activity created successfully');
-                                    fetchActivities();
+                                    void fetchActivities();
                                 }}
                             />
                         </motion.div>
@@ -153,7 +153,7 @@ export default function ActivityManagement() {
                                 onUpdate={() => {
                                     setEditingId(null);
                                     showMessage('success', 'Activity updated successfully');
-                                    fetchActivities();
+                                    void fetchActivities();
                                 }}
                                 onDelete={() => handleDelete(selectedActivity.id, selectedActivity.name)}
                             />

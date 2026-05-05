@@ -11,6 +11,7 @@ from apps.core.models import (
     BadgeRecord,
     BadgeTemplate,
     CertificationRecord,
+    Evidence,
     LearningTask,
     Learner,
     Lesson,
@@ -32,6 +33,16 @@ def _module_pathway(module: Any) -> str:
         return module.program.track.pathway.name
     except AttributeError:
         return ""
+
+
+def _usable_evidence_ids_by_key(evidence: list[Evidence], key: str) -> dict[tuple[str, str], list[str]]:
+    grouped: dict[tuple[str, str], list[str]] = {}
+    for row in evidence:
+        key_value = getattr(row, f"{key}_id")
+        if key_value is None or not row.is_usable_for_recognition:
+            continue
+        grouped.setdefault((str(row.learner_id), str(key_value)), []).append(str(row.id))
+    return grouped
 
 
 class TeacherPanelService:
@@ -127,6 +138,14 @@ class TeacherPanelService:
         )
         issued_str = {(str(l), str(t)) for l, t in issued_pairs}
 
+        usable_evidence = list(
+            Evidence.objects.filter(
+                learner__tenant=school,
+                verification_status=Evidence.STATUS_VERIFIED,
+            ).select_related("artifact")
+        )
+        evidence_by_unit = _usable_evidence_ids_by_key(usable_evidence, "unit")
+
         pending_awards: list[dict] = []
         for mp in active_progress:
             for seq in range(1, mp.units_completed + 1):
@@ -142,6 +161,9 @@ class TeacherPanelService:
                         "unit_title": bt.unit.title,
                         "module_title": mp.module.name,
                         "module_id": str(mp.module_id),
+                        "evidence_ids": evidence_by_unit.get(
+                            (str(mp.learner_id), str(bt.unit_id)), []
+                        ),
                     })
 
         recently_issued = (
@@ -183,6 +205,32 @@ class TeacherPanelService:
         )
         issued_str = {(str(l), str(m)) for l, m in issued_pairs}
 
+        usable_evidence = list(
+            Evidence.objects.filter(
+                learner__tenant=school,
+                verification_status=Evidence.STATUS_VERIFIED,
+            ).select_related("artifact")
+        )
+        evidence_by_module = _usable_evidence_ids_by_key(usable_evidence, "module")
+
+        issued_badges = (
+            BadgeRecord.objects.filter(
+                learner__tenant=school,
+                status=BadgeRecord.STATUS_ISSUED,
+            )
+            .select_related("template__unit")
+            .order_by("date_awarded")
+        )
+        badge_records_by_module: dict[tuple[str, str], list[str]] = {}
+        for record in issued_badges:
+            unit = getattr(record.template, "unit", None)
+            if unit is None or unit.module_id is None:
+                continue
+            badge_records_by_module.setdefault(
+                (str(record.learner_id), str(unit.module_id)),
+                [],
+            ).append(str(record.id))
+
         eligible: list[dict] = []
         for mp in eligible_progress:
             if (str(mp.learner_id), str(mp.module_id)) in issued_str:
@@ -194,6 +242,13 @@ class TeacherPanelService:
                 "module": mp.module.name,
                 "module_id": str(mp.module_id),
                 "microcredential_template": template.title if template else "",
+                "microcredential_template_id": str(template.id) if template else None,
+                "evidence_ids": evidence_by_module.get(
+                    (str(mp.learner_id), str(mp.module_id)), []
+                ),
+                "badge_record_ids": badge_records_by_module.get(
+                    (str(mp.learner_id), str(mp.module_id)), []
+                ),
                 "artifact_submitted": mp.artifact_submitted,
                 "reflection_submitted": mp.reflection_submitted,
                 "teacher_verified": mp.teacher_verified,

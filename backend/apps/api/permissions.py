@@ -4,7 +4,7 @@ Roles:
 - learner: Can view own data, submit artifacts
 - teacher: Can view learners in their classes, submit observations
 - parent: Can view their child's data
-- leader: Can view all data in their school (tenant)
+- program_manager: Can view cross-program analytics
 - admin: Full access (superuser)
 """
 
@@ -82,12 +82,12 @@ class IsParent(permissions.BasePermission):
         ).exists()
 
 
-class IsLeader(permissions.BasePermission):
-    """Permission for school leaders/admins to access all data in their school."""
+class IsProgramManager(permissions.BasePermission):
+    """Permission for program managers/admins to access aggregate program data."""
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in [
-            UserRole.LEADER,
+            UserRole.PROGRAM_MANAGER,
             UserRole.ADMIN,
         ]
 
@@ -97,19 +97,19 @@ class IsLeader(permissions.BasePermission):
             return True
         if request.user.role == UserRole.ADMIN and request.user.tenant_id:
             return _same_school(request.user, obj, request.user.tenant_id)
-        if request.user.role == UserRole.LEADER:
+        if request.user.role == UserRole.PROGRAM_MANAGER:
             school = getattr(request, "school", None)
             return _same_school(request.user, obj, getattr(school, "id", None))
         return False  # Deny when no tenant scope can be resolved
 
 
-class IsTeacherOrLeader(permissions.BasePermission):
-    """Permission for teachers or leaders."""
+class IsTeacherOrProgramManager(permissions.BasePermission):
+    """Permission for teachers or program managers."""
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in [
             UserRole.TEACHER,
-            UserRole.LEADER,
+            UserRole.PROGRAM_MANAGER,
             UserRole.ADMIN,
         ]
 
@@ -180,15 +180,26 @@ class IsSchoolAdmin(permissions.BasePermission):
 class IsCurriculumDesigner(permissions.BasePermission):
     """Only curriculum designers (and superusers) may create or edit content objects.
 
-    Safe methods (GET, HEAD, OPTIONS) are open to any authenticated user so
-    that teachers and admins can browse the hierarchy without write access.
+    Safe methods are limited to staff-like roles because CMS serializers include
+    teacher-only fields such as notes, rubrics, and answer keys.
     """
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         if request.method in permissions.SAFE_METHODS:
-            return True
+            return (
+                request.user.is_superuser
+                or request.user.role
+                in {
+                    UserRole.ADMIN,
+                    UserRole.CURRICULUM_DESIGNER,
+                    UserRole.TEACHER,
+                    UserRole.SCHOOL,
+                    UserRole.PROGRAM_MANAGER,
+                    UserRole.DATA_ENTRY,
+                }
+            )
         return (
             request.user.is_superuser
             or request.user.role == UserRole.CURRICULUM_DESIGNER

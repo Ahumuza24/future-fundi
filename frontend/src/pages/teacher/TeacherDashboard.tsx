@@ -17,6 +17,7 @@ import type {
   MicrocredentialReadinessData,
   InterventionFlag,
   PendingBadgeAward,
+  EligibleLearner,
   CertificationPipelineRow,
   CohortLearnerRow,
   DualViewData,
@@ -73,9 +74,8 @@ export default function TeacherDashboard() {
       try {
         await teacherApi.badges.awardBadge({
           learner_id: award.learner_id,
-          badge_name: award.badge_title,
-          description: award.unit_title ? `Completed ${award.unit_title}` : undefined,
-          module_id: award.module_id,
+          badge_template_id: award.badge_template_id,
+          evidence_ids: award.evidence_ids,
         });
         badges.refetch();
       } catch {
@@ -83,6 +83,28 @@ export default function TeacherDashboard() {
       }
     },
     [badges]
+  );
+
+  const handleIssueMicrocredential = useCallback(
+    async (learner: EligibleLearner) => {
+      if (!learner.microcredential_template_id) {
+        toast.error("Missing microcredential template.");
+        return;
+      }
+      try {
+        await teacherApi.credentials.award({
+          learner_id: learner.learner_id,
+          microcredential_template_id: learner.microcredential_template_id,
+          evidence_ids: learner.evidence_ids,
+          badge_record_ids: learner.badge_record_ids,
+        });
+        microcreds.refetch();
+        certPipeline.refetch();
+      } catch {
+        toast.error("Failed to issue microcredential.");
+      }
+    },
+    [certPipeline, microcreds]
   );
 
   const isLoading = cohort.isLoading || badges.isLoading;
@@ -160,6 +182,7 @@ export default function TeacherDashboard() {
               <MicrocredentialReadinessPanel
                 data={microcreds.data ?? { eligible: [], not_yet_eligible: [] }}
                 onSelectLearner={setSelectedLearnerId}
+                onIssueMicrocredential={handleIssueMicrocredential}
               />
               <CertificationPipelinePanel
                 rows={certPipeline.data ?? []}

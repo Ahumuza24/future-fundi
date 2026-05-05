@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
+import { StudentArtifactUploadModal } from '@/features/student/dashboard/components';
 import { usePathwayLearning } from './hooks/usePathwayLearning';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import type {
@@ -16,6 +17,8 @@ import { PathwayHeader } from './components/PathwayHeader';
 import { MediaModal } from './components/MediaModal';
 import {
   dedupeModules,
+  flattenHierarchyModules,
+  getHierarchyProgressSummary,
   flattenModules,
   getModuleIndex,
   getModuleLevel,
@@ -29,18 +32,33 @@ const PathwayLearning = () => {
   const navigate = useNavigate();
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<NormalizedMediaResource | null>(null);
+  const [submissionContext, setSubmissionContext] = useState<{
+    moduleId: string;
+    taskId: string;
+    label: string;
+  } | null>(null);
 
   const {
     data,
     isLoading,
     isError,
+    refetch,
   } = usePathwayLearning(enrollmentId);
 
   const levels = useMemo(() => data?.levels ?? [], [data?.levels]);
+  const hierarchyModules = useMemo(
+    () => flattenHierarchyModules(data?.hierarchy),
+    [data?.hierarchy]
+  );
 
   const moduleList = useMemo<PathwayModuleWithLevel[]>(
-    () => dedupeModules(flattenModules(levels)),
-    [levels]
+    () => {
+      if (hierarchyModules.length > 0) {
+        return dedupeModules(hierarchyModules);
+      }
+      return dedupeModules(flattenModules(levels));
+    },
+    [hierarchyModules, levels]
   );
 
   const resolvedModuleId = useMemo(() => {
@@ -49,6 +67,10 @@ const PathwayLearning = () => {
     }
     if (selectedModuleId && moduleList.some((module) => module.id === selectedModuleId)) {
       return selectedModuleId;
+    }
+    const firstOpenModule = moduleList.find((module) => module.access?.can_open);
+    if (firstOpenModule) {
+      return firstOpenModule.id;
     }
     const initialLevel = selectInitialLevel(levels);
     return initialLevel?.modules[0]?.id ?? moduleList[0].id;
@@ -74,8 +96,13 @@ const PathwayLearning = () => {
   );
 
   const { totalModules, completedModules } = useMemo(
-    () => getModuleProgressSummary(levels),
-    [levels]
+    () => {
+      if (hierarchyModules.length > 0) {
+        return getHierarchyProgressSummary(moduleList);
+      }
+      return getModuleProgressSummary(levels);
+    },
+    [hierarchyModules.length, levels, moduleList]
   );
 
   useEscapeKey(() => setSelectedMedia(null));
@@ -123,6 +150,16 @@ const PathwayLearning = () => {
     []
   );
 
+  const handleSubmitTask = useCallback((taskId: string, moduleId: string, label: string) => {
+    setSubmissionContext({ taskId, moduleId, label });
+  }, []);
+
+  const handleEvidenceUploaded = useCallback(() => {
+    toast.success('Evidence submitted for review.');
+    setSubmissionContext(null);
+    refetch();
+  }, [refetch]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -158,7 +195,7 @@ const PathwayLearning = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-3 space-y-4">
-            <ModuleSidebar modules={moduleList} selectedModuleId={selectedModuleId} onSelect={handleSelectModule} />
+            <ModuleSidebar modules={moduleList} selectedModuleId={resolvedModuleId} onSelect={handleSelectModule} />
           </div>
 
           <div className="col-span-12 lg:col-span-9">
@@ -174,6 +211,7 @@ const PathwayLearning = () => {
                 canGoNext={moduleIndex < moduleList.length - 1}
                 onMediaSelect={handleMediaSelect}
                 mediaResources={mediaResources}
+                onSubmitTask={handleSubmitTask}
               />
             </motion.div>
           </div>
@@ -181,6 +219,14 @@ const PathwayLearning = () => {
       </div>
 
       <MediaModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
+      <StudentArtifactUploadModal
+        isOpen={submissionContext !== null}
+        onClose={() => setSubmissionContext(null)}
+        onSuccess={handleEvidenceUploaded}
+        moduleId={submissionContext?.moduleId}
+        taskId={submissionContext?.taskId}
+        contextLabel={submissionContext?.label}
+      />
     </div>
   );
 };

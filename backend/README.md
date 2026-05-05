@@ -4,7 +4,7 @@ Django REST Framework backend for the Future Fundi Dashboard.
 
 ## 🏗️ Architecture
 
-- **Framework**: Django 5.0 + Django REST Framework
+- **Framework**: Django 6.0 + Django REST Framework
 - **Database**: PostgreSQL (with SQLite fallback for development)
 - **Cache**: Redis (with LocMem fallback)
 - **Authentication**: JWT (Simple JWT)
@@ -44,7 +44,7 @@ backend/
 
 ### 1. Prerequisites
 
-- Python 3.10+
+- Python 3.11+
 - PostgreSQL 14+ (optional, SQLite works for development)
 - Redis (optional, LocMem cache works for development)
 
@@ -119,15 +119,15 @@ The API will be available at `http://localhost:8000`
 
 ### User Roles
 
-The system supports 6 core user roles (plus legacy `leader`):
+The system supports 7 core user roles:
 
 1. **learner** - Students using the platform
 2. **teacher** - L1/L2 teachers who capture artifacts and assessments
 3. **parent** - Parents/guardians viewing their child's progress
-4. **school** - School admin account
-5. **admin** - Platform administrators with global access
-6. **data_entry** - Curriculum/data operations
-7. **leader** - Legacy role still supported
+4. **program_manager** - Cross-program analytics and impact reporting
+5. **school** - School admin account
+6. **admin** - Platform administrators with global access
+7. **data_entry** - Curriculum/data operations
 
 ### Authentication Flow
 
@@ -176,7 +176,8 @@ Each endpoint has role-based permissions:
 - **Learners**: Can only view/edit their own profile and artifacts
 - **Teachers**: Can view learners in their school, create artifacts
 - **Parents**: Can view their child's profile and artifacts
-- **School/Leaders**: Full access to school data and school dashboards
+- **School admins**: Full access to school data and school dashboards
+- **Program managers**: Cross-program analytics and recognition reporting
 - **Admins**: Global access (or school-scoped if assigned to one school)
 
 ## 📡 API Endpoints
@@ -205,7 +206,7 @@ Each endpoint has role-based permissions:
 - `POST /api/artifacts/{id}/upload-media/` - Upload media
 
 ### Dashboard
-- `GET /api/dashboard/kpis/` - Get KPI metrics (teachers/leaders only)
+- `GET /api/dashboard/kpis/` - Get KPI metrics (teachers/program managers only)
 
 ## 🧪 Testing
 

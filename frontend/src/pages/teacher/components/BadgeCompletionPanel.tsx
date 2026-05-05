@@ -30,24 +30,31 @@ export default function BadgeCompletionPanel({ data, onAwardBadge }: Props) {
         {pending_awards.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Award</p>
-            {pending_awards.map((award, i) => (
-              <div
-                key={`${award.learner_id}-${award.badge_template_id}-${i}`}
-                className="flex items-start justify-between gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-800 truncate">{award.learner_name}</div>
-                  <div className="text-xs text-amber-700 truncate">{award.badge_title}</div>
-                  <div className="text-xs text-gray-400 truncate">{award.unit_title}</div>
-                </div>
-                <button
-                  onClick={() => onAwardBadge(award)}
-                  className="shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded font-medium transition-colors"
+            {pending_awards.map((award, i) => {
+              const hasEvidence = award.evidence_ids.length > 0;
+              return (
+                <div
+                  key={`${award.learner_id}-${award.badge_template_id}-${i}`}
+                  className="flex items-start justify-between gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2"
                 >
-                  Award
-                </button>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-gray-800 truncate">{award.learner_name}</div>
+                    <div className="text-xs text-amber-700 truncate">{award.badge_title}</div>
+                    <div className="text-xs text-gray-400 truncate">{award.unit_title}</div>
+                    <div className={`text-[10px] mt-1 ${hasEvidence ? "text-green-600" : "text-red-500"}`}>
+                      {hasEvidence ? `${award.evidence_ids.length} verified evidence` : "No verified evidence"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onAwardBadge(award)}
+                    disabled={!hasEvidence}
+                    className="shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded font-medium transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  >
+                    Award
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
         {recently_issued.length > 0 && (

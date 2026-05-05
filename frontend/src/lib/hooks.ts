@@ -84,7 +84,7 @@ export const useCreateArtifact = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       const response = await artifactApi.create(data);
       return response.data;
     },

@@ -35,9 +35,9 @@ const portals: Portal[] = [
     },
     {
         icon: BarChart3,
-        title: "Leaders",
-        description: "School-wide analytics and impact reporting",
-        path: "/leader",
+        title: "Program Managers",
+        description: "Cross-program analytics and impact reporting",
+        path: "/program-manager",
         color: "#C7F464",
     },
 ];

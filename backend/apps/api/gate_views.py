@@ -72,7 +72,8 @@ class IsStaffOrAdmin(permissions.BasePermission):
             and request.user.is_authenticated
             and (
                 request.user.is_staff
-                or getattr(request.user, "role", None) in ("admin", "leader", "teacher")
+                or getattr(request.user, "role", None)
+                in ("admin", "program_manager", "teacher")
             )
         )
 

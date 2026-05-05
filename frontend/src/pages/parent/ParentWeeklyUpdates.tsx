@@ -12,13 +12,6 @@ interface Child {
     age?: number;
 }
 
-interface WeeklyPulse {
-    mood: number;
-    win: string;
-    worry: string;
-    created_at: string;
-}
-
 export default function ParentWeeklyUpdates() {
     const [children, setChildren] = useState<Child[]>([]);
     const [loading, setLoading] = useState(true);

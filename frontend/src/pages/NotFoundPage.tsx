@@ -5,7 +5,7 @@ import { getCurrentUser, getDashboardRoute } from "@/lib/auth";
 
 const NotFoundPage = () => {
   const user = getCurrentUser();
-  const dashboardUrl = user ? getDashboardRoute(user.role as any) : "/";
+  const dashboardUrl = user ? getDashboardRoute(user.role) : "/";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, rgba(240, 87, 34, 0.05), rgba(21, 189, 219, 0.05))' }}>

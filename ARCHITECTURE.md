@@ -5,7 +5,7 @@
 ```
 ┌───────────────────────────────────────────────────────────┐
 │                      Browser (SPA)                        │
-│         React 19 + Vite 7 + Tailwind CSS 4               │
+│         React 19 + Vite 8 + Tailwind CSS 4               │
 │                  Hosted on Vercel                         │
 └─────────────────────────┬─────────────────────────────────┘
                           │ HTTPS / JWT (Authorization header)
@@ -41,7 +41,7 @@
 
 ```
 School (Tenant)
-├── User (auth)  → role: admin | teacher | learner | parent | leader | school | data_entry
+├── User (auth)  → role: admin | teacher | learner | parent | program_manager | school | data_entry
 ├── Learner      → linked 1:1 with User (role=learner)
 │   ├── LearnerCourseEnrollment → Course (Pathway)
 │   │   ├── current_level  → CourseLevel
@@ -108,9 +108,9 @@ Permissions live in `apps/api/permissions.py`. Each role has a dedicated permiss
 | `IsLearner` | `learner` |
 | `IsTeacher` | `teacher` |
 | `IsParent` | `parent` |
-| `IsLeader` | `leader`, `admin` |
+| `IsProgramManager` | `program_manager`, `admin` |
 | `IsSchoolAdmin` | `school`, superuser |
-| `IsTeacherOrLeader` | `teacher`, `leader`, `admin` |
+| `IsTeacherOrProgramManager` | `teacher`, `program_manager`, `admin` |
 | `IsLearnerOrParent` | `learner`, `parent` |
 
 Frontend route guards (`ProtectedRoute`) mirror this — each route declares `allowedRoles`.

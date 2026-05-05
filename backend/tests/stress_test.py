@@ -492,13 +492,12 @@ class SchoolSurfaceTests(TestCase):
 
     def setUp(self):
         self.school = School.objects.create(name="Stress School", code="STRESS01")
-        # 'school' role satisfies IsSchoolAdmin (not 'leader' which maps to UserRole.LEADER)
-        self.leader, _ = make_user("surf_leader", role="school", email="sl@x.com")
-        self.leader.tenant = self.school
-        self.leader.save()
-        self.lc = _force_client(self.leader)
+        self.school_admin, _ = make_user("surf_school", role="school", email="sl@x.com")
+        self.school_admin.tenant = self.school
+        self.school_admin.save()
+        self.lc = _force_client(self.school_admin)
 
-    def test_school_dashboard_accessible_by_leader(self):
+    def test_school_dashboard_accessible_by_school_admin(self):
         r = self.lc.get(
             f"{API}/school/dashboard/", HTTP_X_SCHOOL_ID=str(self.school.id)
         )

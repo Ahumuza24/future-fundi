@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User as UserIcon, Mail, Lock, Bell, Shield, Save, Camera, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
-import { Avatar, EditableAvatar } from "@/components/ui/avatar";
+import { EditableAvatar } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SettingsPage = () => {
@@ -88,7 +88,7 @@ const SettingsPage = () => {
         localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
-    } catch (error) {
+    } catch {
       showMessage("error", "Failed to remove avatar");
     }
   };

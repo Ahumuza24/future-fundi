@@ -44,8 +44,10 @@ export interface EvidenceArtifact {
   id: string;
   title: string;
   status: "pending" | "approved" | "rejected";
+  evidence_status?: "pending" | "verified" | "rejected" | "corrected";
   submitted_at: string | null;
   module: string;
+  task?: string;
   uploaded_by_student: boolean;
   reflection: string;
   media_refs: ArtifactMediaRef[];

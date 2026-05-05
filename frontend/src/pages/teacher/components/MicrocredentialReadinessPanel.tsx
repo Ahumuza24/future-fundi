@@ -1,13 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
-import type { MicrocredentialReadinessData } from "../teacher-dashboard-types";
+import type { EligibleLearner, MicrocredentialReadinessData } from "../teacher-dashboard-types";
 
 interface Props {
   data: MicrocredentialReadinessData;
   onSelectLearner: (learnerId: string) => void;
+  onIssueMicrocredential: (learner: EligibleLearner) => void;
 }
 
-export default function MicrocredentialReadinessPanel({ data, onSelectLearner }: Props) {
+export default function MicrocredentialReadinessPanel({
+  data,
+  onSelectLearner,
+  onIssueMicrocredential,
+}: Props) {
   const { eligible, not_yet_eligible } = data;
 
   return (
@@ -31,17 +36,37 @@ export default function MicrocredentialReadinessPanel({ data, onSelectLearner }:
           <div className="space-y-1.5">
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Ready to Issue</p>
             {eligible.map((learner) => (
-              <button
+              <div
                 key={learner.learner_id}
-                onClick={() => onSelectLearner(learner.learner_id)}
-                className="w-full text-left bg-green-50 border border-green-200 rounded-lg px-3 py-2 hover:bg-green-100 transition-colors"
+                className="bg-green-50 border border-green-200 rounded-lg px-3 py-2"
               >
-                <div className="text-xs font-semibold text-gray-800">{learner.learner_name}</div>
-                <div className="text-xs text-green-700">{learner.module}</div>
-                {learner.microcredential_template && (
-                  <div className="text-xs text-gray-400">{learner.microcredential_template}</div>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectLearner(learner.learner_id)}
+                  className="w-full text-left"
+                >
+                  <div className="text-xs font-semibold text-gray-800">{learner.learner_name}</div>
+                  <div className="text-xs text-green-700">{learner.module}</div>
+                  {learner.microcredential_template && (
+                    <div className="text-xs text-gray-400">{learner.microcredential_template}</div>
+                  )}
+                </button>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className={`text-[10px] ${learner.evidence_ids.length > 0 ? "text-green-700" : "text-red-500"}`}>
+                    {learner.evidence_ids.length > 0
+                      ? `${learner.evidence_ids.length} verified evidence`
+                      : "No verified evidence"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onIssueMicrocredential(learner)}
+                    disabled={!learner.microcredential_template_id || learner.evidence_ids.length === 0}
+                    className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded font-medium transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  >
+                    Issue
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

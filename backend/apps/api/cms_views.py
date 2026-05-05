@@ -2,7 +2,8 @@
 Curriculum Designer CMS views (PRD §8, Phase 4).
 
 All write operations require the curriculum_designer role (IsCurriculumDesigner).
-Safe methods (GET, HEAD, OPTIONS) are open to any authenticated user.
+Safe methods are limited to staff-like roles because CMS serializers include
+teacher-only content.
 
 Structural limit warnings are surfaced in the response as `structural_warning`
 when a creation is near the ceiling (hard blocks raise 400 via the serializer).

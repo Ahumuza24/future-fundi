@@ -1,5 +1,5 @@
 import { ButtonHTMLAttributes, memo } from 'react';
-import { Award } from 'lucide-react';
+import { Award, LockKeyhole } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PathwayModuleWithLevel } from '../types';
 
@@ -44,11 +44,24 @@ const ModuleSidebarButton = ({ module, index, active, ...props }: ModuleSidebarB
     <div className="flex items-center gap-2">
       <span className="text-xs font-semibold opacity-70">{index + 1}</span>
       <span className="truncate flex-1">{module.name}</span>
+      {module.access && !module.access.can_open && (
+        <LockKeyhole className="h-3.5 w-3.5 shrink-0 opacity-70" aria-label="Locked" />
+      )}
     </div>
+    {(module.programTitle || module.levelName) && (
+      <div className={`mt-1 text-[11px] truncate ${active ? 'opacity-85' : 'text-gray-500'}`}>
+        {module.programTitle ?? module.levelName}
+      </div>
+    )}
     {module.badgeName && (
       <div className={`flex items-center gap-1 mt-1 text-xs ${active ? 'opacity-90' : 'opacity-70'}`}>
         <Award className="h-3 w-3" />
         <span>{module.badgeName}</span>
+      </div>
+    )}
+    {module.access && !module.access.can_open && module.gate?.detail && (
+      <div className={`mt-1 text-[11px] line-clamp-2 ${active ? 'opacity-85' : 'text-gray-500'}`}>
+        {module.gate.detail}
       </div>
     )}
   </button>

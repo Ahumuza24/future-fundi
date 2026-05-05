@@ -7,6 +7,8 @@ const STATUS_CHIP: Record<string, string> = {
   pending: "bg-fundi-yellow/20 text-[#d4b800]",
   approved: "bg-fundi-lime/15 text-[#496400]",
   rejected: "bg-fundi-red/15 text-fundi-red",
+  verified: "bg-fundi-lime/15 text-[#496400]",
+  corrected: "bg-fundi-purple/15 text-fundi-purple",
 };
 
 const ACCENT_COLORS = [
@@ -48,6 +50,8 @@ function ArtifactThumbnail({ mediaRefs }: { mediaRefs: ArtifactMediaRef[] }) {
 
 function ArtifactCard({ artifact, index }: { artifact: EvidenceArtifact; index: number }) {
   const chipStyle = STATUS_CHIP[artifact.status] ?? "bg-[#e8e8e8] text-[#5b5b5b]";
+  const evidenceStatus = artifact.evidence_status ?? artifact.status;
+  const evidenceChipStyle = STATUS_CHIP[evidenceStatus] ?? "bg-[#e8e8e8] text-[#5b5b5b]";
   const accentColor = ACCENT_COLORS[index % ACCENT_COLORS.length];
   const hasImage = artifact.media_refs[0] && isImage(artifact.media_refs[0]);
 
@@ -71,6 +75,12 @@ function ArtifactCard({ artifact, index }: { artifact: EvidenceArtifact; index: 
         {artifact.module && (
           <p className="text-[10px] text-[#5b5b5b] truncate mt-0.5">{artifact.module}</p>
         )}
+        {artifact.task && (
+          <p className="text-[10px] text-[#5b5b5b] truncate mt-0.5">{artifact.task}</p>
+        )}
+        <span className={cn("inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full", evidenceChipStyle)}>
+          Evidence {evidenceStatus}
+        </span>
         {artifact.submitted_at && (
           <p className="text-[10px] text-[#5b5b5b] mt-0.5">{artifact.submitted_at}</p>
         )}

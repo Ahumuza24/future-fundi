@@ -55,7 +55,7 @@ export const UserFilters = ({
                         <SelectItem value="learner">Learners</SelectItem>
                         <SelectItem value="teacher">Teachers</SelectItem>
                         <SelectItem value="parent">Parents</SelectItem>
-                        <SelectItem value="leader">Leaders</SelectItem>
+                        <SelectItem value="program_manager">Program Managers</SelectItem>
                         <SelectItem value="admin">Admins</SelectItem>
                         <SelectItem value="data_entry">Data Entry</SelectItem>
                     </SelectContent>

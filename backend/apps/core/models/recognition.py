@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from .base import BaseUUIDModel
 
@@ -70,6 +71,12 @@ class BadgeRecord(BaseUUIDModel):
         blank=True,
         help_text="Evidence supporting this badge (at least one required at issuance — PRD F-09).",
     )
+    evidence = models.ManyToManyField(
+        "Evidence",
+        related_name="badge_records",
+        blank=True,
+        help_text="Canonical evidence supporting this badge.",
+    )
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True
     )
@@ -78,6 +85,14 @@ class BadgeRecord(BaseUUIDModel):
     )
     verification_ref = models.CharField(max_length=255, blank=True)
     date_awarded = models.DateTimeField(null=True, blank=True, db_index=True)
+    correction_of = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="corrections",
+    )
+    correction_reason = models.TextField(blank=True)
 
     class Meta:
         db_table = "core_badge_record"
@@ -87,6 +102,7 @@ class BadgeRecord(BaseUUIDModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["template", "learner"],
+                condition=Q(correction_of__isnull=True),
                 name="unique_badge_per_learner",
             )
         ]
@@ -131,6 +147,10 @@ class MicrocredentialTemplate(BaseUUIDModel):
 class MicrocredentialRecord(BaseUUIDModel):
     """Issued microcredential instance for a learner (PRD §3.4, F-07, F-09)."""
 
+    STATUS_DRAFT = "draft"
+    STATUS_ISSUED = "issued"
+    STATUS_REVOKED = "revoked"
+
     template = models.ForeignKey(
         "MicrocredentialTemplate",
         on_delete=models.PROTECT,
@@ -166,13 +186,31 @@ class MicrocredentialRecord(BaseUUIDModel):
         blank=True,
         help_text="Evidence supporting this microcredential. At least one required at issuance (PRD F-09).",
     )
+    evidence = models.ManyToManyField(
+        "Evidence",
+        related_name="microcredential_records",
+        blank=True,
+        help_text="Canonical evidence supporting this microcredential.",
+    )
     status = models.CharField(
         max_length=10,
-        choices=[("draft", "Draft"), ("issued", "Issued"), ("revoked", "Revoked")],
-        default="draft",
+        choices=[
+            (STATUS_DRAFT, "Draft"),
+            (STATUS_ISSUED, "Issued"),
+            (STATUS_REVOKED, "Revoked"),
+        ],
+        default=STATUS_DRAFT,
         db_index=True,
     )
     date_issued = models.DateTimeField(null=True, blank=True, db_index=True)
+    correction_of = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="corrections",
+    )
+    correction_reason = models.TextField(blank=True)
 
     class Meta:
         db_table = "core_microcredential_record"
@@ -182,6 +220,7 @@ class MicrocredentialRecord(BaseUUIDModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["template", "learner"],
+                condition=Q(correction_of__isnull=True),
                 name="unique_microcredential_per_learner",
             )
         ]
@@ -226,6 +265,10 @@ class CertificationTemplate(BaseUUIDModel):
 class CertificationRecord(BaseUUIDModel):
     """Issued certification instance for a learner (PRD §3.4, F-08, F-09)."""
 
+    STATUS_DRAFT = "draft"
+    STATUS_ISSUED = "issued"
+    STATUS_REVOKED = "revoked"
+
     template = models.ForeignKey(
         "CertificationTemplate",
         on_delete=models.PROTECT,
@@ -261,13 +304,31 @@ class CertificationRecord(BaseUUIDModel):
         related_name="certification_records",
         help_text="Required capstone artifact. Non-nullable = DB-level evidence enforcement (PRD F-09).",
     )
+    evidence = models.ManyToManyField(
+        "Evidence",
+        related_name="certification_records",
+        blank=True,
+        help_text="Canonical evidence supporting this certification.",
+    )
     status = models.CharField(
         max_length=10,
-        choices=[("draft", "Draft"), ("issued", "Issued"), ("revoked", "Revoked")],
-        default="draft",
+        choices=[
+            (STATUS_DRAFT, "Draft"),
+            (STATUS_ISSUED, "Issued"),
+            (STATUS_REVOKED, "Revoked"),
+        ],
+        default=STATUS_DRAFT,
         db_index=True,
     )
     date_issued = models.DateTimeField(null=True, blank=True, db_index=True)
+    correction_of = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="corrections",
+    )
+    correction_reason = models.TextField(blank=True)
 
     class Meta:
         db_table = "core_certification_record"
@@ -277,6 +338,7 @@ class CertificationRecord(BaseUUIDModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["template", "learner"],
+                condition=Q(correction_of__isnull=True),
                 name="unique_certification_per_learner",
             )
         ]

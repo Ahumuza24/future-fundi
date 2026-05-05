@@ -74,12 +74,20 @@ const SignUpPage = () => {
       setTimeout(() => {
         navigate("/parent");
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorData =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: unknown } }).response?.data
+          : undefined;
       const errorMessage =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        (err.response?.data && typeof err.response.data === "object"
-          ? Object.values(err.response.data).flat().join(", ")
+        (errorData && typeof errorData === "object" && "detail" in errorData
+          ? String(errorData.detail)
+          : "") ||
+        (errorData && typeof errorData === "object" && "message" in errorData
+          ? String(errorData.message)
+          : "") ||
+        (errorData && typeof errorData === "object"
+          ? Object.values(errorData).flat().join(", ")
           : "Registration failed. Please try again.");
       setError(errorMessage);
     } finally {
@@ -303,4 +311,3 @@ const SignUpPage = () => {
 };
 
 export default SignUpPage;
-

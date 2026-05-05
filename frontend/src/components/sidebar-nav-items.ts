@@ -15,7 +15,6 @@ import {
   BookOpen,
   Camera,
   BarChart3,
-  FileText,
   Database,
   MonitorDot,
 } from "lucide-react";
@@ -69,7 +68,7 @@ export const ROLE_LABELS: Record<string, string> = {
   teacher: "Facilitator",
   parent: "Parent",
   school: "School Admin",
-  leader: "Leader",
+  program_manager: "Program Manager",
   admin: "System Admin",
   data_entry: "Data Entry",
   curriculum_designer: "Curriculum Designer",
@@ -101,9 +100,8 @@ export const allNavItems: NavItem[] = [
   { title: "Assessments", path: "/teacher/assessments", icon: ClipboardList, colorKey: "purple", roles: ["teacher"] },
   { title: "Communication", path: "/teacher/communication", icon: MessageSquare, colorKey: "lime", roles: ["teacher"] },
 
-  // ── Leader / Admin dashboard ─────────────────────────────
-  { title: "Dashboard", path: "/admin", icon: Home, colorKey: "lime", roles: ["leader", "admin"] },
-  { title: "Reports", path: "/leader/reports", icon: FileText, colorKey: "lime", roles: ["leader", "admin"] },
+  // ── Program Manager ─────────────────────────────────────
+  { title: "Dashboard", path: "/program-manager", icon: Home, colorKey: "lime", roles: ["program_manager"] },
 
   // ── School Admin ─────────────────────────────────────────
   { title: "Dashboard", path: "/school", icon: Home, colorKey: "purple", roles: ["school"] },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
     Building, Plus, Search, Edit, Trash2, Users,
-    BookOpen, Activity, FileText, CheckCircle, XCircle,
-    RefreshCw, AlertCircle, TrendingUp, Copy, Key
+    Activity, CheckCircle, RefreshCw, AlertCircle, TrendingUp, Copy, Key
 } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,11 +61,7 @@ export default function SchoolManagement() {
 
 
 
-    useEffect(() => {
-        fetchTenants();
-    }, []);
-
-    const fetchTenants = async () => {
+    const fetchTenants = useCallback(async () => {
         setLoading(true);
         try {
             const response = await adminApi.tenants.getAll();
@@ -77,7 +72,11 @@ export default function SchoolManagement() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        void fetchTenants();
+    }, [fetchTenants]);
 
     const fetchTenantStats = async (tenantId: string) => {
         try {
@@ -142,8 +141,8 @@ export default function SchoolManagement() {
 
             setIsCreateDialogOpen(false);
             resetForm();
-            fetchTenants();
-        } catch (error: any) {
+            void fetchTenants();
+        } catch (error: unknown) {
             const apiError = error as { response?: { data?: { message?: string } } };
             showMessage('error', apiError.response?.data?.message || 'Failed to create school');
         }
@@ -158,8 +157,8 @@ export default function SchoolManagement() {
             showMessage('success', 'School updated successfully');
             setIsEditDialogOpen(false);
             resetForm();
-            fetchTenants();
-        } catch (error: any) {
+            void fetchTenants();
+        } catch (error: unknown) {
             const apiError = error as { response?: { data?: { message?: string } } };
             showMessage('error', apiError.response?.data?.message || 'Failed to update school');
         }
@@ -171,8 +170,8 @@ export default function SchoolManagement() {
         try {
             await adminApi.tenants.delete(tenant.id);
             showMessage('success', 'School deactivated successfully');
-            fetchTenants();
-        } catch (error) {
+            void fetchTenants();
+        } catch {
             showMessage('error', 'Failed to deactivate school');
         }
     };

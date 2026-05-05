@@ -4,6 +4,7 @@ import {
   getRoleDisplayName,
   getSelectedTeacherSchoolId,
   getSelectedTeacherSchoolName,
+  type User,
 } from "@/lib/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,19 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SettingsModal } from "./SettingsModal";
 
-interface UserData {
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  email?: string;
-  role: string;
-  tenant_name?: string;
-  teacher_schools?: Array<{ id: string; name: string }>;
-  avatar_url?: string | null;
-}
-
 const TopBar = () => {
-  const user = getCurrentUser() as UserData | null;
+  const user = getCurrentUser() as User | null;
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -66,7 +56,7 @@ const TopBar = () => {
               ? `${selectedTeacherSchoolName} Dashboard`
               : user.tenant_name
                 ? `${user.tenant_name} Dashboard`
-                : `${getRoleDisplayName(user.role as any)} Dashboard`}
+                : `${getRoleDisplayName(user.role)} Dashboard`}
           </p>
         </div>
 
@@ -108,7 +98,7 @@ const TopBar = () => {
                   <p className="text-sm font-semibold" style={{ color: 'var(--fundi-black)' }}>
                     {user.first_name} {user.last_name}
                   </p>
-                  <p className="text-xs text-gray-500">{getRoleDisplayName(user.role as any)}</p>
+                  <p className="text-xs text-gray-500">{getRoleDisplayName(user.role)}</p>
                 </div>
 
                 <ChevronDown className="h-4 w-4 text-gray-500" />

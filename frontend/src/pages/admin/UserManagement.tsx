@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { UserPlus, Download, Upload, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
@@ -43,21 +43,19 @@ export default function UserManagement() {
     const [formData, setFormData] = useState<UserFormData>(EMPTY_FORM);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    useEffect(() => { fetchUsers(); fetchStats(); fetchSchools(); }, [roleFilter, statusFilter, schoolFilter]);
-
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
         setTimeout(() => setMessage(null), 3000);
     };
 
-    const fetchSchools = async () => {
+    const fetchSchools = useCallback(async () => {
         try {
             const res = await adminApi.tenants.getAll();
             setAvailableSchools(Array.isArray(res.data) ? res.data : res.data.results ?? []);
         } catch { /* schools are optional context; silently ignore */ }
-    };
+    }, []);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
             const params: Record<string, string | boolean> = {};
@@ -71,16 +69,22 @@ export default function UserManagement() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [roleFilter, schoolFilter, statusFilter]);
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         try {
             const res = await adminApi.users.stats();
             setStats(res?.data ?? EMPTY_STATS);
         } catch {
             setStats(EMPTY_STATS);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        void fetchUsers();
+        void fetchStats();
+        void fetchSchools();
+    }, [fetchUsers, fetchStats, fetchSchools]);
 
     const buildPayload = (): UserFormData | null => {
         const payload = { ...formData };
@@ -108,7 +112,7 @@ export default function UserManagement() {
             showMessage('success', 'User created successfully');
             setIsCreateOpen(false);
             resetForm();
-            fetchUsers(); fetchStats();
+            void fetchUsers(); void fetchStats();
         } catch (error: unknown) {
             const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
             showMessage('error', msg ?? 'Failed to create user');
@@ -125,7 +129,7 @@ export default function UserManagement() {
             showMessage('success', 'User updated successfully');
             setIsEditOpen(false);
             resetForm();
-            fetchUsers();
+            void fetchUsers();
         } catch (error: unknown) {
             const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
             showMessage('error', msg ?? 'Failed to update user');
@@ -139,7 +143,7 @@ export default function UserManagement() {
         try {
             await adminApi.users.delete(user.id, { permanent: isPermanent });
             showMessage('success', `User ${isPermanent ? 'deleted' : 'deactivated'} successfully`);
-            fetchUsers(); fetchStats();
+            void fetchUsers(); void fetchStats();
         } catch {
             showMessage('error', `Failed to ${action} user`);
         }
@@ -178,7 +182,7 @@ export default function UserManagement() {
                 hasErrors ? `Imported ${created} users with ${errors.length} errors` : `Successfully imported ${created} users`,
             );
             setIsBulkImportOpen(false);
-            fetchUsers(); fetchStats();
+            void fetchUsers(); void fetchStats();
         } catch (error: unknown) {
             const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
             showMessage('error', msg ?? 'Failed to import users');

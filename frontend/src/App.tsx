@@ -26,7 +26,7 @@ import StudentDetail from "@/features/teacher/students/StudentDetail";
 import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/teacher/TeacherLearnerPortfolio";
 import TeacherCommunication from "@/pages/teacher/TeacherCommunication";
-import LeaderDashboard from "@/pages/school/LeaderDashboard";
+import ProgramManagerDashboard from "@/pages/school/ProgramManagerDashboard";
 import SchoolDashboard from "@/pages/school/SchoolDashboard";
 import SchoolStudents from "@/pages/school/SchoolStudents";
 import SchoolTeachers from "@/pages/school/SchoolTeachers";
@@ -249,12 +249,12 @@ const router = sentryCreateBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // Leader Routes
+      // Program Manager Routes
       {
-        path: "leader",
+        path: "program-manager",
         element: (
-          <ProtectedRoute allowedRoles={[ROLES.LEADER, ROLES.ADMIN]}>
-            <LeaderDashboard />
+          <ProtectedRoute allowedRoles={[ROLES.PROGRAM_MANAGER, ROLES.ADMIN]}>
+            <ProgramManagerDashboard />
           </ProtectedRoute>
         ),
       },

@@ -65,16 +65,99 @@ export interface PathwayProgressSummary {
   totalLevels: number;
 }
 
+export interface GatePayload {
+  is_open: boolean;
+  reason: string;
+  detail: string;
+}
+
+export interface AccessPayload {
+  can_preview: boolean;
+  can_open: boolean;
+  can_submit: boolean;
+}
+
+export interface HierarchyTask {
+  id: string;
+  title: string;
+  type: string;
+  evidence_required: boolean;
+  artifact_type: string | null;
+  gate: GatePayload;
+  access: AccessPayload;
+  learner_instructions?: string;
+}
+
+export interface HierarchyLesson {
+  id: string;
+  title: string;
+  duration_minutes: number;
+  learner_objectives: string[];
+  learner_content?: string;
+  gate: GatePayload;
+  access: AccessPayload;
+  tasks: HierarchyTask[];
+}
+
+export interface HierarchyUnit {
+  id: string;
+  title: string;
+  learning_objectives: string[];
+  gate: GatePayload;
+  access: AccessPayload;
+  lessons: HierarchyLesson[];
+}
+
+export interface HierarchyModule {
+  id: string;
+  name: string;
+  outcome_statement: string;
+  gate: GatePayload;
+  access: AccessPayload;
+  units: HierarchyUnit[];
+}
+
+export interface HierarchyProgram {
+  id: string;
+  title: string;
+  gate: GatePayload;
+  access: AccessPayload;
+  modules: HierarchyModule[];
+}
+
+export interface HierarchyTrack {
+  id: string;
+  title: string;
+  gate: GatePayload;
+  access: AccessPayload;
+  programs: HierarchyProgram[];
+}
+
+export interface PathwayHierarchy {
+  id: string;
+  name: string;
+  gate: GatePayload;
+  access: AccessPayload;
+  tracks: HierarchyTrack[];
+}
+
 export interface PathwayData {
   enrollment: PathwayEnrollment;
   course: PathwayCourse;
   currentLevel: PathwayCurrentLevel;
   progress: PathwayProgressSummary;
   levels: PathwayLevel[];
+  hierarchy?: PathwayHierarchy;
 }
 
 export interface PathwayModuleWithLevel extends PathwayModule {
   levelName?: string | null;
+  trackTitle?: string | null;
+  programTitle?: string | null;
+  outcome_statement?: string;
+  gate?: GatePayload;
+  access?: AccessPayload;
+  units?: HierarchyUnit[];
 }
 
 export interface SelectedMedia {

@@ -147,7 +147,7 @@ function AttachmentList({ attachments, onRemove }: { attachments: AttachedItem[]
 }
 
 function AttachmentRow({ item, onRemove }: { item: AttachedItem; onRemove: (id: string) => void }) {
-    const RemoveBtn = () => (
+    const removeButton = (
         <button type="button" onClick={() => onRemove(item.id)}
             className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity">
             <X className="h-3.5 w-3.5" />
@@ -159,7 +159,7 @@ function AttachmentRow({ item, onRemove }: { item: AttachedItem; onRemove: (id: 
             <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 text-sm group">
                 <Link2 className="h-4 w-4 text-blue-500 shrink-0" />
                 <span className="truncate flex-1 text-blue-600">{item.label}</span>
-                <RemoveBtn />
+                {removeButton}
             </div>
         );
     }
@@ -179,7 +179,7 @@ function AttachmentRow({ item, onRemove }: { item: AttachedItem; onRemove: (id: 
                 <p className="truncate font-medium">{item.file!.name}</p>
                 <p className="text-xs text-gray-400">{label} · {(item.file!.size / 1024).toFixed(0)} KB</p>
             </div>
-            <RemoveBtn />
+            {removeButton}
         </div>
     );
 }

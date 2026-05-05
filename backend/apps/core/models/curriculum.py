@@ -68,6 +68,8 @@ class Module(BaseUUIDModel):
     sequence_order = models.PositiveIntegerField(
         default=1, help_text="Display order within the parent program (1-based)"
     )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     STATUS_DRAFT = "draft"
     STATUS_ACTIVE = "active"

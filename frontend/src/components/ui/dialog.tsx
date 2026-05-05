@@ -16,22 +16,16 @@ const DialogOverlay = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Overlay>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-    <DialogStateContext.Provider value={{ overlayRef: ref }}>
-        <DialogPrimitive.Overlay
-            ref={ref}
-            className={cn(
-                "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                className
-            )}
-            {...props}
-        />
-    </DialogStateContext.Provider>
+    <DialogPrimitive.Overlay
+        ref={ref}
+        className={cn(
+            "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            className
+        )}
+        {...props}
+    />
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
-
-// Context to share overlay ref for better focus management if needed, though simpler is often better.
-// Actually standard shadcn doesn't need extra context usually, but standard code:
-const DialogStateContext = React.createContext<{ overlayRef: any }>({ overlayRef: null })
 
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
