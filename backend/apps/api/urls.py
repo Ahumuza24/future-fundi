@@ -28,7 +28,8 @@ from .admin_views import (
     AdminTenantViewSet,
     AdminUserViewSet,
 )
-from .child_views import ChildViewSet
+from .child_views import ChildViewSet, ParentDashboardViewSet
+from .program_manager_views import ProgramManagerDashboardViewSet
 from .course_views import (
     AchievementViewSet,
     ActivityViewSet,
@@ -47,12 +48,13 @@ from .school_views import (
     SchoolStudentViewSet,
     SchoolTeacherViewSet,
 )
-from .student_views import StudentDashboardViewSet
+from .student_views import LearnerDashboardViewSet, StudentDashboardViewSet
 from .teacher_views import (
     BadgeManagementViewSet,
     CredentialManagementViewSet,
     QuickArtifactViewSet,
     StudentManagementViewSet,
+    TeacherDashboardViewSet,
     TeacherSessionViewSet,
     TeacherTaskViewSet,
 )
@@ -98,6 +100,10 @@ router.register(
     r"teacher/credentials", CredentialManagementViewSet, basename="teacher-credentials"
 )
 router.register(r"teacher/tasks", TeacherTaskViewSet, basename="teacher-tasks")
+router.register(r"teacher/dashboard", TeacherDashboardViewSet, basename="teacher-dashboard")
+router.register(r"learner/dashboard", LearnerDashboardViewSet, basename="learner-dashboard")
+router.register(r"parent/dashboard", ParentDashboardViewSet, basename="parent-dashboard")
+router.register(r"program-manager/dashboard", ProgramManagerDashboardViewSet, basename="pm-dashboard")
 
 # Admin endpoints
 router.register(r"admin/users", AdminUserViewSet, basename="admin-users")

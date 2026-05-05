@@ -1,294 +1,87 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  User,
-  Users,
-  BookOpen,
-  BarChart3,
-  Home,
-  Menu,
-  X,
-  LogOut,
-  FileText,
-  Award,
-  Calendar,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Camera,
-  MessageSquare,
-  ClipboardCheck,
-  Database,
-  GraduationCap,
-  TrendingUp,
-  ListTodo,
-  MonitorDot,
-} from "lucide-react";
+import { Menu, X, LogOut, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore } from "@/lib/store";
 import { authApi } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
+import { allNavItems, COLOR_CLASSES, type NavItem } from "./sidebar-nav-items";
 
-interface NavItem {
-  title: string;
-  path: string;
-  icon: typeof User;
-  color: string;
-  roles: string[];
+
+function NavLink({
+  item,
+  active,
+  collapsed,
+  onClose,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  onClose: () => void;
+}) {
+  const colors = COLOR_CLASSES[item.colorKey] ?? COLOR_CLASSES.orange;
+  const Icon = item.icon;
+
+  return (
+    <Link
+      to={item.path}
+      onClick={onClose}
+      title={collapsed ? item.title : undefined}
+      className={cn(
+        "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl border-l-4 transition-all duration-200",
+        active
+          ? cn(colors.bg, colors.border)
+          : "border-transparent hover:bg-[#f6f6f6]",
+        collapsed && "justify-center"
+      )}
+    >
+      <div className={cn("p-1.5 rounded-lg shrink-0 transition-colors", active ? colors.iconBg : "")}>
+        <Icon className={cn("h-4 w-4", active ? colors.text : "text-[#5b5b5b]")} />
+      </div>
+
+      {!collapsed && (
+        <span className={cn("text-sm truncate", active ? cn(colors.text, "font-semibold") : "font-medium text-[#2f2f2f]")}>
+          {item.title}
+        </span>
+      )}
+
+      {active && !collapsed && (
+        <div className={cn("ml-auto h-1.5 w-1.5 rounded-full shrink-0", colors.bg.replace("/10", "").replace("bg-", "bg-"))} />
+      )}
+
+      {collapsed && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-[#2f2f2f] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+          {item.title}
+        </div>
+      )}
+    </Link>
+  );
 }
-
-const allNavItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    path: "/student",
-    icon: Home,
-    color: "var(--fundi-orange)",
-    roles: ["learner"],
-  },
-  {
-    title: "My Portfolio",
-    path: "/student/portfolio",
-    icon: FileText,
-    color: "var(--fundi-orange)",
-    roles: ["learner"],
-  },
-  {
-    title: "Achievements",
-    path: "/student/achievements",
-    icon: Award,
-    color: "var(--fundi-orange)",
-    roles: ["learner"],
-  },
-  {
-    title: "Dashboard",
-    path: "/parent",
-    icon: Home,
-    color: "var(--fundi-purple)",
-    roles: ["parent"],
-  },
-  {
-    title: "My Children",
-    path: "/parent/children",
-    icon: Users,
-    color: "var(--fundi-orange)",
-    roles: ["parent"],
-  },
-  {
-    title: "Weekly Updates",
-    path: "/parent/updates",
-    icon: Calendar,
-    color: "var(--fundi-cyan)",
-    roles: ["parent"],
-  },
-  {
-    title: "Dashboard",
-    path: "/teacher",
-    icon: Home,
-    color: "var(--fundi-cyan)",
-    roles: ["teacher"],
-  },
-  {
-    title: "My Sessions",
-    path: "/teacher/sessions",
-    icon: CalendarDays,
-    color: "var(--fundi-cyan)",
-    roles: ["teacher"],
-  },
-  {
-    title: "My Tasks",
-    path: "/teacher/tasks",
-    icon: ListTodo,
-    color: "var(--fundi-purple)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Attendance",
-    path: "/teacher/attendance",
-    icon: ClipboardCheck,
-    color: "var(--fundi-cyan)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Pathways",
-    path: "/teacher/pathways",
-    icon: BookOpen,
-    color: "var(--fundi-lime)",
-    roles: ["teacher"],
-  },
-  {
-    title: "My Students",
-    path: "/teacher/classes",
-    icon: Users,
-    color: "var(--fundi-cyan)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Capture Artifact",
-    path: "/teacher/capture-artifact",
-    icon: Camera,
-    color: "var(--fundi-orange)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Assessments",
-    path: "/teacher/assessments",
-    icon: ClipboardCheck,
-    color: "var(--fundi-purple)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Communication",
-    path: "/teacher/communication",
-    icon: MessageSquare,
-    color: "var(--fundi-lime)",
-    roles: ["teacher"],
-  },
-  {
-    title: "Dashboard",
-    path: "/admin",
-    icon: Home,
-    color: "var(--fundi-lime)",
-    roles: ["leader", "admin"],
-  },
-  /* {
-    title: "School Overview",
-    path: "/leader/overview",
-    icon: Users,
-    color: "var(--fundi-lime)",
-    roles: ["leader", "admin"],
-  }, */
-  {
-    title: "Reports",
-    path: "/leader/reports",
-    icon: FileText,
-    color: "var(--fundi-lime)",
-    roles: ["leader", "admin"],
-  },
-
-  // School Admin Menu
-  {
-    title: "Dashboard",
-    path: "/school",
-    icon: Home,
-    color: "var(--fundi-purple)",
-    roles: ["school"],
-  },
-  {
-    title: "Students",
-    path: "/school/students",
-    icon: Users,
-    color: "var(--fundi-cyan)",
-    roles: ["school"],
-  },
-  /*   {
-      title: "Teachers",
-      path: "/school/teachers",
-      icon: GraduationCap,
-      color: "var(--fundi-lime)",
-      roles: ["school"],
-    }, */
-  {
-    title: "Pathways",
-    path: "/school/pathways",
-    icon: BookOpen,
-    color: "var(--fundi-orange)",
-    roles: ["school"],
-  },
-  /* {
-    title: "Progress Tracking",
-    path: "/school/progress",
-    icon: TrendingUp,
-    color: "var(--fundi-pink)",
-    roles: ["school"],
-  },
-  {
-    title: "Badges & Artifacts",
-    path: "/school/badges",
-    icon: Award,
-    color: "var(--fundi-orange)",
-    roles: ["school"],
-  }, */
-  {
-    title: "Analytics",
-    path: "/school/analytics",
-    icon: BarChart3,
-    color: "var(--fundi-purple)",
-    roles: ["school"],
-  },
-
-  {
-    title: "Curriculum Entry",
-    path: "/admin/curriculum-entry",
-    icon: Database,
-    color: "var(--fundi-purple)",
-    roles: ["admin", "data_entry"],
-  },
-  {
-    title: "Activities",
-    path: "/admin/activities",
-    icon: Calendar,
-    color: "var(--fundi-cyan)",
-    roles: ["admin", "data_entry"],
-  },
-  {
-    title: "User Management",
-    path: "/admin/users",
-    icon: Users,
-    color: "var(--fundi-red)",
-    roles: ["admin"],
-  },
-  {
-    title: "School Management",
-    path: "/admin/schools",
-    icon: BarChart3,
-    color: "var(--fundi-red)",
-    roles: ["admin"],
-  },
-  {
-    title: "Course Management",
-    path: "/admin/courses",
-    icon: BookOpen,
-    color: "var(--fundi-orange)",
-    roles: ["admin"],
-  },
-  {
-    title: "Activity Monitor",
-    path: "/admin/monitor",
-    icon: MonitorDot,
-    color: "var(--fundi-cyan)",
-    roles: ["admin"],
-  },
-  {
-    title: "Analytics",
-    path: "/admin/analytics",
-    icon: BarChart3,
-    color: "var(--fundi-lime)",
-    roles: ["admin"],
-  },
-];
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useAuthStore((s) => s.logout);
   const user = getCurrentUser();
-  const isSidebarCollapsed = useUIStore((state) => state.isSidebarCollapsed);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const isSidebarCollapsed = useUIStore((s) => s.isSidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
   const navItems = useMemo(() => {
     if (!user) return [];
-    return allNavItems.filter(item => item.roles.includes(user.role));
+    return allNavItems.filter((item) => item.roles.includes(user.role));
   }, [user]);
 
+  const roleColorKey = navItems[0]?.colorKey ?? "orange";
+  const colors = COLOR_CLASSES[roleColorKey] ?? COLOR_CLASSES.orange;
+
   const handleLogout = async () => {
-    const refreshToken = sessionStorage.getItem('refresh_token'); // sessionStorage
+    const refreshToken = sessionStorage.getItem("refresh_token");
     if (refreshToken) {
       try {
         await authApi.logout(refreshToken);
-      } catch (error) {
-        console.error('Logout error:', error);
+      } catch {
+        // ignore — proceed to clear local state
       }
     }
     logout();
@@ -296,141 +89,99 @@ const Sidebar = () => {
   };
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
+    const exactPaths = ["/student", "/parent", "/teacher", "/school", "/admin"];
+    if (exactPaths.includes(path)) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
 
+
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg"
-        style={{ backgroundColor: 'var(--fundi-orange)', color: 'white' }}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg bg-fundi-orange text-white"
         aria-label="Toggle menu"
       >
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
-      {/* Overlay for mobile */}
       {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="lg:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setIsOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full bg-white shadow-xl z-40 transform transition-all duration-300 ease-in-out border-r",
-          "lg:translate-x-0",
+          "fixed left-0 top-0 h-full bg-white z-40 flex flex-col",
+          "shadow-[4px_0_24px_rgba(0,0,0,0.06)] border-r border-[#f1f1f1]",
+          "transform transition-all duration-300 ease-in-out lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isSidebarCollapsed ? "w-20" : "w-72"
+          isSidebarCollapsed ? "w-[72px]" : "w-64"
         )}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo/Brand */}
-          <div className="p-4 border-b flex items-center justify-between relative group">
-            <div className={cn("flex items-center gap-3 transition-opacity duration-300", isSidebarCollapsed ? "justify-center w-full" : "")}>
-              <div
-                className="p-1 rounded-lg"
-              >
-                <img
-                  src="/fundi_bots_logo.png"
-                  alt="Fundi Bots Logo"
-                  className={cn("object-contain transition-all duration-300", isSidebarCollapsed ? "h-10 w-10" : "h-8 w-auto")}
-                />
-              </div>
-              <div className={cn("transition-opacity duration-300", isSidebarCollapsed ? "hidden opacity-0 w-0 overflow-hidden" : "opacity-100")}>
-                <h1 className="heading-font text-xl font-bold whitespace-nowrap" style={{ color: 'var(--fundi-black)' }}>
-                  Future Fundi
-                </h1>
-              </div>
-            </div>
-
-            {/* Collapse Button */}
-            <button
-              onClick={toggleSidebar}
-              className={cn(
-                "hidden lg:flex items-center justify-center h-6 w-6 rounded-full border bg-white shadow-md text-gray-500 hover:text-[var(--fundi-orange)] hover:border-[var(--fundi-orange)] absolute -right-3 top-9 z-50 transition-all duration-300",
-                isSidebarCollapsed ? "-right-3" : "opacity-0 group-hover:opacity-100 -right-3"
-              )}
-            >
-              {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
+        {/* Logo */}
+        <div className="group relative flex items-center gap-3 px-4 py-4 border-b border-[#f1f1f1]">
+          <div className={cn("flex items-center gap-3 flex-1 min-w-0", isSidebarCollapsed && "justify-center")}>
+            <img
+              src="/fundi_bots_logo.png"
+              alt="Fundi Bots"
+              className={cn("object-contain shrink-0 transition-all", isSidebarCollapsed ? "h-9 w-9" : "h-7 w-auto")}
+            />
+            {!isSidebarCollapsed && (
+              <span className="heading-font text-lg font-bold text-[#2f2f2f] whitespace-nowrap truncate">
+                Future Fundi
+              </span>
+            )}
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-2 space-y-2 overflow-y-auto overflow-x-hidden">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
+          <button
+            onClick={toggleSidebar}
+            className="hidden lg:flex items-center justify-center h-5 w-5 rounded-full border border-[#e8e8e8] bg-white shadow-sm text-[#5b5b5b] hover:text-fundi-orange hover:border-fundi-orange absolute -right-2.5 top-1/2 -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-all"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
+          </button>
+        </div>
 
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative",
-                    "hover:shadow-md",
-                    active
-                      ? "shadow-md font-semibold"
-                      : "hover:bg-gray-50",
-                    isSidebarCollapsed ? "justify-center" : ""
-                  )}
-                  style={{
-                    backgroundColor: active ? `${item.color}15` : "transparent",
-                    borderLeft: active && !isSidebarCollapsed ? `4px solid ${item.color}` : "4px solid transparent",
-                  }}
-                  title={isSidebarCollapsed ? item.title : undefined}
-                >
-                  <div
-                    className={cn(
-                      "p-2 rounded-lg transition-colors flex-shrink-0",
-                      active ? "" : "opacity-70"
-                    )}
-                    style={{
-                      backgroundColor: active ? `${item.color}20` : "transparent",
-                    }}
-                  >
-                    <Icon
-                      className="h-5 w-5"
-                      style={{ color: active ? item.color : "var(--fundi-black)" }}
-                    />
-                  </div>
-                  <span
-                    className={cn(
-                      "flex-1 transition-all duration-300 whitespace-nowrap overflow-hidden",
-                      isSidebarCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100"
-                    )}
-                    style={{
-                      color: active ? item.color : "var(--fundi-black)",
-                    }}
-                  >
-                    {item.title}
-                  </span>
 
-                  {active && !isSidebarCollapsed && (
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
-                  )}
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-0.5">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              item={item}
+              active={isActive(item.path)}
+              collapsed={isSidebarCollapsed}
+              onClose={() => setIsOpen(false)}
+            />
+          ))}
+        </nav>
 
-                  {/* Tooltip for collapsed state */}
-                  {isSidebarCollapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                      {item.title}
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Bottom actions */}
+        <div className="border-t border-[#f1f1f1] px-3 py-3 space-y-0.5">
+          <Link
+            to="/help"
+            title={isSidebarCollapsed ? "Help Center" : undefined}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#5b5b5b] hover:bg-[#f6f6f6] transition-colors border-l-4 border-transparent",
+              isSidebarCollapsed && "justify-center"
+            )}
+          >
+            <HelpCircle className="h-4 w-4 shrink-0" />
+            {!isSidebarCollapsed && <span className="text-sm font-medium">Help Center</span>}
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            title={isSidebarCollapsed ? "Log Out" : undefined}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#5b5b5b] hover:bg-red-50 hover:text-red-500 transition-colors border-l-4 border-transparent",
+              isSidebarCollapsed && "justify-center"
+            )}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!isSidebarCollapsed && <span className="text-sm font-medium">Log Out</span>}
+          </button>
         </div>
       </aside>
     </>
@@ -438,4 +189,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-

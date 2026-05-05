@@ -10,6 +10,9 @@ const api = axios.create({
 });
 
 const withSelectedSchool = <T extends Record<string, any>>(payload: T = {} as T): T & { school_id?: string } => {
+  if (typeof localStorage === 'undefined') {
+    return payload;
+  }
   const selectedSchoolId = localStorage.getItem('selected_school_id');
   if (!selectedSchoolId) {
     return payload;
@@ -282,6 +285,20 @@ export const teacherApi = {
       description?: string;
       module?: string;
     }) => api.post('/api/teacher/badges/award/', withSelectedSchool(data)),
+    awardBadge: (data: {
+      learner_id: string;
+      badge_name: string;
+      description?: string;
+      module_id?: string;
+    }) => {
+      const payload = {
+        learner: data.learner_id,
+        badge_name: data.badge_name,
+        ...(data.description ? { description: data.description } : {}),
+        ...(data.module_id ? { module: data.module_id } : {}),
+      };
+      return api.post('/api/teacher/badges/award/', withSelectedSchool(payload));
+    },
     getLearnerBadges: (learnerId: string) => api.get(`/api/teacher/badges/learner/${learnerId}/`, { params: withSelectedSchool({}) }),
     getAvailable: () => api.get('/api/teacher/badges/available/', { params: withSelectedSchool({}) }),
   },
@@ -690,4 +707,45 @@ export const cmsApi = {
     update: (id: string, data: unknown) => api.patch(`/api/cms/tasks/${id}/`, data),
     delete: (id: string) => api.delete(`/api/cms/tasks/${id}/`),
   },
+};
+
+export const teacherDashboardApi = {
+  getCohortProgress: () =>
+    api.get('/api/teacher/dashboard/cohort-progress/', { params: withSelectedSchool({}) }),
+  getBadgeReadiness: () =>
+    api.get('/api/teacher/dashboard/badge-readiness/', { params: withSelectedSchool({}) }),
+  getMicrocredentialReadiness: () =>
+    api.get('/api/teacher/dashboard/microcredential-readiness/', { params: withSelectedSchool({}) }),
+  getInterventions: () =>
+    api.get('/api/teacher/dashboard/interventions/', { params: withSelectedSchool({}) }),
+  getCertificationPipeline: () =>
+    api.get('/api/teacher/dashboard/certification-pipeline/', { params: withSelectedSchool({}) }),
+  getLearnerDualView: (learnerId: string) =>
+    api.get(`/api/teacher/dashboard/${learnerId}/dual-view/`, { params: withSelectedSchool({}) }),
+};
+
+export const learnerDashboardApi = {
+  getGrowth: () => api.get("/api/learner/dashboard/growth/"),
+  getModuleProgress: () => api.get("/api/learner/dashboard/module-progress/"),
+  getEvidence: () => api.get("/api/learner/dashboard/evidence/"),
+  getCohortPosition: () => api.get("/api/learner/dashboard/cohort-position/"),
+  getCertifications: () => api.get("/api/learner/dashboard/certifications/"),
+};
+
+export const parentDashboardApi = {
+  getChildren: () => api.get("/api/parent/dashboard/children/"),
+  getGrowth: (learnerId: string) => api.get(`/api/parent/dashboard/${learnerId}/growth/`),
+  getRecognition: (learnerId: string) => api.get(`/api/parent/dashboard/${learnerId}/recognition/`),
+  getArtifacts: (learnerId: string) => api.get(`/api/parent/dashboard/${learnerId}/artifacts/`),
+  getSessions: (learnerId: string) => api.get(`/api/parent/dashboard/${learnerId}/sessions/`),
+};
+
+export const programManagerApi = {
+  getPathwayDemand: () => api.get("/api/program-manager/dashboard/pathway-demand/"),
+  getCompletionRates: () => api.get("/api/program-manager/dashboard/completion-rates/"),
+  getBadgeDistribution: () => api.get("/api/program-manager/dashboard/badge-distribution/"),
+  getMicrocredentialIssuance: () => api.get("/api/program-manager/dashboard/microcredential-issuance/"),
+  getCertificationRates: () => api.get("/api/program-manager/dashboard/certification-rates/"),
+  getLevelDistribution: () => api.get("/api/program-manager/dashboard/level-distribution/"),
+  getAgeBands: () => api.get("/api/program-manager/dashboard/age-bands/"),
 };

@@ -44,3 +44,4 @@ backend/app.yaml
 .claude/
 CLAUDE.md
 frontend/.env.example
+.codex

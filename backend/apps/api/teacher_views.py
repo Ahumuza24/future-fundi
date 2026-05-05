@@ -1095,3 +1095,73 @@ class TeacherTaskViewSet(viewsets.ModelViewSet):
                 "total": qs.count(),
             }
         )
+
+
+class TeacherDashboardViewSet(TeacherSchoolContextMixin, viewsets.ViewSet):
+    """Aggregated panel data for the Phase 5 Teacher Dashboard.
+
+    Each action feeds one panel in the frontend dashboard layout.
+    All endpoints are school-scoped and require the teacher role.
+    """
+
+    permission_classes = [IsTeacher]
+
+    def _require_school(self, request: Request) -> School | None:
+        return self._resolve_school_context(request)
+
+    @action(detail=False, methods=["get"], url_path="cohort-progress")
+    def cohort_progress(self, request: Request) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(TeacherPanelService.cohort_progress(school))
+
+    @action(detail=False, methods=["get"], url_path="badge-readiness")
+    def badge_readiness(self, request: Request) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(TeacherPanelService.badge_readiness(school))
+
+    @action(detail=False, methods=["get"], url_path="microcredential-readiness")
+    def microcredential_readiness(self, request: Request) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(TeacherPanelService.microcredential_readiness(school))
+
+    @action(detail=False, methods=["get"], url_path="interventions")
+    def interventions(self, request: Request) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(TeacherPanelService.interventions(school))
+
+    @action(detail=False, methods=["get"], url_path="certification-pipeline")
+    def certification_pipeline(self, request: Request) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(TeacherPanelService.certification_pipeline(school))
+
+    @action(detail=True, methods=["get"], url_path="dual-view")
+    def learner_dual_view(self, request: Request, pk: str | None = None) -> Response:
+        from apps.core.services.teacher_panel_service import TeacherPanelService
+
+        school = self._require_school(request)
+        if school is None:
+            return Response({"detail": "No school context."}, status=status.HTTP_400_BAD_REQUEST)
+        data = TeacherPanelService.learner_dual_view(str(pk), school)
+        if data is None:
+            return Response({"detail": "Learner not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data)

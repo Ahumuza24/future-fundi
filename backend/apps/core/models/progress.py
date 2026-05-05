@@ -206,6 +206,16 @@ class ModuleProgress(BaseUUIDModel):
         return f"{self.learner} — {self.module} ({self.completion_status})"
 
     @property
+    def completion_pct(self) -> int:
+        if self.units_total <= 0:
+            return 0
+        return round(self.units_completed / self.units_total * 100)
+
+    @property
+    def status(self) -> str:
+        return self.completion_status
+
+    @property
     def is_complete(self) -> bool:
         return self.completion_status == self.STATUS_COMPLETE
 

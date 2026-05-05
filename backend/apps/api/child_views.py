@@ -362,3 +362,56 @@ class ChildViewSet(viewsets.ModelViewSet):
                 "total_children": len(summary_data),
             }
         )
+
+
+class ParentDashboardViewSet(viewsets.ViewSet):
+    """Phase 5 parent dashboard panel endpoints."""
+
+    permission_classes = [IsParent]
+
+    def _get_owned_learner(self, request, learner_id: str):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        try:
+            learner = Learner.objects.select_related("growth_profile").get(id=learner_id)
+        except (Learner.DoesNotExist, Exception):
+            return None
+        if not ParentPanelService._owns(request.user, learner):
+            return None
+        return learner
+
+    @action(detail=False, methods=["get"], url_path="children")
+    def children(self, request):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        return Response({"children": ParentPanelService.children_overview(request.user)})
+
+    @action(detail=True, methods=["get"], url_path="growth")
+    def growth(self, request, pk=None):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        learner = self._get_owned_learner(request, pk)
+        if not learner:
+            return Response({"error": "Not found"}, status=404)
+        return Response(ParentPanelService.child_growth(learner))
+
+    @action(detail=True, methods=["get"], url_path="recognition")
+    def recognition(self, request, pk=None):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        learner = self._get_owned_learner(request, pk)
+        if not learner:
+            return Response({"error": "Not found"}, status=404)
+        return Response(ParentPanelService.child_recognition(learner))
+
+    @action(detail=True, methods=["get"], url_path="artifacts")
+    def artifacts(self, request, pk=None):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        learner = self._get_owned_learner(request, pk)
+        if not learner:
+            return Response({"error": "Not found"}, status=404)
+        return Response({"artifacts": ParentPanelService.child_artifacts(learner)})
+
+    @action(detail=True, methods=["get"], url_path="sessions")
+    def sessions(self, request, pk=None):
+        from apps.core.services.parent_panel_service import ParentPanelService
+        learner = self._get_owned_learner(request, pk)
+        if not learner:
+            return Response({"error": "Not found"}, status=404)
+        return Response({"sessions": ParentPanelService.child_sessions(learner)})

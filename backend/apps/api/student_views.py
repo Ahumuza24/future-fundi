@@ -2,6 +2,8 @@
 
 from datetime import datetime, time
 
+from apps.core.services.learner_panel_service import LearnerPanelService
+
 from apps.core.models import (
     Achievement,
     Activity,
@@ -526,3 +528,52 @@ class StudentDashboardViewSet(viewsets.ViewSet):
                 {"error": f"Server error: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class LearnerDashboardViewSet(viewsets.ViewSet):
+    """Phase 5 learner dashboard panel endpoints."""
+
+    permission_classes = [IsLearner]
+
+    def _get_learner(self, request):
+        try:
+            return Learner.objects.select_related(
+                "growth_profile", "tenant", "current_program", "current_track"
+            ).get(user=request.user)
+        except Learner.DoesNotExist:
+            return None
+
+    @action(detail=False, methods=["get"], url_path="growth")
+    def growth(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response(LearnerPanelService.growth_summary(learner))
+
+    @action(detail=False, methods=["get"], url_path="module-progress")
+    def module_progress(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response(LearnerPanelService.module_progress(learner) or {})
+
+    @action(detail=False, methods=["get"], url_path="evidence")
+    def evidence(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response({"artifacts": LearnerPanelService.evidence_portfolio(learner)})
+
+    @action(detail=False, methods=["get"], url_path="cohort-position")
+    def cohort_position(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response(LearnerPanelService.cohort_position(learner))
+
+    @action(detail=False, methods=["get"], url_path="certifications")
+    def certifications(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response(LearnerPanelService.certifications(learner))

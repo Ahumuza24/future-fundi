@@ -1,750 +1,118 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { childApi } from "@/lib/api";
-import {
-  Users, Calendar, BookOpen, Award, CheckCircle,
-  MessageSquare, AlertCircle, Clock, Zap, Star,
-  ChevronUp, ChevronDown, Briefcase
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import ChildManagement from "@/components/ChildManagement";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { parentDashboardApi } from "@/lib/api";
+import type {
+  ChildSummary,
+  ChildGrowth,
+  ChildRecognition,
+  ChildArtifact,
+  ChildSession,
+} from "./parent-dashboard-types";
+import ChildSelectorPanel from "./components/ChildSelectorPanel";
+import ChildGrowthPanel from "./components/ChildGrowthPanel";
+import ChildRecognitionPanel from "./components/ChildRecognitionPanel";
+import ChildArtifactsPanel from "./components/ChildArtifactsPanel";
+import ChildSessionsPanel from "./components/ChildSessionsPanel";
 
-interface Child {
-  id: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  age?: number;
+function usePanelEnabled<T>(
+  key: string[],
+  fetcher: () => Promise<{ data: T }>,
+  enabled: boolean
+) {
+  return useQuery<T>({
+    queryKey: key,
+    queryFn: () => fetcher().then((r) => r.data),
+    enabled,
+  });
 }
 
-interface DashboardData {
-  child: Child;
-  subscription: {
-    status: string;
-    tier: string;
-    expires_at: string;
-  };
-  pathways: Array<{
-    id: string;
-    name: string;
-    current_level: string;
-    progress: number;
-    description: string;
-    modules: Array<{
-      id: string;
-      name: string;
-      description: string;
-      badge_name: string;
-    }>;
-    careers: Array<{
-      id: string;
-      title: string;
-      description: string;
-    }>;
-    total_modules: number;
-    total_careers: number;
-  }>;
-  badges: Array<{
-    id: string;
-    name: string;
-    module_name: string;
-    earned_at: string;
-    icon: string;
-  }>;
-  artifacts: Array<{
-    id: string;
-    title: string;
-    submitted_at: string;
-    learner_name: string;
-  }>;
-  upcoming_activities: Array<{
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    end_time: string | null;
-    type: string;
-    description?: string;
-    location?: string;
-  }>;
-  micro_lessons: Array<{
-    id: string;
-    title: string;
-    category: string;
-    duration: string;
-  }>;
-  teachers: Array<{
-    id: string;
-    name: string;
-    role: string;
-  }>;
+function PanelSkeleton({ className = "h-48" }: { className?: string }) {
+  return <div className={`${className} bg-gray-100 rounded-xl animate-pulse`} />;
 }
 
-const ParentPortal = () => {
-  const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showManagement, setShowManagement] = useState(false);
+const EMPTY_GROWTH: ChildGrowth = { level: "explorer", leaves_count: 0, fruit_count: 0, recent_badges: [] };
+const EMPTY_RECOGNITION: ChildRecognition = { badges: [], microcredentials: [] };
 
-  // Activity Dialog State
-  const [selectedActivity, setSelectedActivity] = useState<DashboardData['upcoming_activities'][0] | null>(null);
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+export default function ParentPortal() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Pathway Expansion State
-  const [expandedPathway, setExpandedPathway] = useState<string | null>(null);
+  const childrenQuery = useQuery<{ children: ChildSummary[] }>({
+    queryKey: ["parent-children"],
+    queryFn: () => parentDashboardApi.getChildren().then((r) => r.data),
+  });
 
-  useEffect(() => {
-    fetchChildren();
-  }, []);
+  const children = childrenQuery.data?.children ?? [];
+  const activeId = selectedId ?? children[0]?.learner_id ?? null;
+  const hasChild = !!activeId;
 
-  useEffect(() => {
-    if (selectedChildId) {
-      fetchDashboard(selectedChildId);
-    }
-  }, [selectedChildId]);
-
-  const fetchChildren = async () => {
-    // ... existing implementation
-    try {
-      setLoading(true);
-      const response = await childApi.getAll();
-      const childrenData = response.data.results || response.data;
-      const childrenArray = Array.isArray(childrenData) ? childrenData : [];
-      setChildren(childrenArray);
-
-      if (childrenArray.length > 0 && !selectedChildId) {
-        setSelectedChildId(childrenArray[0].id);
-      }
-    } catch (err: unknown) {
-      console.error("Failed to fetch children:", err);
-      setChildren([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDashboard = async (childId: string) => {
-    try {
-      const response = await childApi.getDashboard(childId);
-      setDashboardData(response.data);
-    } catch (err: unknown) {
-      console.error("Failed to fetch dashboard:", err);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-fundi-orange border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your portal...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (showManagement) {
-    // ... existing implementation
-    return (
-      <div className="min-h-screen p-4 md:p-8 bg-gray-50/50">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="heading-font text-3xl font-bold text-fundi-black">
-              Manage Children
-            </h1>
-            <Button
-              onClick={() => {
-                setShowManagement(false);
-                fetchChildren();
-              }}
-              className="bg-white hover:bg-gray-100 text-gray-700 border"
-            >
-              Back to Dashboard
-            </Button>
-          </div>
-          <ChildManagement />
-        </div>
-      </div>
-    );
-  }
-
-  if (children.length === 0) {
-    // ... existing implementation
-    return (
-      <div className="min-h-screen p-8 flex items-center justify-center bg-gray-50/50">
-        <Card className="max-w-2xl w-full text-center p-12 shadow-xl border-dashed border-4 border-gray-200">
-          <div className="w-24 h-24 bg-fundi-orange/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Users className="h-12 w-12 text-fundi-orange" />
-          </div>
-          <h2 className="heading-font text-3xl font-bold mb-4 text-fundi-black">
-            Welcome to Future Fundi!
-          </h2>
-          <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
-            Get started by adding your children to track their amazing robotics journey.
-          </p>
-          <Button
-            onClick={() => setShowManagement(true)}
-            className="bg-fundi-orange text-white text-lg px-8 py-6 rounded-xl hover:opacity-90 transition-opacity"
-          >
-            + Add Your First Child
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  const ARTIFACT_BG_CLASSES = [
-    "bg-fundi-orange",
-    "bg-fundi-cyan",
-    "bg-fundi-lime",
-    "bg-fundi-purple",
-    "bg-fundi-red",
-    "bg-fundi-yellow",
-  ];
-
-  const formatActivityDate = (value: string, pattern: string, fallback: string) => {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return fallback;
-    }
-    return format(parsed, pattern);
-  };
-
-  const formatActivityTime = (value?: string | null) => {
-    if (!value) {
-      return "TBD";
-    }
-    return value.substring(0, 5);
-  };
+  const growth = usePanelEnabled<ChildGrowth>(
+    ["parent-growth", activeId ?? ""],
+    () => parentDashboardApi.getGrowth(activeId!),
+    hasChild
+  );
+  const recognition = usePanelEnabled<ChildRecognition>(
+    ["parent-recognition", activeId ?? ""],
+    () => parentDashboardApi.getRecognition(activeId!),
+    hasChild
+  );
+  const artifactsQuery = usePanelEnabled<{ artifacts: ChildArtifact[] }>(
+    ["parent-artifacts", activeId ?? ""],
+    () => parentDashboardApi.getArtifacts(activeId!),
+    hasChild
+  );
+  const sessionsQuery = usePanelEnabled<{ sessions: ChildSession[] }>(
+    ["parent-sessions", activeId ?? ""],
+    () => parentDashboardApi.getSessions(activeId!),
+    hasChild
+  );
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gray-50/30">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="heading-font text-3xl md:text-4xl font-bold text-fundi-black">
-              Parent Portal
-            </h1>
-            <p className="text-gray-600 mt-1">Foundations for the future.</p>
-          </div>
+    <div className="p-4 md:p-6 space-y-4">
+      <h1 className="text-xl font-bold text-gray-900">Parent Portal</h1>
 
-          <div className="flex items-center gap-3">
-            {/* Child Switcher */}
-            <div className="flex bg-white rounded-full p-1 shadow-sm border">
-              {children.map(child => (
-                <button
-                  key={child.id}
-                  onClick={() => setSelectedChildId(child.id)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                    selectedChildId === child.id
-                      ? "bg-fundi-orange text-white shadow-sm"
-                      : "text-gray-600 hover:bg-gray-100"
-                  )}
-                >
-                  {child.first_name}
-                </button>
-              ))}
-            </div>
+      {childrenQuery.isLoading ? (
+        <div className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+      ) : (
+        <ChildSelectorPanel
+          children={children}
+          selectedId={activeId}
+          onSelect={setSelectedId}
+        />
+      )}
 
-            <Button
-              onClick={() => setShowManagement(true)}
-              variant="outline"
-              className="rounded-full border-gray-300"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Manage
-            </Button>
-          </div>
+      {!hasChild && !childrenQuery.isLoading && (
+        <p className="text-sm text-gray-400 text-center py-10">
+          No children linked — contact your school to link your account.
+        </p>
+      )}
+
+      {hasChild && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {growth.isLoading ? (
+            <PanelSkeleton />
+          ) : (
+            <ChildGrowthPanel data={growth.data ?? EMPTY_GROWTH} />
+          )}
+
+          {recognition.isLoading ? (
+            <PanelSkeleton />
+          ) : (
+            <ChildRecognitionPanel data={recognition.data ?? EMPTY_RECOGNITION} />
+          )}
+
+          {artifactsQuery.isLoading ? (
+            <PanelSkeleton />
+          ) : (
+            <ChildArtifactsPanel artifacts={artifactsQuery.data?.artifacts ?? []} />
+          )}
+
+          {sessionsQuery.isLoading ? (
+            <PanelSkeleton />
+          ) : (
+            <ChildSessionsPanel sessions={sessionsQuery.data?.sessions ?? []} />
+          )}
         </div>
-
-        {dashboardData && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-            {/* LEFT COLUMN: Profile & Status */}
-            <div className="lg:col-span-4 space-y-8">
-
-              {/* Child Profile Card */}
-              <Card className="border-t-4 border-t-fundi-cyan shadow-sm overflow-hidden">
-                <CardContent className="p-6 text-center">
-                  <div className="w-24 h-24 bg-fundi-cyan/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-fundi-cyan">
-                    <span className="heading-font text-3xl text-fundi-cyan">
-                      {dashboardData.child.first_name[0]}
-                    </span>
-                  </div>
-                  <h2 className="heading-font text-2xl font-bold text-gray-900">
-                    {dashboardData.child.full_name}
-                  </h2>
-                  <p className="text-gray-500 font-medium">Future Innovator • {dashboardData.child.age} Years Old</p>
-
-                  <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-600">Subscription Status</span>
-                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded uppercase tracking-wide">
-                        {dashboardData.subscription.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Zap className="h-4 w-4 text-fundi-yellow" />
-                      <span>{dashboardData.subscription.tier} Plan</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Enrolled Pathways */}
-              <div>
-                <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                  <BookOpen className="h-5 w-5 text-fundi-purple" />
-                  Current Learning Pathways
-                </h3>
-                <div className="space-y-4">
-                  {dashboardData.pathways.length > 0 ? (
-                    dashboardData.pathways.map((pathway, i) => {
-                      const isExpanded = expandedPathway === pathway.id;
-                      const pathwayColorClass = {
-                        border: i === 0 ? "border-l-fundi-purple" : "border-l-fundi-cyan",
-                        bg: i === 0 ? "bg-fundi-purple" : "bg-fundi-cyan",
-                        text: i === 0 ? "text-fundi-purple" : "text-fundi-cyan",
-                      };
-
-                      return (
-                        <Card
-                          key={pathway.id}
-                          className={cn("border-l-4 hover:shadow-md transition-all", pathwayColorClass.border)}
-                        >
-                          <CardContent className="p-5">
-                            {/* Header - Always Visible */}
-                            <div
-                              className="cursor-pointer"
-                              onClick={() => setExpandedPathway(isExpanded ? null : pathway.id)}
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-bold text-gray-900">{pathway.name}</h4>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
-                                    L{pathway.current_level.replace(/\D/g, '') || '1'}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-
-                              <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                                {pathway.description || "Learning logical thinking and problem solving."}
-                              </p>
-
-                              {/* Progress Bar */}
-                              <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
-                                <div
-                                  className={cn("h-2 rounded-full transition-all", pathwayColorClass.bg)}
-                                  style={{ width: `${pathway.progress}%` }}
-                                ></div>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-400 font-medium">{pathway.progress}% Complete</span>
-                                <div className="flex gap-3">
-                                  <span className="text-gray-500">
-                                    <Star className="h-3 w-3 inline mr-1" />
-                                    {pathway.total_modules} Micro-credentials
-                                  </span>
-                                  <span className="text-gray-500">
-                                    <Briefcase className="h-3 w-3 inline mr-1" />
-                                    {pathway.total_careers} Careers
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Expanded Details */}
-                            <AnimatePresence>
-                              {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="pt-4 mt-4 border-t space-y-4">
-                                    {/* Micro-credentials Section */}
-                                    <div>
-                                      <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
-                                        <Star className={cn("h-4 w-4", pathwayColorClass.text)} />
-                                        Micro-credentials ({pathway.modules.length})
-                                      </h5>
-                                      {pathway.modules.length > 0 ? (
-                                        <div className="space-y-2">
-                                          {pathway.modules.map((module) => (
-                                            <div
-                                              key={module.id}
-                                              className="bg-gray-50 rounded-lg p-3 border border-gray-100"
-                                            >
-                                              <div className="flex items-start justify-between gap-2">
-                                                <div className="flex-1">
-                                                  <p className="font-medium text-sm text-gray-900">{module.name}</p>
-                                                  {module.description && (
-                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                      {module.description}
-                                                    </p>
-                                                  )}
-                                                </div>
-                                                {module.badge_name && (
-                                                  <div className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
-                                                    <Award className="h-3 w-3" />
-                                                    {module.badge_name}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <p className="text-xs text-gray-400 italic">No micro-credentials defined yet</p>
-                                      )}
-                                    </div>
-
-                                    {/* Careers Section */}
-                                    <div>
-                                      <h5 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
-                                        <Briefcase className={cn("h-4 w-4", pathwayColorClass.text)} />
-                                        Potential Career Paths ({pathway.careers.length})
-                                      </h5>
-                                      {pathway.careers.length > 0 ? (
-                                        <div className="grid grid-cols-1 gap-2">
-                                          {pathway.careers.map((career) => (
-                                            <div
-                                              key={career.id}
-                                              className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-100"
-                                            >
-                                              <p className="font-medium text-sm text-gray-900 flex items-center gap-2">
-                                                <Briefcase className="h-3 w-3 text-blue-600" />
-                                                {career.title}
-                                              </p>
-                                              {career.description && (
-                                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                                  {career.description}
-                                                </p>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <p className="text-xs text-gray-400 italic">No career paths defined yet</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </CardContent>
-                        </Card>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center p-6 bg-white rounded-xl border border-dashed">
-                      <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">No active pathways</p>
-                      <Button variant="ghost" onClick={() => setShowManagement(true)} className="text-fundi-orange hover:bg-orange-50 underline">
-                        Enroll in a pathway
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Upcoming Activities */}
-              <div>
-                <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                  <Calendar className="h-5 w-5 text-fundi-orange" />
-                  Upcoming Activities
-                </h3>
-                <Card className="border-0 shadow-sm bg-white">
-                  <CardContent className="p-0">
-                    {dashboardData.upcoming_activities.length > 0 ? (
-                      <div className="divide-y">
-                        {dashboardData.upcoming_activities.map((activity) => (
-                          <div
-                            key={activity.id}
-                            onClick={() => {
-                              setSelectedActivity(activity);
-                              setIsActivityDialogOpen(true);
-                            }}
-                            className="p-4 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group"
-                          >
-                            <div className="flex flex-col items-center justify-center w-12 h-12 bg-fundi-orange/10 text-fundi-orange rounded-lg flex-shrink-0 group-hover:bg-fundi-orange group-hover:text-white transition-colors">
-                              <span className="text-xs font-bold uppercase">
-                                {formatActivityDate(activity.date, 'MMM', '--')}
-                              </span>
-                              <span className="text-lg font-bold">
-                                {formatActivityDate(activity.date, 'd', '--')}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <h5 className="font-bold text-gray-900 group-hover:text-fundi-orange transition-colors">{activity.title}</h5>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {formatActivityTime(activity.time)}
-                                  {activity.end_time && ` - ${formatActivityTime(activity.end_time)}`}
-                                </span>
-                                <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
-                                  {activity.type}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center text-gray-300 group-hover:text-fundi-orange">
-                              <Zap className="h-4 w-4 rotate-90" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center text-gray-500 text-sm">
-                        No upcoming activities scheduled.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-            </div>
-
-            {/* RIGHT COLUMN: Badges, Artifacts, Lessons */}
-            <div className="lg:col-span-8 space-y-8">
-              {/* Badges Collection */}
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
-                    <Award className="h-5 w-5 text-fundi-yellow" />
-                    Earned Badges
-                  </h3>
-                  <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border">
-                    Total: {dashboardData.badges.length}
-                  </span>
-                </div>
-
-                {dashboardData.badges.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {dashboardData.badges.map((badge, i) => (
-                      <motion.div
-                        key={badge.id}
-                        whileHover={{ scale: 1.05 }}
-                        className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3"
-                      >
-                        <div className="w-16 h-16 rounded-full bg-fundi-yellow/20 flex items-center justify-center p-3">
-                          <Award className="w-8 h-8 text-fundi-yellow" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900 leading-tight mb-1">{badge.name}</h4>
-                          <p className="text-xs text-gray-500">{format(new Date(badge.earned_at), 'MMM yyyy')}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-xl p-8 text-center border border-dashed text-gray-400">
-                    <Award className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                    <p>Completing modules will unlock badges!</p>
-                  </div>
-                )}
-              </section>
-
-              {/* Artifacts Gallery */}
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 font-bold text-lg text-gray-800">
-                    <Star className="h-5 w-5 text-fundi-lime" />
-                    Recent Artifacts
-                  </h3>
-                  <Button variant="ghost" size="sm" className="text-fundi-lime hover:text-green-700 hover:bg-green-50">
-                    View All
-                  </Button>
-                </div>
-
-                {dashboardData.artifacts.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {dashboardData.artifacts.map((artifact, i) => (
-                      <Card key={artifact.id} className="overflow-hidden hover:shadow-lg transition-shadow border-0 shadow ring-1 ring-gray-100">
-                        <div className="h-32 bg-gray-100 relative group">
-                          {/* Placeholder for real image since we don't have URLs in this specific payload yet */}
-                          <div
-                            className={cn("absolute inset-0 flex items-center justify-center text-white font-bold text-4xl opacity-30", ARTIFACT_BG_CLASSES[i % ARTIFACT_BG_CLASSES.length])}
-                          >
-                            {artifact.title[0]}
-                          </div>
-                        </div>
-                        <CardContent className="p-3">
-                          <h4 className="font-bold text-gray-900 truncate">{artifact.title}</h4>
-                          <p className="text-xs text-gray-500 mt-1">{format(new Date(artifact.submitted_at), 'd MMM, yyyy')}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-xl p-8 text-center border border-dashed text-gray-400">
-                    <Star className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                    <p>No artifacts captured yet.</p>
-                  </div>
-                )}
-              </section>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Micro Lessons (Parents) */}
-                <section>
-                  <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                    <Zap className="h-5 w-5 text-fundi-purple" />
-                    Micro Lessons for You
-                  </h3>
-                  <Card className="border-0 shadow-sm bg-white overflow-hidden">
-                    <div className="divide-y relative">
-                      {dashboardData.micro_lessons.map(lesson => (
-                        <div key={lesson.id} className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer group">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded bg-pink-50 flex items-center justify-center text-pink-500">
-                              <CheckCircle className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-gray-900">{lesson.title}</p>
-                              <p className="text-xs text-gray-500">{lesson.category} • {lesson.duration}</p>
-                            </div>
-                          </div>
-                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 text-fundi-purple">
-                            Start
-                          </Button>
-                        </div>
-                      ))}
-                      {/* Overlay placeholder message */}
-                      <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-                    </div>
-                  </Card>
-                </section>
-
-                {/* Teachers & Contact */}
-                <section>
-                  <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-gray-800">
-                    <MessageSquare className="h-5 w-5 text-fundi-red" />
-                    Your Teachers
-                  </h3>
-                  <Card className="border-0 shadow-sm bg-white">
-                    <CardContent className="p-4 space-y-4">
-                      {dashboardData.teachers.map(teacher => (
-                        <div key={teacher.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                              <UserIcon className="h-6 w-6 text-gray-500" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-gray-900">{teacher.name}</p>
-                              <p className="text-xs text-gray-500">{teacher.role}</p>
-                            </div>
-                          </div>
-                          <Button size="icon" variant="ghost" className="text-fundi-red bg-red-50 hover:bg-red-100 rounded-full h-8 w-8">
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="pt-2 text-center">
-                        <p className="text-xs text-gray-400 italic">Chat functionality coming soon</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Activity Details Dialog */}
-        <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-fundi-orange/10 rounded-lg">
-                  <Calendar className="h-6 w-6 text-fundi-orange" />
-                </div>
-                <div className="flex flex-col text-left">
-                  <DialogTitle>{selectedActivity?.title}</DialogTitle>
-                  <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded w-fit mt-1">
-                    {selectedActivity?.type}
-                  </span>
-                </div>
-              </div>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 text-sm">
-                <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
-                <div>
-                  <span className="font-semibold block text-gray-700">Date & Time</span>
-                  <p className="text-gray-600">
-                    {selectedActivity && formatActivityDate(selectedActivity.date, 'EEEE, MMMM do, yyyy', 'Date not set')}
-                  </p>
-                  <p className="text-gray-600">
-                    {formatActivityTime(selectedActivity?.time)}
-                    {selectedActivity?.end_time && ` - ${formatActivityTime(selectedActivity?.end_time)}`}
-                  </p>
-                </div>
-              </div>
-
-              {selectedActivity?.location && (
-                <div className="flex items-start gap-3 text-sm">
-                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                  <div>
-                    <span className="font-semibold block text-gray-700">Location</span>
-                    <p className="text-gray-600">{selectedActivity.location}</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedActivity?.description && (
-                <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 border">
-                  {selectedActivity.description}
-                </div>
-              )}
-            </div>
-            <DialogFooter className="sm:justify-start">
-              <Button type="button" variant="secondary" onClick={() => setIsActivityDialogOpen(false)} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      )}
     </div>
   );
-};
-
-// Helper icons
-const UserIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-  </svg>
-);
-
-const MapPin = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
-);
-
-export default ParentPortal;
+}

@@ -1,422 +1,174 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { teacherApi } from "@/lib/api";
-import {
-    Calendar,
-    CheckCircle,
-    Clock,
-    Users,
-    UserPlus,
-    Camera,
-    AlertCircle,
-    Play,
-    CheckCheck,
-    ListTodo,
-    CalendarDays,
-} from "lucide-react";
-import { motion } from "framer-motion";
+import { teacherDashboardApi, teacherApi } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import CohortProgressPanel from "./components/CohortProgressPanel";
+import InterventionFlagsPanel from "./components/InterventionFlagsPanel";
+import BadgeCompletionPanel from "./components/BadgeCompletionPanel";
+import MicrocredentialReadinessPanel from "./components/MicrocredentialReadinessPanel";
+import ArtifactQualityPanel from "./components/ArtifactQualityPanel";
+import CertificationPipelinePanel from "./components/CertificationPipelinePanel";
+import LearnerDetailView from "./components/LearnerDetailView";
+import type {
+  BadgeReadinessData,
+  MicrocredentialReadinessData,
+  InterventionFlag,
+  PendingBadgeAward,
+  CertificationPipelineRow,
+  CohortLearnerRow,
+  DualViewData,
+} from "./teacher-dashboard-types";
 
-interface Session {
-    id: string;
-    module_name: string;
-    date: string;
-    start_time?: string;
-    end_time?: string;
-    status: string;
-    attendance_marked: boolean;
-    learner_count: number;
-    attendance_count: number;
+const STALE_TIME_MS = 60_000;
+const DUAL_VIEW_STALE_MS = 30_000;
+
+function buildQueryOptions<T>(queryKey: string[], fetcher: () => Promise<{ data: T }>) {
+  return {
+    queryKey,
+    queryFn: async (): Promise<T> => {
+      const res = await fetcher();
+      return res.data;
+    },
+    staleTime: STALE_TIME_MS,
+  };
 }
-
-interface DashboardData {
-    today: {
-        date: string;
-        sessions: Session[];
-        total: number;
-        completed: number;
-        pending: number;
-    };
-    pending_tasks: {
-        attendance_needed: number;
-        artifacts_needed: number;
-        student_submissions: number;
-        total: number;
-    };
-    quick_stats: {
-        sessions_this_week: number;
-        sessions_this_month: number;
-        sessions_this_month_completed: number;
-        total_sessions: number;
-        total_completed: number;
-        week_start: string;
-        week_end: string;
-        month_start: string;
-        month_end: string;
-    };
-}
-
-const parseErrorMessage = (err: unknown, fallback: string) => {
-    if (err instanceof Error && err.message) {
-        return err.message;
-    }
-    if (typeof err === "object" && err && "response" in err) {
-        const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
-        if (detail) {
-            return detail;
-        }
-    }
-    return fallback;
-};
 
 export default function TeacherDashboard() {
-    const navigate = useNavigate();
-    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [selectedLearnerId, setSelectedLearnerId] = useState<string | null>(null);
 
-    const fetchDashboard = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await teacherApi.getDashboard();
-            setDashboardData(response.data);
-        } catch (err: unknown) {
-            setError(parseErrorMessage(err, "Failed to load dashboard"));
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+  const cohort = useQuery<CohortLearnerRow[]>(
+    buildQueryOptions(["teacher-cohort-progress"], teacherDashboardApi.getCohortProgress)
+  );
+  const badges = useQuery<BadgeReadinessData>(
+    buildQueryOptions(["teacher-badge-readiness"], teacherDashboardApi.getBadgeReadiness)
+  );
+  const microcreds = useQuery<MicrocredentialReadinessData>(
+    buildQueryOptions(["teacher-mc-readiness"], teacherDashboardApi.getMicrocredentialReadiness)
+  );
+  const interventions = useQuery<InterventionFlag[]>(
+    buildQueryOptions(["teacher-interventions"], teacherDashboardApi.getInterventions)
+  );
+  const certPipeline = useQuery<CertificationPipelineRow[]>(
+    buildQueryOptions(["teacher-cert-pipeline"], teacherDashboardApi.getCertificationPipeline)
+  );
+  const pendingArtifacts = useQuery<{ results: unknown[] }>(
+    buildQueryOptions(["teacher-pending-artifacts"], teacherApi.getPendingArtifacts)
+  );
 
-    useEffect(() => {
-        fetchDashboard();
-    }, [fetchDashboard]);
+  const dualView = useQuery<DualViewData>({
+    queryKey: ["teacher-dual-view", selectedLearnerId],
+    queryFn: async (): Promise<DualViewData> => {
+      const res = await teacherDashboardApi.getLearnerDualView(selectedLearnerId!);
+      return res.data;
+    },
+    enabled: !!selectedLearnerId,
+    staleTime: DUAL_VIEW_STALE_MS,
+  });
 
-    const handleStartSession = async (sessionId: string) => {
-        try {
-            await teacherApi.startSession(sessionId);
-            fetchDashboard();
-        } catch (err: unknown) {
-            console.error("Failed to start session:", err);
-        }
-    };
+  const handleAwardBadge = useCallback(
+    async (award: PendingBadgeAward) => {
+      try {
+        await teacherApi.badges.awardBadge({
+          learner_id: award.learner_id,
+          badge_name: award.badge_title,
+          description: award.unit_title ? `Completed ${award.unit_title}` : undefined,
+          module_id: award.module_id,
+        });
+        badges.refetch();
+      } catch {
+        toast.error("Failed to award badge.");
+      }
+    },
+    [badges]
+  );
 
-    const handleCompleteSession = async (sessionId: string) => {
-        try {
-            await teacherApi.completeSession(sessionId);
-            fetchDashboard();
-        } catch (err: unknown) {
-            console.error("Failed to complete session:", err);
-        }
-    };
+  const isLoading = cohort.isLoading || badges.isLoading;
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <div className="animate-spin h-12 w-12 border-4 border-[var(--fundi-cyan)] border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading dashboard...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error || !dashboardData) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Card className="max-w-md">
-                    <CardContent className="p-8 text-center">
-                        <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold mb-2">Error Loading Dashboard</h2>
-                        <p className="text-gray-600 mb-4">{error}</p>
-                        <Button onClick={fetchDashboard} style={{ backgroundColor: "var(--fundi-cyan)" }}>
-                            Try Again
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
+  if (isLoading) {
     return (
-        <div className="min-h-screen p-3 md:p-4 lg:p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header */}
-                <header>
-                    <h1 className="heading-font text-3xl md:text-4xl font-bold mb-2" style={{ color: "var(--fundi-black)" }}>
-                        Teacher Dashboard
-                    </h1>
-                    <p className="text-gray-600">Welcome back! Here's what you need to do today.</p>
-                </header>
-
-                {/* Quick Stats — now 4 columns */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Today's Sessions */}
-                    <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-cyan)" }}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">Today's Sessions</p>
-                                    <p className="text-3xl font-bold" style={{ color: "var(--fundi-cyan)" }}>
-                                        {dashboardData.today.total}
-                                    </p>
-                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
-                                        <p>{dashboardData.today.completed} completed</p>
-                                        {dashboardData.today.pending > 0 && (
-                                            <p className="text-amber-500 font-medium">{dashboardData.today.pending} still pending</p>
-                                        )}
-                                    </div>
-                                </div>
-                                <Calendar className="h-12 w-12" style={{ color: "var(--fundi-cyan)", opacity: 0.2 }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Pending Tasks */}
-                    <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-orange)" }}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">Pending Tasks</p>
-                                    <p className="text-3xl font-bold" style={{ color: "var(--fundi-orange)" }}>
-                                        {dashboardData.pending_tasks.total}
-                                    </p>
-                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
-                                        <p>{dashboardData.pending_tasks.attendance_needed} attendance needed</p>
-                                        {dashboardData.pending_tasks.artifacts_needed > 0 && (
-                                            <p>{dashboardData.pending_tasks.artifacts_needed} artifacts needed</p>
-                                        )}
-                                        {dashboardData.pending_tasks.student_submissions > 0 && (
-                                            <p className="text-red-500 font-medium">{dashboardData.pending_tasks.student_submissions} submissions to review</p>
-                                        )}
-                                    </div>
-                                </div>
-                                <AlertCircle className="h-12 w-12" style={{ color: "var(--fundi-orange)", opacity: 0.2 }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* This Week */}
-                    <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-lime)" }}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">This Week</p>
-                                    <p className="text-3xl font-bold" style={{ color: "var(--fundi-lime)" }}>
-                                        {dashboardData.quick_stats.sessions_this_week}
-                                    </p>
-                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
-                                        <p>sessions scheduled</p>
-                                    </div>
-                                </div>
-                                <CheckCircle className="h-12 w-12" style={{ color: "var(--fundi-lime)", opacity: 0.2 }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* This Month card */}
-                    <Card className="border-l-4" style={{ borderLeftColor: "var(--fundi-purple)" }}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">This Month</p>
-                                    <p className="text-3xl font-bold" style={{ color: "var(--fundi-purple)" }}>
-                                        {dashboardData.quick_stats.sessions_this_month ?? 0}
-                                    </p>
-                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
-                                        <p>
-                                            {dashboardData.quick_stats.sessions_this_month_completed ?? 0} completed
-                                        </p>
-                                        <p className="capitalize">
-                                            {new Date().toLocaleString("default", { month: "long" })}
-                                        </p>
-                                    </div>
-                                </div>
-                                <CalendarDays className="h-12 w-12" style={{ color: "var(--fundi-purple)", opacity: 0.2 }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Today's Sessions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Clock className="h-6 w-6" style={{ color: "var(--fundi-cyan)" }} />
-                            Today's Sessions
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {dashboardData.today.sessions.length === 0 ? (
-                            <div className="text-center py-12">
-                                <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                                <p className="text-gray-600 text-lg">No sessions scheduled for today</p>
-                                <p className="text-gray-500 text-sm mt-2">Enjoy your day off!</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {dashboardData.today.sessions.map((session, index) => (
-                                    <motion.div
-                                        key={session.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                                    >
-                                        <Card className="border-2 hover:shadow-md transition-shadow">
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex-1">
-                                                        <h3 className="font-bold text-lg mb-1">{session.module_name}</h3>
-                                                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                                                            <span className="flex items-center gap-1">
-                                                                <Clock className="h-4 w-4" />
-                                                                {session.start_time || "Not started"}
-                                                            </span>
-                                                            <span className="flex items-center gap-1">
-                                                                <Users className="h-4 w-4" />
-                                                                {session.learner_count} learners
-                                                            </span>
-                                                            {session.attendance_marked && (
-                                                                <span className="flex items-center gap-1 text-green-600">
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                    Attendance marked
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            onClick={() => navigate(`/teacher/attendance/${session.id}`)}
-                                                            variant="outline"
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <Users className="h-4 w-4" />
-                                                            Attendance
-                                                        </Button>
-
-                                                        {session.status === "scheduled" && (
-                                                            <Button
-                                                                onClick={() => handleStartSession(session.id)}
-                                                                style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
-                                                                className="flex items-center gap-2"
-                                                            >
-                                                                <Play className="h-4 w-4" />
-                                                                Start
-                                                            </Button>
-                                                        )}
-                                                        {session.status === "in_progress" && (
-                                                            <Button
-                                                                onClick={() => handleCompleteSession(session.id)}
-                                                                style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
-                                                                className="flex items-center gap-2"
-                                                            >
-                                                                <CheckCheck className="h-4 w-4" />
-                                                                Complete
-                                                            </Button>
-                                                        )}
-                                                        {session.status === "completed" && (
-                                                            <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold">
-                                                                Completed
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <Button
-                                onClick={() => navigate("/teacher/sessions")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-cyan)", color: "white" }}
-                            >
-                                <CalendarDays className="h-8 w-8" />
-                                <span className="font-semibold">My Sessions</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/tasks")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-purple)", color: "white" }}
-                            >
-                                <ListTodo className="h-8 w-8" />
-                                <span className="font-semibold">My Tasks</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/students")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-orange)", color: "white" }}
-                            >
-                                <UserPlus className="h-8 w-8" />
-                                <span className="font-semibold">Add Student</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/capture-artifact")}
-                                className="h-24 flex flex-col items-center justify-center gap-2"
-                                style={{ backgroundColor: "var(--fundi-lime)", color: "white" }}
-                            >
-                                <Camera className="h-8 w-8" />
-                                <span className="font-semibold text-center leading-tight">Capture<br/>Artifact</span>
-                            </Button>
-                            <Button
-                                onClick={() => navigate("/teacher/review-pending")}
-                                className="h-24 flex flex-col items-center justify-center gap-2 relative bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-                            >
-                                <CheckCheck className="h-8 w-8" />
-                                <span className="font-semibold text-center leading-tight">Review<br/>Submissions</span>
-                                {dashboardData.pending_tasks.student_submissions > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 border-2 border-white text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                        {dashboardData.pending_tasks.student_submissions}
-                                    </span>
-                                )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Pending Tasks Alert */}
-                {dashboardData.pending_tasks.total > 0 && (
-                    <Card className="border-2 border-orange-200 bg-orange-50">
-                        <CardContent className="p-6">
-                            <div className="flex items-start gap-4">
-                                <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-lg mb-2 text-orange-900">Pending Tasks</h3>
-                                    <ul className="space-y-1 text-orange-800">
-                                        {dashboardData.pending_tasks.attendance_needed > 0 && (
-                                            <li>• {dashboardData.pending_tasks.attendance_needed} sessions need attendance marking</li>
-                                        )}
-                                        {dashboardData.pending_tasks.artifacts_needed > 0 && (
-                                            <li>• {dashboardData.pending_tasks.artifacts_needed} sessions need artifact capture</li>
-                                        )}
-                                        {dashboardData.pending_tasks.student_submissions > 0 && (
-                                            <li
-                                                className="cursor-pointer underline underline-offset-2 hover:text-orange-900 transition-colors"
-                                                onClick={() => navigate("/teacher/review-pending")}
-                                            >
-                                                • {dashboardData.pending_tasks.student_submissions} student submission{dashboardData.pending_tasks.student_submissions > 1 ? "s" : ""} need review — <span className="font-semibold">Review now →</span>
-                                            </li>
-                                        )}
-                                    </ul>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin h-10 w-10 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Loading dashboard...</p>
         </div>
+      </div>
     );
+  }
+
+  if (cohort.isError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="max-w-sm">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+            <p className="text-gray-600 mb-4">Could not load dashboard data.</p>
+            <Button onClick={() => cohort.refetch()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const artifactList = Array.isArray(
+    (pendingArtifacts.data as { results?: unknown[] } | undefined)?.results
+  )
+    ? (pendingArtifacts.data as { results: unknown[] }).results
+    : [];
+
+  return (
+    <div className="min-h-screen p-4 lg:p-6 bg-gray-50">
+      <div className="max-w-screen-2xl mx-auto space-y-5">
+        <header>
+          <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
+          <p className="text-sm text-gray-500">
+            Cohort view · click any learner name to open individual view
+          </p>
+        </header>
+
+        {selectedLearnerId && dualView.data ? (
+          <LearnerDetailView
+            data={dualView.data}
+            onBack={() => setSelectedLearnerId(null)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            {/* Left — 3 columns — cohort overview */}
+            <div className="lg:col-span-3 min-h-[600px]">
+              <CohortProgressPanel
+                rows={cohort.data ?? []}
+                onSelectLearner={setSelectedLearnerId}
+              />
+            </div>
+
+            {/* Right — 2 columns — teacher action panels */}
+            <div className="lg:col-span-2 space-y-4">
+              <InterventionFlagsPanel
+                flags={interventions.data ?? []}
+                onSelectLearner={setSelectedLearnerId}
+              />
+              <ArtifactQualityPanel
+                artifacts={artifactList as Parameters<typeof ArtifactQualityPanel>[0]["artifacts"]}
+                onRefresh={() => pendingArtifacts.refetch()}
+              />
+              <BadgeCompletionPanel
+                data={badges.data ?? { pending_awards: [], recently_issued: [] }}
+                onAwardBadge={handleAwardBadge}
+              />
+              <MicrocredentialReadinessPanel
+                data={microcreds.data ?? { eligible: [], not_yet_eligible: [] }}
+                onSelectLearner={setSelectedLearnerId}
+              />
+              <CertificationPipelinePanel
+                rows={certPipeline.data ?? []}
+                onSelectLearner={setSelectedLearnerId}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
