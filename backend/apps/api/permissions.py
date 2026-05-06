@@ -197,7 +197,6 @@ class IsCurriculumDesigner(permissions.BasePermission):
                     UserRole.TEACHER,
                     UserRole.SCHOOL,
                     UserRole.PROGRAM_MANAGER,
-                    UserRole.DATA_ENTRY,
                 }
             )
         return (

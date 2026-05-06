@@ -19,7 +19,6 @@ export const ROLES = {
   PARENT: 'parent',
   PROGRAM_MANAGER: 'program_manager',
   ADMIN: 'admin',
-  DATA_ENTRY: 'data_entry',
   SCHOOL: 'school',
   CURRICULUM_DESIGNER: 'curriculum_designer',
 } as const satisfies Record<string, UserRole>;
@@ -71,7 +70,6 @@ export const ROLE_DASHBOARD: Record<UserRole, string> = {
   [ROLES.PARENT]: '/parent/portal',
   [ROLES.PROGRAM_MANAGER]: '/program-manager',
   [ROLES.ADMIN]: '/admin/dashboard',
-  [ROLES.DATA_ENTRY]: '/admin/dashboard',
   [ROLES.SCHOOL]: '/school/dashboard',
   [ROLES.CURRICULUM_DESIGNER]: '/admin/curriculum-designer',
 };
@@ -84,7 +82,6 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   [ROLES.PARENT]: 'Parent',
   [ROLES.PROGRAM_MANAGER]: 'Program Manager',
   [ROLES.ADMIN]: 'Admin',
-  [ROLES.DATA_ENTRY]: 'Data Entry',
   [ROLES.SCHOOL]: 'School Admin',
   [ROLES.CURRICULUM_DESIGNER]: 'Curriculum Designer',
 };

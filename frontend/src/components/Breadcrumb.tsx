@@ -26,7 +26,7 @@ const routeLabels: Record<string, string> = {
   badges: "Badges & Artifacts",
   analytics: "Analytics",
   admin: "Dashboard",
-  "curriculum-entry": "Curriculum Entry",
+  "curriculum-entry": "Curriculum Designer",
   activities: "Activities",
   users: "User Management",
   schools: "School Management",

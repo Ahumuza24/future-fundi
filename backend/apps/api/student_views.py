@@ -413,7 +413,7 @@ class StudentDashboardViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="my-modules")
     def my_modules(self, request):
-        """Get all modules for the student's enrolled pathways (courses)."""
+        """Get modules for enrolled pathways, grouped by track then module."""
         user = request.user
 
         try:
@@ -421,38 +421,64 @@ class StudentDashboardViewSet(viewsets.ViewSet):
         except Learner.DoesNotExist:
             return Response({"error": "Learner profile not found"}, status=404)
 
-        # Get active enrollments
-        enrollments = (
+        from apps.core.models import Module, Track, Program
+
+        enrollments = list(
             LearnerCourseEnrollment.objects.filter(learner=learner, is_active=True)
             .select_related("course")
         )
+        course_ids = [e.course_id for e in enrollments]
 
-        # Get all modules for enrolled courses
-        from apps.core.models import Module
-        course_ids = list(enrollments.values_list("course_id", flat=True))
-        modules = Module.objects.filter(course_id__in=course_ids).select_related("course").order_by("course__name", "name")
+        tracks = list(
+            Track.objects.filter(pathway_id__in=course_ids)
+            .select_related("pathway")
+            .order_by("sequence_order")
+        )
+        programs = list(Program.objects.filter(track__in=tracks).select_related("track"))
+        modules_via_program = list(
+            Module.objects.filter(program__in=programs)
+            .select_related("program__track")
+            .order_by("sequence_order")
+        )
+        modules_legacy = list(
+            Module.objects.filter(course_id__in=course_ids, program__isnull=True)
+            .select_related("course")
+            .order_by("name")
+        )
 
-        # Group modules by pathway/course
         pathways_data = []
         for enrollment in enrollments:
             course = enrollment.course
-            course_modules = [m for m in modules if m.course_id == course.id]
+            pathway_tracks = [t for t in tracks if t.pathway_id == course.id]
+
+            tracks_data = []
+            for track in pathway_tracks:
+                track_modules = [
+                    {"id": str(m.id), "name": m.name, "description": m.description or ""}
+                    for m in modules_via_program
+                    if m.program.track_id == track.id
+                ]
+                tracks_data.append({
+                    "track_id": str(track.id),
+                    "track_name": track.title,
+                    "modules": track_modules,
+                })
+
+            legacy_modules = [
+                {"id": str(m.id), "name": m.name, "description": m.description or ""}
+                for m in modules_legacy
+                if m.course_id == course.id
+            ]
+            all_modules = [m for t in tracks_data for m in t["modules"]] + legacy_modules
+
             pathways_data.append({
                 "course_id": str(course.id),
                 "course_name": course.name,
-                "modules": [
-                    {
-                        "id": str(m.id),
-                        "name": m.name,
-                        "description": getattr(m, "description", ""),
-                    }
-                    for m in course_modules
-                ]
+                "tracks": tracks_data,
+                "modules": all_modules,
             })
 
-        return Response({
-            "pathways": pathways_data,
-        })
+        return Response({"pathways": pathways_data})
 
     @action(detail=False, methods=["post"], url_path="upload-artifact")
     def upload_artifact(self, request):

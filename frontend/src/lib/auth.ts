@@ -9,7 +9,6 @@ export type UserRole =
   | "parent"
   | "program_manager"
   | "admin"
-  | "data_entry"
   | "school"
   | "curriculum_designer";
 
@@ -129,7 +128,6 @@ export const getDashboardRoute = (role: UserRole): string => {
     program_manager: '/program-manager',
     school: '/school',
     admin: '/admin',
-    data_entry: '/admin/curriculum-entry',
     curriculum_designer: '/admin/curriculum-designer',
   };
 
@@ -147,8 +145,7 @@ export const canAccessRoute = (userRole: UserRole, routePath: string): boolean =
     program_manager: ['/program-manager', '/'],
     school: ['/school', '/'],
     admin: ['/admin', '/program-manager', '/teacher', '/parent', '/student', '/'],
-    data_entry: ['/admin/curriculum-entry', '/'],
-    curriculum_designer: ['/admin/curriculum-designer', '/'],
+    curriculum_designer: ['/admin/curriculum-designer', '/admin/activities', '/'],
   };
   
   const allowedRoutes = roleRoutes[userRole] || [];
@@ -166,7 +163,6 @@ export const getRoleDisplayName = (role: UserRole): string => {
     program_manager: 'Program Manager',
     school: 'School Admin',
     admin: 'Administrator',
-    data_entry: 'Data Entry',
     curriculum_designer: 'Curriculum Designer',
   };
   

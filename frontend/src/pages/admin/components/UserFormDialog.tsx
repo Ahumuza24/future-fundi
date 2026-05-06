@@ -119,7 +119,7 @@ export const UserFormDialog = ({
                                     <option value="parent">Parent</option>
                                     <option value="program_manager">Program Manager</option>
                                     <option value="admin">Admin</option>
-                                    <option value="data_entry">Data Entry</option>
+                                    <option value="curriculum_designer">Curriculum Designer</option>
                                 </select>
                                 <ChevronIcon />
                             </div>

@@ -8,7 +8,6 @@ Provides endpoints for:
 
 from __future__ import annotations
 
-from apps.core.services.dashboard_service import MediaService
 from apps.api.serializers import (
     AchievementSerializer,
     CareerSerializer,
@@ -31,6 +30,8 @@ from apps.core.models import (
     LearnerLevelProgress,
     Module,
 )
+from apps.core.roles import UserRole
+from apps.core.services.dashboard_service import MediaService
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -49,13 +50,13 @@ class IsAdminUser(permissions.BasePermission):
 
 
 class CanManageCourses(permissions.BasePermission):
-    """Allows access to admin and data_entry users for course management."""
+    """Allows access to admins and curriculum designers for content management."""
 
     def has_permission(self, request, view):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ["admin", "data_entry"]
+            and request.user.role in [UserRole.ADMIN, UserRole.CURRICULUM_DESIGNER]
         )
 
 
@@ -118,7 +119,7 @@ class CourseViewSet(viewsets.ModelViewSet):
             "create",
             "update",
             "partial_update",
-        ] and self.request.user.role in ["admin", "data_entry"]:
+        ] and self.request.user.role in [UserRole.ADMIN, UserRole.CURRICULUM_DESIGNER]:
             return CourseAdminSerializer
         return CourseSerializer
 
@@ -528,7 +529,7 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
-    """Activity management for data entry and admin users.
+    """Activity management for curriculum designers and admin users.
 
     Allows CRUD operations on upcoming activities.
     """
@@ -542,7 +543,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
         if self.action in ["list", "retrieve"]:
             # Anyone authenticated can view
             return [permissions.IsAuthenticated()]
-        # Only admin/data_entry can create/update/delete
+        # Only admins/curriculum designers can create/update/delete
         return [CanManageCourses()]
 
     def get_queryset(self):

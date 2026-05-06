@@ -70,7 +70,6 @@ export const ROLE_LABELS: Record<string, string> = {
   school: "School Admin",
   program_manager: "Program Manager",
   admin: "System Admin",
-  data_entry: "Data Entry",
   curriculum_designer: "Curriculum Designer",
 };
 
@@ -110,8 +109,8 @@ export const allNavItems: NavItem[] = [
   { title: "Analytics", path: "/school/analytics", icon: BarChart3, colorKey: "purple", roles: ["school"] },
 
   // ── System Admin ─────────────────────────────────────────
-  { title: "Curriculum Entry", path: "/admin/curriculum-entry", icon: Database, colorKey: "purple", roles: ["admin", "data_entry"] },
-  { title: "Activities", path: "/admin/activities", icon: Calendar, colorKey: "cyan", roles: ["admin", "data_entry"] },
+  { title: "Curriculum Designer", path: "/admin/curriculum-designer", icon: Database, colorKey: "purple", roles: ["admin", "curriculum_designer"] },
+  { title: "Activities", path: "/admin/activities", icon: Calendar, colorKey: "cyan", roles: ["admin", "curriculum_designer"] },
   { title: "User Management", path: "/admin/users", icon: Users, colorKey: "red", roles: ["admin"] },
   { title: "School Management", path: "/admin/schools", icon: BarChart3, colorKey: "red", roles: ["admin"] },
   { title: "Course Management", path: "/admin/courses", icon: BookOpen, colorKey: "orange", roles: ["admin"] },

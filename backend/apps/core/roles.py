@@ -11,7 +11,6 @@ class UserRole(models.TextChoices):
     PARENT = "parent", "Parent"
     PROGRAM_MANAGER = "program_manager", "Program Manager"
     ADMIN = "admin", "Admin"
-    DATA_ENTRY = "data_entry", "Data Entry"
     SCHOOL = "school", "School Admin"
     CURRICULUM_DESIGNER = "curriculum_designer", "Curriculum Designer"
 
@@ -20,5 +19,5 @@ SCHOOL_STAFF_ROLES = {
     UserRole.TEACHER,
     UserRole.PROGRAM_MANAGER,
     UserRole.SCHOOL,
-    UserRole.DATA_ENTRY,
+    UserRole.CURRICULUM_DESIGNER,
 }

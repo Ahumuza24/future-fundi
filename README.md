@@ -113,7 +113,7 @@ pnpm dev
 | `program_manager` | `/program-manager` | Cross-program analytics and impact reporting |
 | `school` | `/school` | School admin panel |
 | `admin` | `/admin` | Full platform access |
-| `data_entry` | `/admin/curriculum-entry` | Curriculum data only |
+| `curriculum_designer` | `/admin/curriculum-designer` | Curriculum CMS and content management |
 
 ---
 

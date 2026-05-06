@@ -12,7 +12,7 @@ Custom user model. Extends Django's `AbstractUser`.
 | Field | Type | Notes |
 |---|---|---|
 | `email` | EmailField | Used for login (unique) |
-| `role` | CharField | `learner \| teacher \| parent \| program_manager \| admin \| school \| data_entry \| curriculum_designer` |
+| `role` | CharField | `learner \| teacher \| parent \| program_manager \| admin \| school \| curriculum_designer` |
 | `tenant_id` | FK → School | Which school this user belongs to (nullable for global admins) |
 | `first_name` | CharField | |
 | `last_name` | CharField | |

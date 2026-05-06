@@ -273,6 +273,9 @@ class AdminBulkImportService:
     """Import users from a CSV upload."""
 
     REQUIRED_FIELDS: tuple[str, ...] = ("username", "email", "role")
+    LEGACY_ROLE_ALIASES: dict[str, str] = {
+        "data_entry": "curriculum_designer",
+    }
 
     @staticmethod
     def import_users(csv_file: Any) -> dict[str, Any]:
@@ -311,6 +314,7 @@ class AdminBulkImportService:
         from django.db import IntegrityError
 
         from apps.core.models import School
+        from apps.core.roles import UserRole
 
         User = get_user_model()
 
@@ -318,12 +322,16 @@ class AdminBulkImportService:
         if missing:
             return False, f"Row {row_num}: Missing fields {missing}"
 
+        role = AdminBulkImportService.LEGACY_ROLE_ALIASES.get(row["role"], row["role"])
+        if role not in UserRole.values:
+            return False, f"Row {row_num}: Invalid role {row['role']}"
+
         user_data: dict[str, Any] = {
             "username": row["username"],
             "email": row["email"],
             "first_name": row.get("first_name", ""),
             "last_name": row.get("last_name", ""),
-            "role": row["role"],
+            "role": role,
         }
 
         school_id = row.get("school_id") or row.get("tenant_id")

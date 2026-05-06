@@ -160,7 +160,7 @@ class Attendance(BaseUUIDModel):
 class Activity(BaseUUIDModel):
     """Upcoming activities for learners.
 
-    Managed by data_entry or admin users via the curriculum entry dashboard.
+    Managed by curriculum designers or admin users via the content management system.
     """
 
     STATUS_CHOICES = [

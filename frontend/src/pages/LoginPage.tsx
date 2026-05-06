@@ -65,8 +65,8 @@ const LoginPage = () => {
         navigate("/admin");
       } else if (role === "school") {
         navigate("/school");
-      } else if (role === "data_entry") {
-        navigate("/admin/curriculum-entry");
+      } else if (role === "curriculum_designer") {
+        navigate("/admin/curriculum-designer");
       } else {
         navigate("/");
       }

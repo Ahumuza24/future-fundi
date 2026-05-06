@@ -35,7 +35,7 @@ const ROLE_COLORS: Record<string, string> = {
     admin: C.red,
     school: C.teal,
     program_manager: C.lime,
-    data_entry: C.indigo,
+    curriculum_designer: C.indigo,
 };
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */

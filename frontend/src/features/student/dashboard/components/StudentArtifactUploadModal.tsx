@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Loader2, BookOpen, GraduationCap } from "lucide-react";
+import { UploadCloud, X, Loader2, BookOpen, GraduationCap, GitBranch } from "lucide-react";
 import { studentApi } from "@/lib/api";
 
 interface Module {
@@ -18,9 +18,16 @@ interface Module {
   description: string;
 }
 
+interface Track {
+  track_id: string;
+  track_name: string;
+  modules: Module[];
+}
+
 interface Pathway {
   course_id: string;
   course_name: string;
+  tracks: Track[];
   modules: Module[];
 }
 
@@ -47,9 +54,10 @@ export function StudentArtifactUploadModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Pathway and Module selection
+  // Pathway, Track, and Module selection
   const [pathways, setPathways] = useState<Pathway[]>([]);
   const [selectedPathwayId, setSelectedPathwayId] = useState<string>("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
   const [selectedModuleId, setSelectedModuleId] = useState<string>("");
   const [modulesLoading, setModulesLoading] = useState(false);
 
@@ -73,15 +81,28 @@ export function StudentArtifactUploadModal({
     }
   };
 
-  // Get modules for selected pathway
-  const availableModules = selectedPathwayId
-    ? pathways.find((p) => p.course_id === selectedPathwayId)?.modules || []
-    : [];
+  const selectedPathway = pathways.find((p) => p.course_id === selectedPathwayId);
+  const availableTracks = selectedPathway?.tracks ?? [];
+  const hasTracks = availableTracks.length > 0;
 
-  // Handle pathway selection
+  const availableModules = (() => {
+    if (!selectedPathwayId) return [];
+    if (hasTracks && selectedTrackId) {
+      return availableTracks.find((t) => t.track_id === selectedTrackId)?.modules ?? [];
+    }
+    if (!hasTracks) return selectedPathway?.modules ?? [];
+    return [];
+  })();
+
   const handlePathwayChange = (pathwayId: string) => {
     setSelectedPathwayId(pathwayId);
-    setSelectedModuleId(""); // Reset module when pathway changes
+    setSelectedTrackId("");
+    setSelectedModuleId("");
+  };
+
+  const handleTrackChange = (trackId: string) => {
+    setSelectedTrackId(trackId);
+    setSelectedModuleId("");
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -135,6 +156,7 @@ export function StudentArtifactUploadModal({
       setReflection("");
       setFiles([]);
       setSelectedPathwayId("");
+      setSelectedTrackId("");
       setSelectedModuleId("");
       onSuccess();
     } catch (err: unknown) {
@@ -215,7 +237,36 @@ export function StudentArtifactUploadModal({
             </div>
           </div>
 
-          {/* Module/Microcredential Selection - Using native select */}
+          {/* Track Selection — only shown when the pathway has tracks */}
+          {hasTracks && (
+            <div className="space-y-2">
+              <Label htmlFor="track">
+                <span className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-orange-500" />
+                  Track <span className="text-red-500">*</span>
+                </span>
+              </Label>
+              <div className="relative">
+                <select
+                  id="track"
+                  value={selectedTrackId}
+                  onChange={(e) => handleTrackChange(e.target.value)}
+                  disabled={loading || !selectedPathwayId}
+                  className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8L9.5 4.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}
+                >
+                  <option value="">Select your track</option>
+                  {availableTracks.map((track) => (
+                    <option key={track.track_id} value={track.track_id}>
+                      {track.track_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Module/Microcredential Selection */}
           <div className="space-y-2">
             <Label htmlFor="module">
               <span className="flex items-center gap-2">
@@ -228,13 +279,15 @@ export function StudentArtifactUploadModal({
                 id="module"
                 value={selectedModuleId}
                 onChange={(e) => setSelectedModuleId(e.target.value)}
-                disabled={loading || !selectedPathwayId || availableModules.length === 0}
+                disabled={loading || !selectedPathwayId || (hasTracks && !selectedTrackId) || availableModules.length === 0}
                 className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 appearance-none cursor-pointer"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8L9.5 4.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px' }}
               >
                 <option value="">
                   {!selectedPathwayId
                     ? "Select a pathway first"
+                    : hasTracks && !selectedTrackId
+                    ? "Select a track first"
                     : availableModules.length === 0
                     ? "No modules available"
                     : "Select microcredential"}
@@ -246,8 +299,8 @@ export function StudentArtifactUploadModal({
                 ))}
               </select>
             </div>
-            {selectedPathwayId && availableModules.length === 0 && (
-              <p className="text-xs text-amber-600">No microcredentials available for this pathway.</p>
+            {selectedPathwayId && (!hasTracks || selectedTrackId) && availableModules.length === 0 && (
+              <p className="text-xs text-amber-600">No microcredentials available for this selection.</p>
             )}
           </div>
             </>

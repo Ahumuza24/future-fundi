@@ -1,10 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Construction, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Construction, Home } from "lucide-react";
+import { getCurrentUser, getDashboardRoute } from "@/lib/auth";
 
 export default function ComingSoon() {
     const navigate = useNavigate();
+    const user = getCurrentUser();
+    const dashboardUrl = user ? getDashboardRoute(user.role) : "/";
 
     return (
         <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
@@ -15,20 +18,28 @@ export default function ComingSoon() {
                     </div>
 
                     <h1 className="heading-font text-2xl font-bold mb-2 text-fundi-black">
-                        Coming Soon!
+                        This feature is coming soon
                     </h1>
 
                     <p className="text-gray-600 mb-8">
-                        This module is currently under development. Phase 2 features are being rolled out.
+                        We are still building this part of Future Fundi.
                     </p>
 
-                    <Button
-                        onClick={() => navigate(-1)}
-                        className="w-full bg-fundi-cyan"
-                    >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Go Back
-                    </Button>
+                    <div className="flex flex-col gap-3">
+                        <Button
+                            onClick={() => navigate(-1)}
+                            className="w-full bg-fundi-cyan"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Go Back
+                        </Button>
+                        <Button asChild variant="outline" className="w-full">
+                            <Link to={dashboardUrl}>
+                                <Home className="h-4 w-4 mr-2" />
+                                Go to Dashboard
+                            </Link>
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>

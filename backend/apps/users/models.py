@@ -22,6 +22,7 @@ class User(AbstractUser):
     - parent: Parents/guardians viewing their child's progress
     - program_manager: Program managers with cross-program dashboard access
     - admin: System administrators with full access
+    - curriculum_designer: CMS authors who manage learning content
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -111,8 +112,8 @@ class User(AbstractUser):
             UserRole.PARENT: "/parent",
             UserRole.PROGRAM_MANAGER: "/program-manager",
             UserRole.ADMIN: "/admin",
-            UserRole.DATA_ENTRY: "/admin/curriculum-entry",
             UserRole.SCHOOL: "/school",
+            UserRole.CURRICULUM_DESIGNER: "/admin/curriculum-designer",
         }
         return dashboard_map.get(self.role, "/student")
 

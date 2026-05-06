@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { ROLES } from "@/lib/roles";
 import PageLayout from "@/components/PageLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -41,11 +41,10 @@ import AdminMonitor from "@/pages/admin/AdminMonitor";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import UserManagement from "@/pages/admin/UserManagement";
 import SchoolManagement from "@/pages/admin/SchoolManagement";
-import CurriculumDataEntry from "@/pages/admin/CurriculumDataEntry";
 import CurriculumDesigner from "@/pages/admin/CurriculumDesigner";
 import ActivityManagement from "@/pages/admin/ActivityManagement";
 import SettingsPage from "@/pages/SettingsPage";
-import NotFoundPage from "@/pages/NotFoundPage";
+import ComingSoon from "@/pages/ComingSoon";
 
 const sentryCreateBrowserRouter = Sentry.wrapCreateBrowserRouterV7(createBrowserRouter);
 
@@ -352,8 +351,8 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/curriculum-entry",
         element: (
-          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DATA_ENTRY]}>
-            <CurriculumDataEntry />
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.CURRICULUM_DESIGNER]}>
+            <Navigate to="/admin/curriculum-designer" replace />
           </ProtectedRoute>
         ),
       },
@@ -368,7 +367,7 @@ const router = sentryCreateBrowserRouter([
       {
         path: "admin/activities",
         element: (
-          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DATA_ENTRY]}>
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.CURRICULUM_DESIGNER]}>
             <ActivityManagement />
           </ProtectedRoute>
         ),
@@ -407,10 +406,10 @@ const router = sentryCreateBrowserRouter([
       },
     ],
   },
-  // 404 fallback
+  // Unimplemented or unknown routes
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: <ComingSoon />,
   },
 ]);
 

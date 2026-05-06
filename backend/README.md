@@ -127,7 +127,7 @@ The system supports 7 core user roles:
 4. **program_manager** - Cross-program analytics and impact reporting
 5. **school** - School admin account
 6. **admin** - Platform administrators with global access
-7. **data_entry** - Curriculum/data operations
+7. **curriculum_designer** - Curriculum CMS and content management
 
 ### Authentication Flow
 
