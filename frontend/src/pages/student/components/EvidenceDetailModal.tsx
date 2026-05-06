@@ -115,17 +115,17 @@ export default function EvidenceDetailModal({ artifact, onClose }: EvidenceDetai
                       href={url}
                       target="_blank"
                       rel="noreferrer"
-                      className={`block overflow-hidden rounded-xl group relative ${
-                        images.length === 1 ? "h-64" : "h-40"
-                      }`}
+                      className="block rounded-xl group relative bg-[#f6f6f6] overflow-hidden"
                     >
                       <img
                         src={url}
                         alt={img.filename || `Image ${idx + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full max-h-72 object-contain"
                       />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-end justify-end p-2">
+                        <span className="flex items-center gap-1 text-[10px] font-semibold bg-black/50 text-white px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ExternalLink className="h-3 w-3" /> Open full size
+                        </span>
                       </div>
                     </a>
                   );

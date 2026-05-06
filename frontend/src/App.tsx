@@ -27,6 +27,9 @@ import TeacherAssessments from "@/pages/teacher/TeacherAssessments";
 import TeacherLearnerPortfolio from "@/pages/teacher/TeacherLearnerPortfolio";
 import TeacherCommunication from "@/pages/teacher/TeacherCommunication";
 import ProgramManagerDashboard from "@/pages/school/ProgramManagerDashboard";
+import BadgesCredentialsPage from "@/features/student/achievements/BadgesCredentialsPage";
+import AttendancePage from "@/features/student/attendance/AttendancePage";
+import MyPathwaysPage from "@/features/student/pathways/MyPathwaysPage";
 import SchoolDashboard from "@/pages/school/SchoolDashboard";
 import SchoolStudents from "@/pages/school/SchoolStudents";
 import SchoolTeachers from "@/pages/school/SchoolTeachers";
@@ -74,6 +77,30 @@ const router = sentryCreateBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
             <StudentDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "student/pathways",
+        element: (
+          <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
+            <MyPathwaysPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "student/achievements",
+        element: (
+          <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
+            <BadgesCredentialsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "student/attendance",
+        element: (
+          <ProtectedRoute allowedRoles={[ROLES.LEARNER, ROLES.ADMIN]}>
+            <AttendancePage />
           </ProtectedRoute>
         ),
       },

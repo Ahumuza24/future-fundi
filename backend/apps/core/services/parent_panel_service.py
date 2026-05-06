@@ -25,7 +25,11 @@ def _fmt_date(dt: Any) -> str | None:
 
 
 def _learner_children(parent_user) -> QuerySet:
-    return Learner.objects.filter(parent=parent_user).select_related("growth_profile")
+    return Learner.objects.filter(parent=parent_user).select_related(
+        "growth_profile",
+        "current_program",
+        "current_track",
+    )
 
 
 class ParentPanelService:
@@ -50,6 +54,10 @@ class ParentPanelService:
                     "leaves_count": leaves,
                     "fruit_count": fruit,
                     "equity_flag": child.equity_flag,
+                    "current_school": child.current_school,
+                    "current_class": child.current_class,
+                    "current_program": child.current_program.title if child.current_program else "",
+                    "current_track": child.current_track.title if child.current_track else "",
                 }
             )
         return result
@@ -114,20 +122,26 @@ class ParentPanelService:
     def child_artifacts(learner: Learner) -> list[dict]:
         artifacts = (
             Artifact.objects.filter(learner=learner)
-            .select_related("module")
+            .select_related("module", "evidence_record", "evidence_record__task")
             .order_by("-submitted_at")[:15]
         )
-        return [
-            {
-                "id": str(a.id),
-                "title": a.title,
-                "status": a.status,
-                "submitted_at": _fmt_date(a.submitted_at),
-                "module": a.module.name if a.module else "",
-                "uploaded_by_student": a.uploaded_by_student,
-            }
-            for a in artifacts
-        ]
+        rows = []
+        for artifact in artifacts:
+            evidence = getattr(artifact, "evidence_record", None)
+            rows.append(
+                {
+                    "id": str(artifact.id),
+                    "title": artifact.title,
+                    "status": artifact.status,
+                    "submitted_at": _fmt_date(artifact.submitted_at),
+                    "module": artifact.module.name if artifact.module else "",
+                    "task": evidence.task.title if evidence and evidence.task else "",
+                    "evidence_status": evidence.verification_status if evidence else "",
+                    "media_count": len(artifact.media_refs or []),
+                    "uploaded_by_student": artifact.uploaded_by_student,
+                }
+            )
+        return rows
 
     @staticmethod
     def child_sessions(learner: Learner) -> list[dict]:

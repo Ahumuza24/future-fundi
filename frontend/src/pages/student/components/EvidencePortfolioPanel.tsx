@@ -42,7 +42,7 @@ function ArtifactThumbnail({ mediaRefs }: { mediaRefs: ArtifactMediaRef[] }) {
 
   if (first) {
     return (
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center ga   p-1">
         <File className="h-7 w-7 text-[#5b5b5b]/40" />
         <span className="text-[9px] text-[#5b5b5b]/60 truncate max-w-[80%]">{first.filename}</span>
       </div>

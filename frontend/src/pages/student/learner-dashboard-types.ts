@@ -134,6 +134,45 @@ export interface StudentDashboardData {
   upcomingLessons: UpcomingLesson[];
 }
 
+export type AttendanceStatus = "present" | "absent" | "late" | "excused";
+
+export interface StudentAttendanceRecord {
+  id: string;
+  status: AttendanceStatus;
+  notes: string;
+  marked_at: string | null;
+  session: {
+    id: string;
+    title: string;
+    date: string;
+    start_time: string | null;
+    end_time: string | null;
+    status: string;
+    pathway: string;
+    teacher: string;
+  };
+}
+
+export interface StudentAttendancePathway {
+  name: string;
+  attendance_rate: number;
+  total_sessions: number;
+}
+
+export interface StudentAttendanceData {
+  summary: {
+    attendance_rate: number;
+    total_sessions: number;
+    sessions_completed: number;
+    absent: number;
+    late: number;
+    excused: number;
+    current_streak: number;
+  };
+  pathways: StudentAttendancePathway[];
+  records: StudentAttendanceRecord[];
+}
+
 export const PATHWAY_STATUS_STYLE: Record<string, string> = {
   good: "bg-fundi-lime/10 text-[#496400]",
   warning: "bg-fundi-yellow/20 text-[#d4b800]",

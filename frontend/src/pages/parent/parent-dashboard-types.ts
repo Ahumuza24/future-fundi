@@ -5,6 +5,10 @@ export interface ChildSummary {
   leaves_count: number;
   fruit_count: number;
   equity_flag: boolean;
+  current_school?: string;
+  current_class?: string;
+  current_program?: string;
+  current_track?: string;
 }
 
 export interface ChildGrowth {
@@ -36,6 +40,9 @@ export interface ChildArtifact {
   status: "pending" | "approved" | "rejected";
   submitted_at: string | null;
   module: string;
+  task?: string;
+  evidence_status?: "pending" | "verified" | "rejected" | "corrected" | "";
+  media_count?: number;
   uploaded_by_student: boolean;
 }
 

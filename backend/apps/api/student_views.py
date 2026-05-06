@@ -628,3 +628,10 @@ class LearnerDashboardViewSet(viewsets.ViewSet):
         if not learner:
             return Response({"error": "Learner profile not found"}, status=404)
         return Response(LearnerPanelService.certifications(learner))
+
+    @action(detail=False, methods=["get"], url_path="attendance")
+    def attendance(self, request):
+        learner = self._get_learner(request)
+        if not learner:
+            return Response({"error": "Learner profile not found"}, status=404)
+        return Response(LearnerPanelService.attendance(learner))

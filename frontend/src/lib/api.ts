@@ -768,6 +768,7 @@ export const learnerDashboardApi = {
   getModuleProgress: () => api.get("/api/learner/dashboard/module-progress/"),
   getEvidence: () => api.get("/api/learner/dashboard/evidence/"),
   getCertifications: () => api.get("/api/learner/dashboard/certifications/"),
+  getAttendance: () => api.get("/api/learner/dashboard/attendance/"),
 };
 
 export const parentDashboardApi = {

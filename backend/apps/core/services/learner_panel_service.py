@@ -6,6 +6,7 @@ from django.db.models import Count
 
 from apps.core.models import (
     Artifact,
+    Attendance,
     BadgeRecord,
     CertificationRecord,
     GrowthProfile,
@@ -204,4 +205,101 @@ class LearnerPanelService:
                 for c in issued
             ],
             "in_progress": in_progress,
+        }
+
+    @staticmethod
+    def attendance(learner: Learner) -> dict:
+        records = (
+            Attendance.objects.filter(learner=learner)
+            .select_related(
+                "session",
+                "session__teacher",
+                "session__module",
+                "session__module__course",
+                "session__module__program__track__pathway",
+            )
+            .order_by("-session__date", "-session__start_time", "-marked_at")
+        )
+
+        total = records.count()
+        present_count = records.filter(status__in=["present", "late"]).count()
+        absent_count = records.filter(status="absent").count()
+        late_count = records.filter(status="late").count()
+        excused_count = records.filter(status="excused").count()
+        rate = round((present_count / total) * 100) if total else 0
+
+        streak = 0
+        seen_dates: set[str] = set()
+        for record in records:
+            date_key = record.session.date.isoformat()
+            if date_key in seen_dates:
+                continue
+            seen_dates.add(date_key)
+            if record.status in {"present", "late"}:
+                streak += 1
+            else:
+                break
+
+        pathway_counts: dict[str, dict[str, int]] = {}
+        rows = []
+        for record in records:
+            module = record.session.module
+            pathway = ""
+            if module:
+                if module.course:
+                    pathway = module.course.name
+                elif module.program and module.program.track and module.program.track.pathway:
+                    pathway = module.program.track.pathway.name
+
+            pathway_label = pathway or "General Learning"
+            if pathway_label not in pathway_counts:
+                pathway_counts[pathway_label] = {"total": 0, "present": 0}
+            pathway_counts[pathway_label]["total"] += 1
+            if record.status in {"present", "late"}:
+                pathway_counts[pathway_label]["present"] += 1
+
+            teacher_name = record.session.teacher.get_full_name() or record.session.teacher.username
+            rows.append({
+                "id": str(record.id),
+                "status": record.status,
+                "notes": record.notes,
+                "marked_at": _fmt_date(record.marked_at),
+                "session": {
+                    "id": str(record.session.id),
+                    "title": module.name if module else "Learning Session",
+                    "date": record.session.date.isoformat(),
+                    "start_time": (
+                        record.session.start_time.strftime("%H:%M")
+                        if record.session.start_time else None
+                    ),
+                    "end_time": (
+                        record.session.end_time.strftime("%H:%M")
+                        if record.session.end_time else None
+                    ),
+                    "status": record.session.status,
+                    "pathway": pathway_label,
+                    "teacher": teacher_name,
+                },
+            })
+
+        return {
+            "summary": {
+                "attendance_rate": rate,
+                "total_sessions": total,
+                "sessions_completed": present_count,
+                "absent": absent_count,
+                "late": late_count,
+                "excused": excused_count,
+                "current_streak": streak,
+            },
+            "pathways": [
+                {
+                    "name": name,
+                    "attendance_rate": round((counts["present"] / counts["total"]) * 100)
+                    if counts["total"] else 0,
+                    "total_sessions": counts["total"],
+                }
+                for name, counts in pathway_counts.items()
+            ],
+            "records": rows,
         }
